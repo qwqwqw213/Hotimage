@@ -6,10 +6,12 @@
 #include "QDebug"
 #include "QSurfaceFormat"
 #include "QTranslator"
+#include "QFontDatabase"
 
 int main(int argc, char *argv[])
 {
     QQuickStyle::setStyle("Imagine");
+
     int exitCode = 0;
     do {
 //        qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
@@ -17,6 +19,18 @@ int main(int argc, char *argv[])
         QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
         QApplication app(argc, argv);
+
+        QFontDatabase fd;
+        int fontIndex = fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf");
+        if( fontIndex >= 0 ) {
+            QFont font = app.font();
+            QString family = QFontDatabase::applicationFontFamilies(fontIndex).at(0);
+            font.setFamily(family);
+            qDebug() << "set font family:" << family;
+            app.setFont(font);
+        }
+        fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
+
         QSurfaceFormat format;
         format.setSamples(8);
         QSurfaceFormat::setDefaultFormat(format);
@@ -24,31 +38,6 @@ int main(int argc, char *argv[])
         QQmlApplicationEngine engine;
         Config *config = new Config(&engine);
         config->init(&app, &engine);
-
-        // 多语言翻译
-        // 必须在这里加载
-        // 否则即使installTranslator 返回true
-        // 也不会翻译成中文
-        QTranslator ts;
-        switch(config->language())
-        {
-        case Config::__cn: {
-            if( ts.load(":/translation/Cn.qm") ) {
-                if( app.installTranslator(&ts) ) {
-                    qDebug() << "load cn transloation";
-                }
-                else {
-                    qDebug() << "install translator fail";
-                }
-            }
-        }
-            break;
-        case Config::__en: {
-        }
-            break;
-        default:
-            break;
-        }
 
         const QUrl url(QStringLiteral("qrc:/main.qml"));
         QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,

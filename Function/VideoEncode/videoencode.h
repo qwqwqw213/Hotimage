@@ -54,6 +54,8 @@ public:
 
     QString error();
 
+    QString filePath();
+
 protected:
     void run() override;
 

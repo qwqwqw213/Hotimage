@@ -42,7 +42,7 @@ Rectangle {
         font.pixelSize: 20
         color: "white"
         text: qsTr("text rwerwerwer")
-        wrapMode: Text.WordWrap
+        wrapMode: contentWidth > parent.width ? Text.WordWrap : Text.NoWrap
         anchors.centerIn: parent
         Component.onCompleted: console.log(contentWidth, contentHeight)
     }

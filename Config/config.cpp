@@ -55,6 +55,8 @@ public:
     void readSetting();
     void saveSetting();
 
+    QTranslator *ts;
+
 private:
     Config *f;
 };
@@ -76,6 +78,29 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
     // 读配置文件
     p->readSetting();
 
+    // QTranslator 如果为局部变量
+    // 则加载无效
+
+    switch(p->language)
+    {
+    case Config::__cn: {
+        if( p->ts->load(":/translation/Cn.qm") ) {
+            if( a->installTranslator(p->ts) ) {
+                qDebug() << "load cn transloation";
+            }
+            else {
+                qDebug() << "install translator fail";
+            }
+        }
+    }
+        break;
+    case Config::__en: {
+    }
+        break;
+    default:
+        break;
+    }
+
     p->screen = QApplication::primaryScreen();
     p->screen->setOrientationUpdateMask(Qt::PortraitOrientation |
                                      Qt::LandscapeOrientation |
@@ -95,21 +120,6 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
     p->height = 540;
 #endif
     qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height;
-
-    QFontDatabase fd;
-    QVector<int> fontIndex;
-    fontIndex.append(fd.addApplicationFont(":/font/fontawesome-webfont.ttf"));
-    fontIndex.append(fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf"));
-    for(int i = 0; i < fontIndex.size(); i ++) {
-        if( fontIndex.at(i) >= 0 ) {
-            qDebug() << "font:" << i << fd.applicationFontFamilies(i);
-            if( i == 1 ) {
-                QFont font = a->font();
-                font.setFamily(QFontDatabase::applicationFontFamilies(i).at(0));
-                a->setFont(font);
-            }
-        }
-    }
 
     p->androidInterface = new AndroidInterface(this);
 
@@ -199,6 +209,8 @@ void Config::setLanguage(const int &language)
 ConfigPrivate::ConfigPrivate(Config *parent)
 {
     f = parent;
+
+    ts = new QTranslator(f);
 
     oldRotation = 0;
 #ifdef Q_OS_ANDROID
@@ -297,7 +309,7 @@ ConfigPrivate::~ConfigPrivate()
 void ConfigPrivate::readSetting()
 {
 #ifdef Q_OS_ANDROID
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
     QString path = QApplication::applicationDirPath() + QString("/setting.ini");
 #endif
@@ -313,7 +325,7 @@ void ConfigPrivate::readSetting()
 void ConfigPrivate::saveSetting()
 {
 #ifdef Q_OS_ANDROID
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
     QString path = QApplication::applicationDirPath() + QString("/setting.ini");
 #endif

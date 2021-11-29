@@ -313,7 +313,7 @@ Window {
                     }
                     onReleased: {
                         btnPhoto.m_scale = 1.0
-                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
+                        var component = Qt.createComponent("qrc:/ImageListModel/ImageListView.qml")
                         if( component.status === Component.Ready ) {
                             var obj = component.createObject(mainView)
                         }
@@ -356,10 +356,10 @@ Window {
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnRecord.width * 0.8
+                    font.pixelSize: btnRecord.width * 0.75
                     text: "\uf03d"
                     color: btnRecordArea.pressed ? "#a0a0a0" : "white"
-                    rotation: Config.rotation
+                    rotation: oldRotation
                 }
 
                 MouseArea {
@@ -404,6 +404,7 @@ Window {
         target: tcpCamera
         onMsg: {
 //            console.log(str)
+            messagebox.showMsg(str)
         }
 
         onCaptureFinished: {

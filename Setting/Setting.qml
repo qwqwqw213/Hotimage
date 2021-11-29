@@ -197,7 +197,7 @@ Drawer {
                     interval: 1000
                 }
 
-                Label {
+                Text {
                     id: label
                     color: "white"
                     anchors.centerIn: parent
@@ -263,7 +263,7 @@ Drawer {
             width: flick.width
             height: flick.sectionHeight
 
-            Label {
+            Text {
                 id: label
                 color: "white"
                 anchors.left: parent.left
@@ -294,7 +294,7 @@ Drawer {
                 anchors.leftMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Label {
+            Text {
                 id: label
                 color: "white"
                 anchors.left: icon.right
@@ -397,7 +397,7 @@ Drawer {
                 anchors.verticalCenter: parent.verticalCenter
             }
 
-            Label {
+            Text {
                 id: label
                 text: parent.text + "\n" + slider.value.toFixed(floatLength)
                 color: "white"
@@ -419,12 +419,13 @@ Drawer {
             width: flick.itemWidth
             height: flick.itemHeight
             color: "transparent"
-            Label {
+            Text {
                 id: label
                 color: "white"
                 anchors.left: parent.left
                 anchors.leftMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
+                Component.onCompleted: console.log(font.family)
             }
             MouseArea {
                 anchors.fill: parent

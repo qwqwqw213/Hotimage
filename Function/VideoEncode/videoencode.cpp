@@ -109,6 +109,11 @@ QString VideoEncode::error()
     return p->error;
 }
 
+QString VideoEncode::filePath()
+{
+    return p->config.filePath;
+}
+
 void VideoEncode::run()
 {
     p->second = 0;

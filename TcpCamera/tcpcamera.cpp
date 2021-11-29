@@ -239,6 +239,8 @@ void TcpCamera::openRecode()
 #ifdef Q_OS_ANDROID
         if( p->encode->encoding() ) {
             p->encode->stopEncode();
+
+            emit msg(tr("Save record path:") + p->encode->filePath());
         }
         else {
             RecordConfig cfg;
@@ -296,7 +298,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
                 socket->connectToHost(cfg.ip, cfg.port);
                 while (!socket->waitForConnected(3000) && !exit) {
-                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
+//                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
                     socket->connectToHost(cfg.ip, cfg.port);
                 }
             }
@@ -309,20 +311,20 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
-            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
+//            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
             socket->connectToHost(cfg.ip, cfg.port);
         }
 
         if( !exit ) {
             emit f->connectStatusChanged();
-            emit f->msg(QString("connected"));
+//            emit f->msg(QString("connected"));
         }
     });
     QObject::connect(thread, &QThread::finished, [=](){
         socket->disconnectFromHost();
         socket->deleteLater();
         socket = NULL;
-        emit f->msg(QString("recv disconenct"));
+//        emit f->msg(QString("recv disconenct"));
 
 //        image = QImage();
         provider->release();
@@ -376,10 +378,10 @@ void TcpCameraPrivate::onReadyRead()
             provider->setEmptyRgbImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
 
             frameSize = convert().frameSize(cfg.cam.format, cfg.cam.w, cfg.cam.h);
-            emit f->msg(QString("handshake success\n"
-                             "camera width: %1 camera height: %2\n"
-                             "pixel format: %3")
-                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
+//            emit f->msg(QString("handshake success\n"
+//                             "camera width: %1 camera height: %2\n"
+//                             "pixel format: %3")
+//                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
             cfg.set.type = HandShake::__handshake;
             QByteArray byte = handshake.pack(cfg.set);
