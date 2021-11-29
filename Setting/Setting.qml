@@ -11,7 +11,8 @@ Drawer {
     Flickable {
         id: flick
         anchors.fill: parent
-        contentHeight: itemHeight * 13 + sectionHeight * 2
+//        contentHeight: itemHeight * 13 + sectionHeight * 3
+        contentHeight: column.implicitHeight
 
         property real itemWidth: width
         property real itemHeight: 60
@@ -213,6 +214,30 @@ Drawer {
                     color: "white"
                 }
             }
+
+            Loader {
+                sourceComponent: section
+                onLoaded: {
+                    item.text = qsTr("Language")
+                }
+            }
+
+            Loader {
+                sourceComponent: radioItem
+                onLoaded: {
+                    item.text = "简体中文"
+                    item.index = 1
+                }
+            }
+
+            Loader {
+                sourceComponent: radioItem
+                onLoaded: {
+                    item.text = "English"
+                    item.index = 0
+                    item.isBottom = true
+                }
+            }
         }
         ScrollIndicator.vertical: ScrollIndicator {
 
@@ -379,6 +404,96 @@ Drawer {
                 anchors.left: parent.left
                 anchors.leftMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+    }
+
+    Component {
+        id: radioItem
+        Rectangle {
+            id: item
+            property int index: 0
+            property alias text: label.text
+            property bool isBottom: false
+
+            width: flick.itemWidth
+            height: flick.itemHeight
+            color: "transparent"
+            Label {
+                id: label
+                color: "white"
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            MouseArea {
+                anchors.fill: parent
+                onReleased: {
+                    Config.setLanguage(parent.index)
+                }
+            }
+            Rectangle {
+                width: parent.width - 40
+                height: 1
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.bottom: parent.bottom
+                color: "white"
+                visible: !parent.isBottom
+            }
+
+            // icon
+            Text {
+                id: selectIcon
+                property real iwidth: parent.width > parent.height ?
+                                          parent.height * 0.5 : parent.width * 0.5
+                anchors.right: parent.right
+                anchors.rightMargin: iwidth
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: "FontAwesome"
+                font.pixelSize: iwidth
+                text: "\uf192"
+//                color: tcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
+
+                state: "noselection"
+                states: [
+                    State {
+                        name: "selection"
+                        when: Config.language === item.index
+                        PropertyChanges {
+                            target: selectIcon
+                            color: "#ffffff"
+                        }
+                    },
+                    State {
+                        name: "noselection"
+                        when: Config.language !== item.index
+                        PropertyChanges {
+                            target: selectIcon
+                            color: "#505050"
+                        }
+                    }
+                ]
+                transitions: [
+                    Transition {
+                        from: "selection"
+                        to: "noselection"
+
+                        ColorAnimation {
+                            target: selectIcon
+                            duration: 200
+                        }
+                    },
+                    Transition {
+                        from: "noselection"
+                        to: "selection"
+
+                        ColorAnimation {
+                            target: selectIcon
+                            duration: 200
+                        }
+                    }
+                ]
             }
         }
     }

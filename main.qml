@@ -144,6 +144,43 @@ Window {
 
             source: tcpCamera.isConnected ? tcpCamera.videoFrameUrl : ""
 
+            // 录像标志
+            Text {
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.top: parent.top
+                anchors.topMargin: 10
+                font.family: "FontAwesome"
+                font.pixelSize: 30
+                text: "\uf03d" + " " + tcpCamera.recordTime
+                color: "red"
+                visible: tcpCamera.encoding
+
+                SequentialAnimation on color {
+                    loops: Animation.Infinite
+                    running: visible
+                    ColorAnimation {
+                        from: "red"
+                        to: "black"
+                        duration: 800
+                    }
+                    ColorAnimation {
+                        from: "black"
+                        to: "red"
+                        duration: 800
+                    }
+                }
+
+//                Text {
+//                    anchors.left: parent.right
+//                    anchors.leftMargin: 20
+//                    anchors.verticalCenter: parent.verticalCenter
+//                    text: tcpCamera.recodeTime
+//                    font.pixelSize: 30
+//                    color: "red"
+//                }
+            }
+
             MouseArea {
                 anchors.fill: parent
                 onPressed: {
@@ -306,6 +343,33 @@ Window {
                     }
                 }
             }
+
+            // 录像按钮
+            Rectangle {
+                id: btnRecord
+                width: parent.width * 0.5
+                height: width
+                anchors.left: btnCapture.left
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: height / 2
+                color: "transparent"
+                Text {
+                    anchors.centerIn: parent
+                    font.family: "FontAwesome"
+                    font.pixelSize: btnRecord.width * 0.8
+                    text: "\uf03d"
+                    color: btnRecordArea.pressed ? "#a0a0a0" : "white"
+                    rotation: Config.rotation
+                }
+
+                MouseArea {
+                    id: btnRecordArea
+                    anchors.fill: parent
+                    onReleased: {
+                        tcpCamera.openRecode()
+                    }
+                }
+            }
         }
 
         MouseArea {
@@ -332,7 +396,7 @@ Window {
     Loading {
         visible: !tcpCamera.isConnected
         anchors.fill: parent
-        text: qsTr("Loading...")
+        text: qsTr("Camera connecting...")
     }
 
     // 消息注册

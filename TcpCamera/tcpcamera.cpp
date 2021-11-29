@@ -2,6 +2,8 @@
 
 #ifdef Q_OS_ANDROID
 #include "xtherm/thermometry.h"
+
+#include "VideoEncode/videoencode.h"
 #endif
 
 #include "QDebug"
@@ -25,6 +27,10 @@ class TcpCameraPrivate : public QObject
 public:
     explicit TcpCameraPrivate(TcpCamera *parent = nullptr);
     ~TcpCameraPrivate();
+
+#ifdef Q_OS_ANDROID
+    VideoEncode *encode;
+#endif
 
     ImageProvider *provider;
 
@@ -218,6 +224,50 @@ void TcpCamera::setShowTemp(const bool &show)
     emit showTempChanged();
 }
 
+bool TcpCamera::encoding()
+{
+#ifdef Q_OS_ANDROID
+    return p->encode->encoding();
+#else
+    return false;
+#endif
+}
+
+void TcpCamera::openRecode()
+{
+    if( isConnected() ) {
+#ifdef Q_OS_ANDROID
+        if( p->encode->encoding() ) {
+            p->encode->stopEncode();
+        }
+        else {
+            RecordConfig cfg;
+            QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+            path.append("/Hotimage/REC_");
+            path.append(QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
+            path.append(QString(".avi"));
+            cfg.filePath = path;
+            cfg.width = p->cfg.cam.w;
+            cfg.height = p->cfg.cam.h;
+            cfg.fps = 25;
+            cfg.encodePixel = p->encode->pixel(QImage::Format_RGB888);
+            p->encode->startEncode(cfg);
+        }
+
+        emit encodingChanged();
+#endif
+    }
+}
+
+QString TcpCamera::recordTime()
+{
+#ifdef Q_OS_ANDROID
+    return p->encode->recordTime();
+#else
+    return QString("00:00");
+#endif
+}
+
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     : QObject(nullptr)
 {
@@ -289,11 +339,22 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     });
     this->moveToThread(thread);
 
-
+#ifdef Q_OS_ANDROID
+    encode = new VideoEncode;
+    QObject::connect(encode, &VideoEncode::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
+    QObject::connect(encode, &VideoEncode::encodeFail, f, [=](){
+        encode->stopEncode();
+        emit f->encodingChanged();
+    }, Qt::QueuedConnection);
+#endif
 }
 
 TcpCameraPrivate::~TcpCameraPrivate()
 {
+#ifdef Q_OS_ANDROID
+    encode->stopEncode();
+    encode->deleteLater();
+#endif
     saveSetting();
     qDebug() << "tcp release";
 }
@@ -503,6 +564,10 @@ void TcpCameraPrivate::onReadyRead()
                         fontW, fontH,
                         Qt::AlignCenter,
                         str);
+        }
+
+        if( encode->encoding() ) {
+            encode->push(provider->image());
         }
 #endif
 

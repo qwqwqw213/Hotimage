@@ -15,5 +15,10 @@
         <file>sources/whitehot.jpg</file>
         <file>Loading/Loading.qml</file>
         <file>MessageBox/MessageBox.qml</file>
+        <file>sources/program_icon_high.png</file>
+        <file>sources/program_icon_low.png</file>
+        <file>sources/program_icon_mid.png</file>
+        <file>font/SourceHanSansCN-Normal.otf</file>
+        <file>translation/Cn.qm</file>
     </qresource>
 </RCC>

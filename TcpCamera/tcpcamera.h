@@ -65,6 +65,13 @@ public:
     bool showTemp();
     void setShowTemp(const bool &show);
 
+    Q_PROPERTY(bool encoding READ encoding NOTIFY encodingChanged)
+    bool encoding();
+    Q_INVOKABLE void openRecode();
+
+    Q_PROPERTY(QString recordTime READ recordTime NOTIFY recordTimeChanged)
+    QString recordTime();
+
 private:
     friend class TcpCameraPrivate;
     QScopedPointer<TcpCameraPrivate> p;
@@ -76,6 +83,8 @@ Q_SIGNALS:
     void connectStatusChanged();
     void paletteChanged();
     void showTempChanged();
+    void encodingChanged();
+    void recordTimeChanged();
 };
 
 #endif // RECV_H

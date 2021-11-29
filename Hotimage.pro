@@ -42,7 +42,7 @@ HEADERS += \
     ImageListModel/imagelistmodel.h \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
-    TcpCamera/tcpcamera.h
+    TcpCamera/tcpcamera.h \
 
 DEFINES += ANDROID_APP
 
@@ -57,6 +57,16 @@ QT += \
 
 HEADERS += \
     libs/xtherm/thermometry.h \
+    libs/ffmpeg/libavcodec/avcodec.h \
+    libs/ffmpeg/libavformat/avformat.h \
+    libs/ffmpeg/libavutil/avutil.h \
+    libs/ffmpeg/libswresample/swresample.h \
+    libs/ffmpeg/libswscale/swscale.h \
+    Function/VideoEncode/videoencode.h
+
+SOURCES += \
+    Function/VideoEncode/videoencode.cpp
+
 
 DISTFILES += \
     android/AndroidManifest.xml \
@@ -70,14 +80,32 @@ DISTFILES += \
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 
 LIBS += -L$$PWD/libs/armeabi-v7a/ \
-    -lthermometry
+    -lthermometry \
+    -lavcodec \
+    -lavfilter \
+    -lavformat \
+    -lavutil \
+    -lswresample \
+    -lswscale
 
 ANDROID_EXTRA_LIBS = \
-    $$PWD/libs/armeabi-v7a/libthermometry.so
+    $$PWD/libs/armeabi-v7a/libthermometry.so \
+    $$PWD/libs/armeabi-v7a/libavcodec.so \
+    $$PWD/libs/armeabi-v7a/libavfilter.so \
+    $$PWD/libs/armeabi-v7a/libavformat.so \
+    $$PWD/libs/armeabi-v7a/libavutil.so \
+    $$PWD/libs/armeabi-v7a/libswresample.so \
+    $$PWD/libs/armeabi-v7a/libswscale.so
 
 INCLUDEPATH += $$PWD/libs
 DEPENDPATH += $$PWD/libs
-}
+
+INCLUDEPATH += $$PWD/libs/ffmpeg
+DEPENDPATH += $$PWD/libs/ffmpeg
 
 DISTFILES += \
     android/src/org/qtproject/example/function.java
+}
+
+TRANSLATIONS += \
+    translation/Cn.ts

@@ -2,8 +2,10 @@
 #define CONFIG_H
 
 #include <QObject>
-#include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QApplication>
+
+#define REBOOT_CODE             (-1)
 
 class ConfigPrivate;
 class Config : public QObject
@@ -11,10 +13,15 @@ class Config : public QObject
     Q_OBJECT
 
 public:
+    enum Language
+    {
+        __en = 0,
+        __cn
+    };
     explicit Config(QObject *parent = nullptr);
     ~Config();
 
-    int init(QGuiApplication *a, QQmlApplicationEngine *e);
+    int init(QApplication *a, QQmlApplicationEngine *e);
 
     // 添加CONSTANT关键字
     // 屏蔽QML depends on non-NOTIFYable properties 警告
@@ -32,8 +39,13 @@ public:
     qreal rotation();
     Q_INVOKABLE void setRotation();
 
+    Q_PROPERTY(int language READ language NOTIFY languageChanged)
+    int language();
+    Q_INVOKABLE void setLanguage(const int &language);
+
 Q_SIGNALS:
     void rotationChanged();
+    void languageChanged();
 
 private:
     friend class ConfigPrivate;

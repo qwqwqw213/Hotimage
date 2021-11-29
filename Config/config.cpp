@@ -12,6 +12,7 @@
 #include "QDateTime"
 #include "QFontDatabase"
 #include "QThread"
+#include "QTranslator"
 
 #ifdef Q_OS_ANDROID
 #include "MadgwickAHRS.hpp"
@@ -49,6 +50,8 @@ public:
 
     QScreen *screen;
 
+    int language;
+
     void readSetting();
     void saveSetting();
 
@@ -68,12 +71,12 @@ Config::~Config()
 
 }
 
-int Config::init(QGuiApplication *gui, QQmlApplicationEngine *e)
+int Config::init(QApplication *a, QQmlApplicationEngine *e)
 {
     // 读配置文件
     p->readSetting();
 
-    p->screen = QGuiApplication::primaryScreen();
+    p->screen = QApplication::primaryScreen();
     p->screen->setOrientationUpdateMask(Qt::PortraitOrientation |
                                      Qt::LandscapeOrientation |
                                      Qt::InvertedLandscapeOrientation |
@@ -93,9 +96,24 @@ int Config::init(QGuiApplication *gui, QQmlApplicationEngine *e)
 #endif
     qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height;
 
-    e->rootContext()->setContextProperty("Config", this);
+    QFontDatabase fd;
+    QVector<int> fontIndex;
+    fontIndex.append(fd.addApplicationFont(":/font/fontawesome-webfont.ttf"));
+    fontIndex.append(fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf"));
+    for(int i = 0; i < fontIndex.size(); i ++) {
+        if( fontIndex.at(i) >= 0 ) {
+            qDebug() << "font:" << i << fd.applicationFontFamilies(i);
+            if( i == 1 ) {
+                QFont font = a->font();
+                font.setFamily(QFontDatabase::applicationFontFamilies(i).at(0));
+                a->setFont(font);
+            }
+        }
+    }
 
-    //    qmlRegisterType<TcpCamera>("tcpcamera", 1, 0, "TcpCamera");
+    p->androidInterface = new AndroidInterface(this);
+
+    e->rootContext()->setContextProperty("Config", this);
 
     p->imageModel.reset(new ImageListModel);
 #ifdef Q_OS_ANDROID
@@ -118,17 +136,8 @@ int Config::init(QGuiApplication *gui, QQmlApplicationEngine *e)
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
 
-    p->androidInterface = new AndroidInterface(this);
-
-    QFontDatabase fd;
-    int fontIndex = fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
-    if( fontIndex >= 0 ) {
-        qDebug() << fd.applicationFontFamilies(fontIndex);
-    }
     return 1;
 }
-
-
 
 int Config::width()
 {
@@ -171,6 +180,20 @@ void Config::setRotation()
     }
     emit rotationChanged();
 #endif
+}
+
+int Config::language()
+{
+    return p->language;
+}
+
+void Config::setLanguage(const int &language)
+{
+    if( p->language != language ) {
+        p->language = language;
+        emit languageChanged();
+        qApp->exit(REBOOT_CODE);
+    }
 }
 
 ConfigPrivate::ConfigPrivate(Config *parent)
@@ -276,11 +299,12 @@ void ConfigPrivate::readSetting()
 #ifdef Q_OS_ANDROID
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
 #else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
+    QString path = QApplication::applicationDirPath() + QString("/setting.ini");
 #endif
     qDebug() << "read setting path:" << path;
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
+    language = s->value("Language/Value", 0).toInt();
 
     delete s;
     s = NULL;
@@ -291,11 +315,11 @@ void ConfigPrivate::saveSetting()
 #ifdef Q_OS_ANDROID
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
 #else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
+    QString path = QApplication::applicationDirPath() + QString("/setting.ini");
 #endif
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
-
+    s->setValue("Language/Value", language);
 
     s->sync();
     delete s;
