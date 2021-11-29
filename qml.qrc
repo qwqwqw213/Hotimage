@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>ImageListModel/ImageListView.qml</file>
+        <file>ImageListModel/ImageView.qml</file>
+        <file>ImageListModel/ImagePlayer.qml</file>
+        <file>ImageListModel/AlbumScanDelegate.qml</file>
+        <file>Setting/Setting.qml</file>
+        <file>font/fontawesome-webfont.ttf</file>
+        <file>sources/blackhot.jpg</file>
+        <file>sources/HCR.jpg</file>
+        <file>sources/iron.jpg</file>
+        <file>sources/irongray.jpg</file>
+        <file>sources/rainbow.jpg</file>
+        <file>sources/whitehot.jpg</file>
+        <file>Loading/Loading.qml</file>
+        <file>MessageBox/MessageBox.qml</file>
+    </qresource>
+</RCC>
