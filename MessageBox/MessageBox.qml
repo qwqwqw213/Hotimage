@@ -13,14 +13,16 @@ Rectangle {
     radius: 5
     visible: false
 
-    property real _opacity: 1
-    property real _y: 10
+    property real newOpacity: 1
+    property real newY: 10
     property bool toshow: true
     property alias text: text.text
+    property alias contentWidth: text.contentWidth
+    property alias textW: text.width
 
     onVisibleChanged: {
-        _opacity = 1
-        _y = 10
+        newOpacity = 1
+        newY = 10
         toshow = true
         if( visible ) {
             animation.running = true
@@ -29,9 +31,9 @@ Rectangle {
 
     function showMsg(text) {
         rect.text = text
-        rect.visible = true
-        _opacity = 1
-        _y = 10
+        visible = true
+        newOpacity = 1
+        newY = 10
         toshow = true
         animation.running = true
     }
@@ -41,18 +43,20 @@ Rectangle {
         opacity: rect.opacity
         font.pixelSize: 20
         color: "white"
-        text: qsTr("text rwerwerwer")
-        wrapMode: contentWidth > parent.width ? Text.WordWrap : Text.NoWrap
+        wrapMode: Text.Wrap
+//        anchors.fill: parent
+        width: parent.width - 20
+        height: parent.height - 20
         anchors.centerIn: parent
-        Component.onCompleted: console.log(contentWidth, contentHeight)
+        onContentWidthChanged: console.log(contentWidth, parent.width, width)
     }
 
     Timer {
         id: timer
         interval: 2000
         onTriggered: {
-            rect._y = 0 - rect.height
-            rect._opacity = 0
+            rect.newY = 0 - rect.height
+            rect.newOpacity = 0
             rect.toshow = false
             animation.running = true
         }
@@ -63,7 +67,7 @@ Rectangle {
         YAnimator {
             target: rect
             from: rect.y
-            to: rect._y
+            to: rect.newY
             duration: 200
             easing.type: Easing.OutCurve
         }
@@ -71,7 +75,7 @@ Rectangle {
         OpacityAnimator {
             target: rect
             from: rect.opacity
-            to: rect._opacity
+            to: rect.newOpacity
             duration: 200
             easing.type: Easing.OutCurve
         }

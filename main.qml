@@ -40,7 +40,7 @@ Window {
 
     Rectangle {
         id: mainView
-        anchors.fill: parent
+//        anchors.fill: parent
         color: "black"
 
         // 顶部按钮栏
@@ -141,7 +141,6 @@ Window {
             height: parent.height
             x: parent.width * 0.1
             y: 0
-
             source: tcpCamera.isConnected ? tcpCamera.videoFrameUrl : ""
 
             // 录像标志
@@ -313,10 +312,7 @@ Window {
                     }
                     onReleased: {
                         btnPhoto.m_scale = 1.0
-                        var component = Qt.createComponent("qrc:/ImageListModel/ImageListView.qml")
-                        if( component.status === Component.Ready ) {
-                            var obj = component.createObject(mainView)
-                        }
+                        stackView.push("qrc:/ImageListModel/ImageListView.qml")
                     }
                 }
 
@@ -393,6 +389,49 @@ Window {
         }
     }
 
+    StackView {
+        id: stackView
+        anchors.fill: parent
+        initialItem: mainView
+
+        pushEnter: Transition {
+            YAnimator {
+                target: stackView.currentItem
+                from: height
+                to: 0
+                duration: 200
+                easing.type: Easing.OutCurve
+            }
+        }
+        pushExit: Transition {
+            YAnimator {
+                target: stackView.currentItem
+                from: 0
+                to: 0 - height
+                duration: 200
+                easing.type: Easing.OutCurve
+            }
+        }
+        popEnter: Transition {
+            YAnimator {
+                target: stackView.currentItem
+                from: 0 - height
+                to: 0
+                duration: 200
+                easing.type: Easing.OutCurve
+            }
+        }
+        popExit: Transition {
+            YAnimator {
+                target: stackView.currentItem
+                from: 0
+                to: height
+                duration: 200
+                easing.type: Easing.OutCurve
+            }
+        }
+    }
+
     Loading {
         visible: !tcpCamera.isConnected
         anchors.fill: parent
@@ -414,5 +453,8 @@ Window {
 
     MessageBox {
         id: messagebox
+        z: 100
     }
+
+    Component.onCompleted: messagebox.showMsg("123456")
 }

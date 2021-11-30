@@ -653,12 +653,12 @@ void TcpCameraPrivate::capture()
 
                 path.append("/IMG_" + fileName);
                 bool flag = pix.save(path, "JPG");
-                qDebug() << "capture:" << flag << ", capture path:" << path;
                 if( flag ) {
-                    emit f->msg(QString("capture success %1").arg(path.right(path.length() - path.lastIndexOf('/') - 1)));
+//                    emit f->msg(QString("capture success %1").arg(path.right(path.length() - path.lastIndexOf('/') - 1)));
+                    qDebug() << "capture success:" << path;
                 }
                 else {
-                    emit f->msg(QString("captrue fail"));
+                    emit f->msg(tr("Captrue fail"));
                 }
             }
             else {

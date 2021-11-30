@@ -75,6 +75,7 @@ bool VideoEncode::stopEncode()
         this->requestInterruption();
         this->wait();
         p->imgQueue.clear();
+        p->second = 0;
     }
     return true;
 }

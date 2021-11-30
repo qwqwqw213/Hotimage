@@ -425,7 +425,6 @@ Drawer {
                 anchors.left: parent.left
                 anchors.leftMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
-                Component.onCompleted: console.log(font.family)
             }
             MouseArea {
                 anchors.fill: parent
