@@ -99,7 +99,7 @@ Window {
                     id: btnShutterArea
                     anchors.fill: parent
                     onReleased: {
-                        tcpCamera.shutter()
+                        TcpCamera.shutter()
                     }
                 }
             }
@@ -120,7 +120,7 @@ Window {
                     font.family: "FontAwesome"
                     font.pixelSize: btnSetting.width * 0.8
                     text: "\uf2cb"
-                    color: tcpCamera.showTemp ? "#dc143c" : "#696969"
+                    color: TcpCamera.showTemp ? "#dc143c" : "#696969"
                     rotation: window.oldRotation
                 }
 
@@ -128,7 +128,7 @@ Window {
                     id: btnTempSettingArea
                     anchors.fill: parent
                     onReleased: {
-                        tcpCamera.showTemp = !tcpCamera.showTemp
+                        TcpCamera.showTemp = !TcpCamera.showTemp
                     }
                 }
             }
@@ -141,7 +141,7 @@ Window {
             height: parent.height
             x: parent.width * 0.1
             y: 0
-            source: tcpCamera.isConnected ? tcpCamera.videoFrameUrl : ""
+            source: TcpCamera.isConnected ? TcpCamera.videoFrameUrl : ""
 
             // 录像标志
             Text {
@@ -151,9 +151,9 @@ Window {
                 anchors.topMargin: 10
                 font.family: "FontAwesome"
                 font.pixelSize: 30
-                text: "\uf03d" + " " + tcpCamera.recordTime
+                text: "\uf03d" + " " + TcpCamera.recordTime
                 color: "red"
-                visible: tcpCamera.encoding
+                visible: TcpCamera.encoding
 
                 SequentialAnimation on color {
                     loops: Animation.Infinite
@@ -174,7 +174,7 @@ Window {
 //                    anchors.left: parent.right
 //                    anchors.leftMargin: 20
 //                    anchors.verticalCenter: parent.verticalCenter
-//                    text: tcpCamera.recodeTime
+//                    text: TcpCamera.recodeTime
 //                    font.pixelSize: 30
 //                    color: "red"
 //                }
@@ -252,7 +252,7 @@ Window {
                     pressAndHoldInterval: 100
                     onReleased: {
                         btnCaptureTimer.start()
-                        tcpCamera.capture()
+                        TcpCamera.capture()
                         captureAnimationView.start()
                     }
                     onPressAndHold: {
@@ -297,7 +297,7 @@ Window {
 
                 Image {
                     id: btnPhotoImage
-                    source: imageModel.newImageUrl
+                    source: ImageModel.newImageUrl
                     width: parent.width * 0.8 * btnPhoto.m_scale
                     height: parent.height * 0.8 * btnPhoto.m_scale
                     anchors.centerIn: parent
@@ -317,7 +317,7 @@ Window {
                 }
 
                 Connections {
-                    target: imageModel
+                    target: ImageModel
                     onNewImageChanged: {
                         btnPhoto.m_scale = 0.5
                         btnPhotoTimer.start()
@@ -362,7 +362,7 @@ Window {
                     id: btnRecordArea
                     anchors.fill: parent
                     onReleased: {
-                        tcpCamera.openRecode()
+                        TcpCamera.openRecode()
                     }
                 }
             }
@@ -430,17 +430,19 @@ Window {
                 easing.type: Easing.OutCurve
             }
         }
+
+
     }
 
     Loading {
-        visible: !tcpCamera.isConnected
+        visible: !TcpCamera.isConnected
         anchors.fill: parent
         text: qsTr("Camera connecting...")
     }
 
     // 消息注册
     Connections {
-        target: tcpCamera
+        target: TcpCamera
         onMsg: {
 //            console.log(str)
             messagebox.showMsg(str)
@@ -455,6 +457,4 @@ Window {
         id: messagebox
         z: 100
     }
-
-    Component.onCompleted: messagebox.showMsg("123456")
 }

@@ -100,7 +100,7 @@ Drawer {
                     item.from = 0
                     item.to = 1
                     item.step = 0.01
-                    item.value = tcpCamera.emiss
+                    item.value = TcpCamera.emiss
                     item.text = qsTr("Emiss")
                     item.floatLength = 2
                 }
@@ -113,7 +113,7 @@ Drawer {
                     item.from = -20
                     item.to = 120
                     item.step = 0.1
-                    item.value = tcpCamera.reflected
+                    item.value = TcpCamera.reflected
                     item.text = qsTr("Reflected")
                 }
             }
@@ -125,7 +125,7 @@ Drawer {
                     item.from = -20
                     item.to = 120
                     item.step = 0.1
-                    item.value = tcpCamera.ambient
+                    item.value = TcpCamera.ambient
                     item.text = qsTr("Ambient")
                 }
             }
@@ -137,7 +137,7 @@ Drawer {
                     item.from = -20
                     item.to = 120
                     item.step = 0.1
-                    item.value = tcpCamera.humidness
+                    item.value = TcpCamera.humidness
                     item.text = qsTr("Humidness")
                 }
             }
@@ -149,7 +149,7 @@ Drawer {
                     item.from = 0
                     item.to = 3
                     item.step = 0.01
-                    item.value = tcpCamera.correction
+                    item.value = TcpCamera.correction
                     item.text = qsTr("Correction")
                     item.floatLength = 2
                 }
@@ -162,7 +162,7 @@ Drawer {
                     item.from = 0
                     item.to = 50
                     item.step = 1
-                    item.value = tcpCamera.distance
+                    item.value = TcpCamera.distance
                     item.text = qsTr("Distance")
                 }
             }
@@ -183,7 +183,7 @@ Drawer {
                                     humidnessSlider.item.value,
                                     correctionSlider.item.value,
                                     distanceSlider.item.value)
-                        tcpCamera.setCameraParam(emissSlider.item.value,
+                        TcpCamera.setCameraParam(emissSlider.item.value,
                                                  reflectedSlider.item.value,
                                                  ambientSlider.item.value,
                                                  humidnessSlider.item.value,
@@ -233,9 +233,9 @@ Drawer {
             Loader {
                 sourceComponent: radioItem
                 onLoaded: {
+                    item.isBottom = true
                     item.text = "English"
                     item.index = 0
-                    item.isBottom = true
                 }
             }
         }
@@ -245,12 +245,12 @@ Drawer {
 
         onVisibleChanged: {
             if( visible === true ) {
-                emissSlider.item.value = tcpCamera.emiss
-                reflectedSlider.item.value = tcpCamera.reflected
-                ambientSlider.item.value = tcpCamera.ambient
-                humidnessSlider.item.value = tcpCamera.humidness
-                correctionSlider.item.value = tcpCamera.correction
-                distanceSlider.item.value = tcpCamera.distance
+                emissSlider.item.value = TcpCamera.emiss
+                reflectedSlider.item.value = TcpCamera.reflected
+                ambientSlider.item.value = TcpCamera.ambient
+                humidnessSlider.item.value = TcpCamera.humidness
+                correctionSlider.item.value = TcpCamera.correction
+                distanceSlider.item.value = TcpCamera.distance
             }
         }
     }
@@ -304,7 +304,7 @@ Drawer {
             MouseArea {
                 anchors.fill: parent
                 onReleased: {
-                    tcpCamera.setPalette(parent.paletteIndex)
+                    TcpCamera.setPalette(parent.paletteIndex)
                 }
             }
 
@@ -328,13 +328,13 @@ Drawer {
                 font.family: "FontAwesome"
                 font.pixelSize: iwidth
                 text: "\uf192"
-//                color: tcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
+//                color: TcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
 
                 state: "noselection"
                 states: [
                     State {
                         name: "selection"
-                        when: tcpCamera.palette === item.paletteIndex
+                        when: TcpCamera.palette === item.paletteIndex
                         PropertyChanges {
                             target: selectIcon
                             color: "#ffffff"
@@ -342,7 +342,7 @@ Drawer {
                     },
                     State {
                         name: "noselection"
-                        when: tcpCamera.palette !== item.paletteIndex
+                        when: TcpCamera.palette !== item.paletteIndex
                         PropertyChanges {
                             target: selectIcon
                             color: "#505050"
@@ -453,7 +453,7 @@ Drawer {
                 font.family: "FontAwesome"
                 font.pixelSize: iwidth
                 text: "\uf192"
-//                color: tcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
+//                color: TcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
 
                 state: "noselection"
                 states: [

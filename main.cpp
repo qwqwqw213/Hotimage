@@ -2,11 +2,8 @@
 
 #include "Config/config.h"
 
-#include "QDateTime"
 #include "QDebug"
 #include "QSurfaceFormat"
-#include "QTranslator"
-#include "QFontDatabase"
 
 int main(int argc, char *argv[])
 {
@@ -19,17 +16,6 @@ int main(int argc, char *argv[])
         QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
         QApplication app(argc, argv);
-
-        QFontDatabase fd;
-        int fontIndex = fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf");
-        if( fontIndex >= 0 ) {
-            QFont font = app.font();
-            QString family = QFontDatabase::applicationFontFamilies(fontIndex).at(0);
-            font.setFamily(family);
-            qDebug() << "set font family:" << family;
-            app.setFont(font);
-        }
-        fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
 
         QSurfaceFormat format;
         format.setSamples(8);
@@ -47,6 +33,7 @@ int main(int argc, char *argv[])
         }, Qt::QueuedConnection);
 
         engine.load(url);
+
         exitCode = app.exec();
     } while(exitCode == REBOOT_CODE);
 

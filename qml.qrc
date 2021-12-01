@@ -2,7 +2,6 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>ImageListModel/ImageListView.qml</file>
-        <file>ImageListModel/ImageView.qml</file>
         <file>ImageListModel/ImagePlayer.qml</file>
         <file>ImageListModel/AlbumScanDelegate.qml</file>
         <file>Setting/Setting.qml</file>

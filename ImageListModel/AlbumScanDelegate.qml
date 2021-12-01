@@ -1,9 +1,9 @@
 import QtQuick 2.11
 
 Rectangle{
-    id:wrapper
+    id: wrapper
     property bool pinchAreaBool: true
-    color:"black"
+    color: "transparent"
 
     property real initWidth : Math.min(width,height)
     property real initHeight: Math.max(width,height)
@@ -54,9 +54,10 @@ Rectangle{
               flick.contentY += pinch.previousCenter.y - pinch.center.y
 
               // resize content
-              flick.resizeContent((initialWidth * pinch.scale)<root.width?root.width:(initialWidth * pinch.scale),
-                                  (initialHeight * pinch.scale)<root.height?root.height:(initialHeight * pinch.scale), pinch.center)
-              console.log(pinch.scale)
+              flick.resizeContent((initialWidth * pinch.scale)< imagePlayer.width ?
+                                      imagePlayer.width : (initialWidth * pinch.scale),
+                                  (initialHeight * pinch.scale)< imagePlayer.height ?
+                                      imagePlayer.height : (initialHeight * pinch.scale), pinch.center)
           }
 
           onPinchFinished: {
@@ -66,11 +67,13 @@ Rectangle{
           }
 
           Image {
-              id:image
+              id: image
+              opacity: wrapper.opacity
               width: flick.contentWidth - 10
               height: flick.contentHeight - 10
               cache: true
-              source: photoScan.model.folder + fileName
+//              source: photoScan.model.folder + fileName
+              source: path
               anchors.centerIn: parent
               asynchronous: true
               fillMode: Image.PreserveAspectFit

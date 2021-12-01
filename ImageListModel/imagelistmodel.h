@@ -19,14 +19,17 @@ public:
 
     void search(const QString &path);
 
-    int rowCount(const QModelIndex &parent) const;
-    QVariant data(const QModelIndex &index, int role) const;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
     QHash<int, QByteArray> roleNames() const;
 
     Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentIndexChanged)
     int currentIndex();
     Q_INVOKABLE void setCurrentIndex(const int &index);
+
+    Q_PROPERTY(QString name READ name CONSTANT)
+    QString name();
 
     Q_PROPERTY(QString newImageUrl READ newImageUrl NOTIFY newImageChanged)
     QString newImageUrl();

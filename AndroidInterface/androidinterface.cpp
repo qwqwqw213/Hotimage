@@ -3,6 +3,7 @@
 #ifdef Q_OS_ANDROID
 #include "QAndroidJniObject"
 #include "QtAndroid"
+#include "QAndroidJniEnvironment"
 #include "QDebug"
 #endif
 
@@ -80,6 +81,38 @@ AndroidInterface::AndroidInterface(QObject *parent)
 AndroidInterface::~AndroidInterface()
 {
 
+}
+
+void AndroidInterface::setRotationScreen(const int &index)
+{
+    if( index < __unspecified
+            || index > __portrait ) {
+        return;
+    }
+#ifdef Q_OS_ANDROID
+    QAndroidJniEnvironment env;
+    QAndroidJniObject activity = QtAndroid::androidActivity();
+
+    jint orient = activity.callMethod<jint>( "getRequestedOrientation" );   // 调用Android SDK方法，获取当前屏幕显示方向
+    if(env->ExceptionCheck())       //异常捕获
+    {
+        qDebug() << "exception occured when get";
+        env->ExceptionClear();
+    }
+    qDebug() << "set ratation:" << index << "current:" << orient;
+    if( orient == index ) {
+        return;
+    }
+
+    orient = index;
+    activity.callMethod<void>("setRequestedOrientation", "(I)V", orient);   // 调用Android SDK方法，设置屏幕方向
+    if(env->ExceptionCheck())       //异常捕获
+    {
+        qDebug() << "exception occured when set";
+        env->ExceptionClear();
+    }
+    qDebug() << "now screen orientation = " << orient;
+#endif
 }
 
 AndroidInterfacePrivate::AndroidInterfacePrivate(AndroidInterface *parent)

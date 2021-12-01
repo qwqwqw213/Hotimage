@@ -9,6 +9,8 @@ import android.os.Bundle;
 
 import android.content.Context;
 
+import android.view.WindowManager;
+
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -36,6 +38,9 @@ public class function extends QtActivity {
         super.onCreate(savedInstanceState);
         System.out.println("java on craete");
         this.context = this;
+
+        // 屏幕常亮
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         //获取Sensor
@@ -111,7 +116,7 @@ public class function extends QtActivity {
         } else {
             return;
         }
-        System.out.printf("rotation changed: %d", oldRotation);
+        System.out.printf("java rotation changed: %d", oldRotation);
     }
 
     @Override

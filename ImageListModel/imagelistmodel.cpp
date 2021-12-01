@@ -109,7 +109,9 @@ bool ImageListModel::setData(const QModelIndex &index, const QVariant &value, in
                     p->removeCount ++;
                 }
                 if( old == 1 & flag == 0 ) {
-                    p->removeCount --;
+                    if( p->removeCount > 0 ) {
+                        p->removeCount --;
+                    }
                 }
             }
             std::get<2>(d) = flag;
@@ -146,6 +148,15 @@ void ImageListModel::setCurrentIndex(const int &index)
     emit currentIndexChanged();
 }
 
+QString ImageListModel::name()
+{
+    if( p->currentIndex >= 0 ) {
+        auto d = p->list.at(p->currentIndex);
+        return std::get<0>(d);
+    }
+    return QString("");
+}
+
 QString ImageListModel::newImageUrl()
 {
     if( p->list.size() > 0 ) {
@@ -163,6 +174,21 @@ bool ImageListModel::selectionStatus()
 void ImageListModel::setSelectionStatus(const bool &status)
 {
     p->selectionStatus = status;
+    if( !status && p->removeCount > 0 ) {
+        // 重置选中状态
+        int i = p->removeStart;
+        int count = 0;
+        while (true) {
+            if( i >= p->list.size() || count == p->removeCount ) {
+                break;
+            }
+            auto d = p->list.at(i);
+            if( std::get<2>(d) ) {
+                setData(index(i), 0, __selection);
+            }
+            i ++;
+        }
+    }
     p->removeCount = 0;
     p->removeStart = p->list.size();
     emit selectionStatusChanged();

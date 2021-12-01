@@ -8,7 +8,7 @@ Item {
 //    height: parent.height
     onVisibleChanged: {
         if( !visible ) {
-            imageModel.selectionStatus = false
+            ImageModel.selectionStatus = false
         }
     }
 
@@ -27,7 +27,7 @@ Item {
             height: parent.height - 60
             cellWidth: width / 4
             cellHeight: width / 4
-            model: imageModel
+            model: ImageModel
 
             delegate: Rectangle {
                 width: imageList.cellWidth
@@ -64,16 +64,7 @@ Item {
                         font.pixelSize: 30
                         text: selection ? "\uf192" : "\uf10c"
                         color: selection ? "#6f9f9f" : "white"
-                        visible: imageModel.selectionStatus
-                    }
-                }
-
-                Connections {
-                    target: imageModel
-                    onSelectionStatusChanged : {
-                        if( !imageModel.selectionStatus ) {
-                            selection = 0
-                        }
+                        visible: ImageModel.selectionStatus
                     }
                 }
 
@@ -82,13 +73,15 @@ Item {
                     id:mouseArea
                     anchors.fill: parent
                     onClicked: {
-                        imageModel.currentIndex = index
-                        if( imageModel.selectionStatus ) {
+                        ImageModel.currentIndex = index
+                        imagePlayer.show(index)
+
+                        if( ImageModel.selectionStatus ) {
                             selection = !selection
                         }
                     }
                     onPositionChanged: {
-                        if( imageModel.selectionStatus ) {
+                        if( ImageModel.selectionStatus ) {
                         }
                     }
                 }
@@ -141,6 +134,7 @@ Item {
             height: 60
             color: "#2f4f4f"
 
+            // 返回按钮
             Rectangle {
                 id: btnReturn
                 width: 60
@@ -158,7 +152,11 @@ Item {
                 MouseArea {
                     id: btnReturnArea
                     anchors.fill: parent
-                    onClicked: stackView.pop()
+                    onClicked: {
+                        AndroidApi.setRotationScreen(0)
+                        stackView.pop()
+                    }
+
                 }
 
                 Text {
@@ -190,9 +188,9 @@ Item {
                     property bool selectionStatus: false
                     onClicked: {
                         selectionStatus = !selectionStatus
-                        imageModel.selectionStatus = selectionStatus
+                        ImageModel.selectionStatus = selectionStatus
 
-                        bottom.state = imageModel.selectionStatus ? "show" : "hide"
+                        bottom.state = ImageModel.selectionStatus ? "show" : "hide"
                     }
                 }
 
@@ -232,7 +230,7 @@ Item {
                 MouseArea {
                     id: btnDeleteArea
                     anchors.fill: parent
-                    onClicked: imageModel.removeSelection()
+                    onClicked: ImageModel.removeSelection()
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -285,10 +283,21 @@ Item {
     }
 
     Connections {
-        target: imageModel
+        target: ImageModel
         onCurrentIndexChanged: {
 
         }
+    }
+
+    ImagePlayer {
+        id: imagePlayer
+//        visible: false
+        visible: true
+    }
+
+    StackView.onActivated: {
+//        console.log("123")
+        AndroidApi.setRotationScreen(-1)
     }
 
     signal currentIndexChanged(var index, var source)

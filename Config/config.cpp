@@ -43,8 +43,8 @@ public:
     qreal accelerometer_z;
 #endif
 
-    AndroidInterface *androidInterface;
 
+    QScopedPointer<AndroidInterface> androidInterface;
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
 
@@ -56,6 +56,7 @@ public:
     void saveSetting();
 
     QTranslator *ts;
+    QFontDatabase fd;
 
 private:
     Config *f;
@@ -101,6 +102,18 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
         break;
     }
 
+    // 字库加载
+
+    int fontIndex = p->fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf");
+    if( fontIndex >= 0 ) {
+        QFont font = a->font();
+        QString family = QFontDatabase::applicationFontFamilies(fontIndex).at(0);
+        font.setFamily(family);
+        qDebug() << "set font family:" << family;
+        a->setFont(font);
+    }
+    p->fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
+
     p->screen = QApplication::primaryScreen();
     p->screen->setOrientationUpdateMask(Qt::PortraitOrientation |
                                      Qt::LandscapeOrientation |
@@ -108,7 +121,7 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
                                      Qt::InvertedPortraitOrientation);
     QObject::connect(p->screen, static_cast<void (QScreen::*)(Qt::ScreenOrientation)>(&QScreen::orientationChanged),
                      [=](Qt::ScreenOrientation orientation){
-        qDebug() << "orientationChanged screen:" << orientation << p->screen->availableGeometry();
+//        qDebug() << "orientationChanged screen:" << orientation << p->screen->availableGeometry();
     });
 
     QRect r = p->screen->availableGeometry();
@@ -121,10 +134,14 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
 #endif
     qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height;
 
-    p->androidInterface = new AndroidInterface(this);
+    // 安卓模块
+    p->androidInterface.reset(new AndroidInterface);
+    e->rootContext()->setContextProperty("AndroidApi", p->androidInterface.data());
 
+    // 配置模块
     e->rootContext()->setContextProperty("Config", this);
 
+    // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
 #ifdef Q_OS_ANDROID
     QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
@@ -135,12 +152,13 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
 #else
     p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
 #endif
-    e->rootContext()->setContextProperty("imageModel", p->imageModel.data());
+    e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
 
+    // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
     ImageProvider *provider = p->tcpCamera->provider();
     e->addImageProvider(provider->url(), provider);
-    e->rootContext()->setContextProperty("tcpCamera", p->tcpCamera.data());
+    e->rootContext()->setContextProperty("TcpCamera", p->tcpCamera.data());
 
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
