@@ -49,7 +49,22 @@ DEFINES += ANDROID_APP
 DEPENDPATH += $$PWD/Function
 INCLUDEPATH += $$PWD/Function
 
+greaterThan(QT_MAJOR_VERSION,4){
+        TARGET_ARCH=$${QT_ARCH}
+}else{
+        TARGET_ARCH=$${QMAKE_HOST.arch}
+}
+
+
+
 android {
+
+contains(TARGET_ARCH, arm64-v8a){
+BUILD_LIB=arm64-v8a
+} else {
+BUILD_LIB=armeabi-v7a
+}
+
 
 QT += \
     androidextras \
@@ -62,10 +77,10 @@ HEADERS += \
     libs/ffmpeg/libavutil/avutil.h \
     libs/ffmpeg/libswresample/swresample.h \
     libs/ffmpeg/libswscale/swscale.h \
-    Function/VideoEncode/videoencode.h
+    Function/VideoProcess/videoprocess.h
 
 SOURCES += \
-    Function/VideoEncode/videoencode.cpp
+    Function/VideoProcess/videoprocess.cpp
 
 
 DISTFILES += \
@@ -79,7 +94,28 @@ DISTFILES += \
 
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 
-LIBS += -L$$PWD/libs/armeabi-v7a/ \
+
+message("build lib:" $$BUILD_LIB)
+
+#LIBS += -L$$PWD/libs/armeabi-v7a/ \
+#    -lthermometry \
+#    -lavcodec \
+#    -lavfilter \
+#    -lavformat \
+#    -lavutil \
+#    -lswresample \
+#    -lswscale
+
+#ANDROID_EXTRA_LIBS = \
+#    $$PWD/libs/armeabi-v7a/libthermometry.so \
+#    $$PWD/libs/armeabi-v7a/libavcodec.so \
+#    $$PWD/libs/armeabi-v7a/libavfilter.so \
+#    $$PWD/libs/armeabi-v7a/libavformat.so \
+#    $$PWD/libs/armeabi-v7a/libavutil.so \
+#    $$PWD/libs/armeabi-v7a/libswresample.so \
+#    $$PWD/libs/armeabi-v7a/libswscale.so
+
+LIBS += -L$$PWD/libs/arm64-v8a/ \
     -lthermometry \
     -lavcodec \
     -lavfilter \
@@ -89,13 +125,14 @@ LIBS += -L$$PWD/libs/armeabi-v7a/ \
     -lswscale
 
 ANDROID_EXTRA_LIBS = \
-    $$PWD/libs/armeabi-v7a/libthermometry.so \
-    $$PWD/libs/armeabi-v7a/libavcodec.so \
-    $$PWD/libs/armeabi-v7a/libavfilter.so \
-    $$PWD/libs/armeabi-v7a/libavformat.so \
-    $$PWD/libs/armeabi-v7a/libavutil.so \
-    $$PWD/libs/armeabi-v7a/libswresample.so \
-    $$PWD/libs/armeabi-v7a/libswscale.so
+    $$PWD/libs/arm64-v8a/libthermometry.so \
+    $$PWD/libs/arm64-v8a/libavcodec.so \
+    $$PWD/libs/arm64-v8a/libavfilter.so \
+    $$PWD/libs/arm64-v8a/libavformat.so \
+    $$PWD/libs/arm64-v8a/libavutil.so \
+    $$PWD/libs/arm64-v8a/libswresample.so \
+    $$PWD/libs/arm64-v8a/libswscale.so
+
 
 INCLUDEPATH += $$PWD/libs
 DEPENDPATH += $$PWD/libs

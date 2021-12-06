@@ -137,6 +137,7 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
     // 安卓模块
     p->androidInterface.reset(new AndroidInterface);
     e->rootContext()->setContextProperty("AndroidApi", p->androidInterface.data());
+    p->androidInterface->requestPhotoWritePermission();
 
     // 配置模块
     e->rootContext()->setContextProperty("Config", this);
@@ -152,11 +153,13 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
 #else
     p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
 #endif
+    ImageProvider *provider = p->imageModel->provider();
+    e->addImageProvider(provider->url(), provider);
     e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
 
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
-    ImageProvider *provider = p->tcpCamera->provider();
+    provider = p->tcpCamera->provider();
     e->addImageProvider(provider->url(), provider);
     e->rootContext()->setContextProperty("TcpCamera", p->tcpCamera.data());
 

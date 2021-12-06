@@ -141,7 +141,8 @@ Window {
             height: parent.height
             x: parent.width * 0.1
             y: 0
-            source: TcpCamera.isConnected ? TcpCamera.videoFrameUrl : ""
+            source: TcpCamera.isConnected ?
+                        (stackView.depth == 1 ? TcpCamera.videoFrameUrl : "") : ""
 
             // 录像标志
             Text {
@@ -295,13 +296,45 @@ Window {
                 anchors.topMargin: height / 2
                 color: "transparent"
 
-                Image {
-                    id: btnPhotoImage
-                    source: ImageModel.newImageUrl
-                    width: parent.width * 0.8 * btnPhoto.m_scale
-                    height: parent.height * 0.8 * btnPhoto.m_scale
-                    anchors.centerIn: parent
+                Rectangle {
+                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale
                     rotation: window.oldRotation
+                    color: "transparent"
+                    border.color: "white"
+                    border.width: 1
+                    anchors.centerIn: parent
+                }
+
+                Loader {
+                    Component {
+                        id: imageType
+                        Image {
+                            source: ImageModel.lastImagePath
+                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+                            rotation: window.oldRotation
+                        }
+                    }
+                    Component {
+                        id: videoType
+                        Rectangle {
+                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+                            rotation: window.oldRotation
+                            color: "transparent"
+                            Text {
+                                anchors.centerIn: parent
+                                font.family: "FontAwesome"
+                                font.pixelSize: parent.width * 0.5
+                                text: "\uf144"
+                                color: "white"
+                                rotation: oldRotation
+                            }
+                        }
+                    }
+                    anchors.centerIn: parent
+                    sourceComponent: ImageModel.lastType === 0 ? imageType : videoType
                 }
 
                 MouseArea {
@@ -318,7 +351,7 @@ Window {
 
                 Connections {
                     target: ImageModel
-                    onNewImageChanged: {
+                    onAddNewFile: {
                         btnPhoto.m_scale = 0.5
                         btnPhotoTimer.start()
                     }
@@ -450,6 +483,12 @@ Window {
 
         onCaptureFinished: {
 
+        }
+
+        onConnectStatusChanged: {
+            if( stackView.depth > 1 && !TcpCamera.isConnected ) {
+                stackView.pop()
+            }
         }
     }
 

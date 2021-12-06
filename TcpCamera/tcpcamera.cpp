@@ -3,8 +3,12 @@
 #ifdef Q_OS_ANDROID
 #include "xtherm/thermometry.h"
 
-#include "VideoEncode/videoencode.h"
+#include "VideoProcess/videoprocess.h"
 #endif
+
+#include "AndroidInterface/androidinterface.h"
+
+#include "QApplication"
 
 #include "QDebug"
 #include "QThread"
@@ -16,6 +20,7 @@
 #include "QDir"
 #include "QStandardPaths"
 #include "QSettings"
+#include "QMutex"
 
 #include "thread"
 
@@ -29,7 +34,7 @@ public:
     ~TcpCameraPrivate();
 
 #ifdef Q_OS_ANDROID
-    VideoEncode *encode;
+    VideoProcess *encode;
 #endif
 
     ImageProvider *provider;
@@ -64,6 +69,13 @@ public:
     void setCameraParam(const qreal &emiss, const qreal &reflected,
                         const qreal &ambient, const qreal &humidness,
                         const qreal &correction, const int &distance);
+
+    int runDecode;
+    std::thread unpackThread;
+    QMutex unpackMutex;
+    void openUnpack();
+    void unpack(const int &data_size);
+    void closeUnpack();
 
     bool showTemp;
 
@@ -227,7 +239,7 @@ void TcpCamera::setShowTemp(const bool &show)
 bool TcpCamera::encoding()
 {
 #ifdef Q_OS_ANDROID
-    return p->encode->encoding();
+    return p->encode->encodeRunning();
 #else
     return false;
 #endif
@@ -237,23 +249,33 @@ void TcpCamera::openRecode()
 {
     if( isConnected() ) {
 #ifdef Q_OS_ANDROID
-        if( p->encode->encoding() ) {
-            p->encode->stopEncode();
+        if( p->encode->encodeRunning() ) {
+            p->encode->closeEncode();
 
             emit msg(tr("Save record path:") + p->encode->filePath());
         }
         else {
-            RecordConfig cfg;
+            EncodeConfig cfg;
+            QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
+#ifdef Q_OS_ANDROID
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-            path.append("/Hotimage/REC_");
-            path.append(QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
-            path.append(QString(".avi"));
+#else
+            QString path = QApplication::applicationDirPath();
+#endif
+            path.append("/Hotimage");
+            if( !QFileInfo::exists(path) ) {
+                QDir d;
+                d.mkdir(path);
+            }
+
+            path.append("/VIDEO_" + fileName);
+
             cfg.filePath = path;
             cfg.width = p->cfg.cam.w;
             cfg.height = p->cfg.cam.h;
             cfg.fps = 25;
             cfg.encodePixel = p->encode->pixel(QImage::Format_RGB888);
-            p->encode->startEncode(cfg);
+            p->encode->openEncode(cfg);
         }
 
         emit encodingChanged();
@@ -281,7 +303,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     }, Qt::QueuedConnection);
 
     provider = new ImageProvider("tcpcamera");
-//    QObject::connect(f, &TcpCamera::videoFrame, provider, &ImageProvider::imageChanged);
 
     temperatureData = NULL;
     fps = 0.0;
@@ -291,11 +312,14 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         exit = false;
         buf.clear();
         socket = new QTcpSocket;
+        handshake.disconnect();
         QObject::connect(socket, &QTcpSocket::readyRead, this, &TcpCameraPrivate::onReadyRead, Qt::QueuedConnection);
         QObject::connect(socket, &QTcpSocket::disconnected, [=](){
             if( !exit ) {
+                qDebug() << "socket disconnect";
                 emit f->connectStatusChanged();
 
+                socket->disconnectFromHost();
                 socket->connectToHost(cfg.ip, cfg.port);
                 while (!socket->waitForConnected(3000) && !exit) {
 //                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
@@ -317,18 +341,16 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
         if( !exit ) {
             emit f->connectStatusChanged();
-//            emit f->msg(QString("connected"));
         }
     });
     QObject::connect(thread, &QThread::finished, [=](){
         socket->disconnectFromHost();
         socket->deleteLater();
         socket = NULL;
-//        emit f->msg(QString("recv disconenct"));
+        handshake.disconnect();
 
-//        image = QImage();
         provider->release();
-        emit f->videoFrameChanged(QPixmap());
+        emit f->videoFrameChanged();
 
         if( temperatureData ) {
             free(temperatureData);
@@ -336,16 +358,19 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         }
 
         buf.clear();
+        closeUnpack();
 
         emit f->connectStatusChanged();
     });
     this->moveToThread(thread);
 
 #ifdef Q_OS_ANDROID
-    encode = new VideoEncode;
-    QObject::connect(encode, &VideoEncode::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
-    QObject::connect(encode, &VideoEncode::encodeFail, f, [=](){
-        encode->stopEncode();
+    encode = new VideoProcess;
+    QObject::connect(encode, &VideoProcess::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
+    QObject::connect(encode, &VideoProcess::error, f, [=](){
+        encode->closeEncode();
+        qDebug() << QString::fromStdString(encode->encodeError());
+        emit f->msg(tr("Record video fail"));
         emit f->encodingChanged();
     }, Qt::QueuedConnection);
 #endif
@@ -354,16 +379,20 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 TcpCameraPrivate::~TcpCameraPrivate()
 {
 #ifdef Q_OS_ANDROID
-    encode->stopEncode();
+    encode->closeEncode();
     encode->deleteLater();
 #endif
     saveSetting();
+
+    closeUnpack();
     qDebug() << "tcp release";
 }
 
 void TcpCameraPrivate::onReadyRead()
 {
+    unpackMutex.lock();
     buf.push_back(socket->readAll());
+    unpackMutex.unlock();
     if( !handshake.isConnected() ) {
         int res = handshake.recvHandShake(buf.data(), buf.size(), &cfg.cam);
         if( res == (-1) ) {
@@ -383,6 +412,10 @@ void TcpCameraPrivate::onReadyRead()
 //                             "pixel format: %3")
 //                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
+            qDebug() << QThread::currentThreadId()
+                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h
+                     << "format:" << cfg.cam.format;
+
             cfg.set.type = HandShake::__handshake;
             QByteArray byte = handshake.pack(cfg.set);
             int size = socket->write(byte.data(), byte.size());
@@ -391,14 +424,55 @@ void TcpCameraPrivate::onReadyRead()
 //            std::string str = handshake.s_pack(cfg.set);
 //            int size = socket->write(str.c_str(), str.size());
 //            qDebug() << "write size:" << size << str.size();
+
+//            openUnpack();
         }
         return;
     }
+    int data_size = frameSize + 4;
+    if( buf.size() >= data_size )
+    {
+        QByteArray tail = buf.mid(data_size - 4, 4);
+        if( tail != QByteArray("TcAm") )
+        {
+            // 包丢失
+            // 重新校验包
+            qDebug() << "invalid pack" << buf.size() << data_size;
+            int i = 0;
+            int flag = 0;
 
-    if( buf.size() >= frameSize ) {
-        int head = buf.at(0);
-        if( head == PAGE_HEAD ) {
-            buf.remove(0, HANDSHAKE_PAGE_SIZE);
+            int size = buf.size();
+            while (i < size)
+            {
+                char first = buf.at(i);
+                if( first == 'T' ) {
+                    tail = buf.mid(i, 4);
+                    if( tail == QByteArray("TcAm") )
+                    {
+                        qDebug() << "remove invalid data, size:" << (i + 1) << data_size;
+                        unpackMutex.lock();
+                        buf.remove(0, i + 4);
+                        unpackMutex.unlock();
+                        flag = 1;
+                        break;
+                    }
+                    else {
+                        i ++;
+                    }
+                }
+                else {
+                    i ++;
+                }
+            }
+
+            if( flag == 0 ) {
+                // 当前数据无效
+                qDebug() << "pack invalid:" << i + 1 << data_size;
+                unpackMutex.lock();
+                buf.remove(0, i + 1);
+                unpackMutex.unlock();
+            }
+            return;
         }
 
         frameCount ++;
@@ -488,19 +562,17 @@ void TcpCameraPrivate::onReadyRead()
                           RANGE_MODE,
                           OUTPUT_MODE);
 
-//        if( (frameCount % 100) == 0 ) {
-//            qDebug("width:%d, height:%d\n"
-//                   "centerTmp:%.2f, maxTmp:%.2f, minTmp:%.2f, avgTmp:%.2f\n"
+        if( (frameCount % 100) == 0 ) {
+//            qDebug("centerTmp:%.2f, maxTmp:%.2f, minTmp:%.2f, avgTmp:%.2f\n"
 //                   "emiss:%.2f, refltmp:%.2f, airtmp:%.2f, humi:%.2f, distance:%d, fix:%.2f\n"
 //                   "shufferTemp:%.2f, coreTemp:%.2f",
-//                    cfg.cam.w, cfg.cam.h,
 //                    temperatureData[0],
 //                    temperatureData[3],
 //                    temperatureData[6],
 //                    temperatureData[9],
 //                    emiss, Refltmp, Airtmp, humi, distance, correction,
 //                    floatShutTemper, floatCoreTemper);
-//        }
+        }
 
 #endif
         timer0 = timer1;
@@ -568,14 +640,14 @@ void TcpCameraPrivate::onReadyRead()
                         str);
         }
 
-        if( encode->encoding() ) {
-            encode->push(provider->image());
+        if( encode->encodeRunning() ) {
+            encode->pushEncode(provider->image());
         }
 #endif
 
 
-        emit f->videoFrameChanged(QPixmap::fromImage(provider->image()));
-        buf.remove(0, frameSize);
+        emit f->videoFrameChanged();
+        buf.remove(0, data_size);
     }
 }
 
@@ -638,11 +710,10 @@ void TcpCameraPrivate::capture()
         captureThread = std::thread([=](){
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-            QString path("");
 #ifdef Q_OS_ANDROID
-            path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+            QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 #else
-            path = QGuiApplication::applicationDirPath();
+            QString path = QApplication::applicationDirPath();
 #endif
             if( !path.isEmpty() ) {
                 path.append("/Hotimage");
@@ -701,6 +772,250 @@ void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected
     cfg.set.distance = distance;
     QByteArray byte = handshake.pack(cfg.set);
     emit write(byte);
+}
+
+void TcpCameraPrivate::openUnpack()
+{
+    if( unpackThread.joinable() ) {
+        return;
+    }
+
+    runDecode = 1;
+    unpackThread = std::thread([=](){
+        int data_size = frameSize + 4;
+        while (runDecode)
+        {
+            while (buf.size() >= data_size) {
+                unpack(data_size);
+            }
+        }
+    });
+}
+
+void TcpCameraPrivate::unpack(const int &data_size)
+{
+    QByteArray tail = buf.mid(data_size - 4, 4);
+    if( tail != QByteArray("TcAm") )
+    {
+        // 包丢失
+        // 重新校验包
+        qDebug() << "invalid pack" << buf.size() << data_size;
+        int i = 0;
+        int flag = 0;
+
+        while (i < buf.size())
+        {
+            char first = buf.at(i);
+            if( first == 'T' ) {
+                tail = buf.mid(i, 4);
+                if( tail == QByteArray("TcAm") )
+                {
+                    qDebug() << "remove invalid data, size:" << (i + 1) << data_size;
+                    unpackMutex.lock();
+                    buf.remove(0, i + 1);
+                    unpackMutex.unlock();
+                    flag = 1;
+                    break;
+                }
+            }
+            else {
+                i ++;
+            }
+        }
+
+        if( flag == 0 ) {
+            // 当前数据无效
+            qDebug() << "pack invalid:" << i + 1 << data_size;
+            unpackMutex.lock();
+            buf.remove(0, i + 1);
+            unpackMutex.unlock();
+        }
+
+    }
+
+    frameCount ++;
+
+#ifdef Q_OS_ANDROID
+    if( temperatureData == NULL ) {
+        temperatureData = (float*)calloc(cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET) + 10, sizeof(float));
+    }
+    uint16_t *data = reinterpret_cast<uint16_t *>(buf.data());
+    uint16_t *temp = data + (cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET));
+
+    float floatFpaTmp;
+    float correction;
+    float Refltmp;
+    float Airtmp;
+    float humi;
+    float emiss;
+    unsigned short distance;
+    char sn[32];//camera序列码
+    char cameraSoftVersion[16];//camera软件版本
+    unsigned short shutTemper;
+    float floatShutTemper;//快门温度
+    unsigned short coreTemper;
+    float floatCoreTemper;//外壳温度
+
+    int amountPixels=0;
+    switch (cfg.cam.w)
+    {
+    case 384:
+        amountPixels=cfg.cam.w*(4-1);
+        break;
+    case 240:
+        amountPixels=cfg.cam.w*(4-3);
+        break;
+    case 256:
+        amountPixels=cfg.cam.w*(4-3);
+        break;
+    case 640:
+        amountPixels=cfg.cam.w*(4-1);
+        break;
+    }
+
+    memcpy(&shutTemper,temp+amountPixels+1,sizeof(unsigned short));
+    floatShutTemper=shutTemper/10.0f-273.15f;//快门温度
+    memcpy(&coreTemper,temp+amountPixels+2,sizeof(unsigned short));//外壳
+    floatCoreTemper=coreTemper/10.0f-273.15f;
+    memcpy((unsigned short*)cameraSoftVersion,temp+amountPixels+24,16*sizeof(uint8_t));//camera soft version
+    memcpy((unsigned short*)sn,temp+amountPixels+32,32*sizeof(uint8_t));//SN
+    int userArea=amountPixels+127;
+    memcpy(&correction,temp+userArea,sizeof( float));//修正
+    userArea=userArea+2;
+    memcpy(&Refltmp,temp+userArea,sizeof( float));//反射温度
+    userArea=userArea+2;
+    memcpy(&Airtmp,temp+userArea,sizeof( float));//环境温度
+    userArea=userArea+2;
+    memcpy(&humi,temp+userArea,sizeof( float));//湿度
+    userArea=userArea+2;
+    memcpy(&emiss,temp+userArea,sizeof( float));//发射率
+    userArea=userArea+2;
+    memcpy(&distance,temp+userArea,sizeof(unsigned short));//距离
+
+    if( (frameCount % 4500) == 25 ) {
+        thermometryT4Line(cfg.cam.w,
+                          cfg.cam.h,
+                          temperatureTable,
+                          temp,
+                          &floatFpaTmp,
+                          &correction,
+                          &Refltmp,
+                          &Airtmp,
+                          &humi,
+                          &emiss,
+                          &distance,
+                          CAMERA_LEN,
+                          SHUTTER_FIX,
+                          RANGE_MODE);
+        if( frameCount > 9000 ) {
+            frameCount = 0;
+        }
+    }
+
+    thermometrySearch(cfg.cam.w,
+                      cfg.cam.h,
+                      temperatureTable,
+                      data,
+                      temperatureData,
+                      RANGE_MODE,
+                      OUTPUT_MODE);
+
+    if( (frameCount % 100) == 0 ) {
+        qDebug("centerTmp:%.2f, maxTmp:%.2f, minTmp:%.2f, avgTmp:%.2f\n"
+               "emiss:%.2f, refltmp:%.2f, airtmp:%.2f, humi:%.2f, distance:%d, fix:%.2f\n"
+               "shufferTemp:%.2f, coreTemp:%.2f",
+                temperatureData[0],
+                temperatureData[3],
+                temperatureData[6],
+                temperatureData[9],
+                emiss, Refltmp, Airtmp, humi, distance, correction,
+                floatShutTemper, floatCoreTemper);
+    }
+
+#endif
+    timer0 = timer1;
+    timer1 = clock();
+    uint8_t *bit = provider->data();
+
+    fps = CLOCKS_PER_SEC / (double)(timer1 - timer0);
+    if( cfg.cam.format == __yuyv ) {
+        convert().yuv422_to_rgb(reinterpret_cast<uint8_t *>(buf.data()), bit,
+                                cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
+    }
+    else if( cfg.cam.format == __yuv420 ) {
+        convert().yuv420p_to_rgb(reinterpret_cast<uint8_t *>(buf.data()), bit,
+                                 cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
+    }
+
+#ifdef Q_OS_ANDROID
+    // 画温度信息
+    if( showTemp ) {
+        QPainter pr(&provider->image());
+        QFontMetrics metrics(pr.font());
+        // 最大温度
+        pr.setPen(Qt::red);
+        pr.drawLine(temperatureData[1] - 10, temperatureData[2],
+                    temperatureData[1] + 10, temperatureData[2]);
+        pr.drawLine(temperatureData[1], temperatureData[2] - 10,
+                    temperatureData[1], temperatureData[2] + 10);
+
+        QString str = QString::number(temperatureData[3], 'f', 1);
+        int fontW = metrics.horizontalAdvance(str);
+        int fontH = metrics.height();
+        pr.drawText(temperatureData[1], temperatureData[2] - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+
+        // 最小温度
+        pr.setPen(Qt::blue);
+        pr.drawLine(temperatureData[4] - 10, temperatureData[5],
+                    temperatureData[4] + 10, temperatureData[5]);
+        pr.drawLine(temperatureData[4], temperatureData[5] - 10,
+                    temperatureData[4], temperatureData[5] + 10);
+
+        str = QString::number(temperatureData[6], 'f', 1);
+        fontW = metrics.horizontalAdvance(str);
+        fontH = metrics.height();
+        pr.drawText(temperatureData[4], temperatureData[5] - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+
+        // 中心温度
+        pr.setPen(Qt::white);
+        int cx = cfg.cam.w / 2;
+        int cy = cfg.cam.h / 2;
+        pr.drawLine(cx - 10, cy, cx + 10, cy);
+        pr.drawLine(cx, cy - 10, cx, cy + 10);
+
+        str = QString::number(temperatureData[0], 'f', 1);
+        fontW = metrics.horizontalAdvance(str);
+        fontH = metrics.height();
+        pr.drawText(cx, cy - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+    }
+
+    if( encode->encodeRunning() ) {
+        encode->pushEncode(provider->image());
+    }
+#endif
+
+
+    emit f->videoFrameChanged();
+    unpackMutex.lock();
+    buf.remove(0, data_size);
+    unpackMutex.unlock();
+}
+
+void TcpCameraPrivate::closeUnpack()
+{
+    if( unpackThread.joinable() ) {
+        runDecode = 0;
+        unpackThread.join();
+    }
 }
 
 #include "tcpcamera.moc"

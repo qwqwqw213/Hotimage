@@ -2,6 +2,11 @@
 
 #include "thread"
 
+#ifdef Q_OS_ANDROID
+#include "VideoProcess/videoprocess.h"
+#include "ImageProvider/imageprovider.h"
+#endif
+
 #include "QDebug"
 #include "QDirIterator"
 #include "QFile"
@@ -12,7 +17,13 @@ public:
     explicit ImageListModelPrivate(ImageListModel *parent);
     ~ImageListModelPrivate();
 
-    typedef std::tuple<QString, QString, int> Image;
+#ifdef Q_OS_ANDROID
+    VideoProcess *decode;
+#endif
+    ImageProvider *provider;
+    bool videoPlaying;
+
+    typedef std::tuple<QString, QString, int, int> Image;
     QVector<Image> list;
 
     std::thread searchThread;
@@ -49,22 +60,24 @@ void ImageListModel::search(const QString &path)
     p->searchThread = std::thread([=](){
         QDir d;
         d.setPath(path);
+        d.setSorting(QDir::Time | QDir::Reversed);
+//        d.setNameFilters(QStringList()
+//                         << QString("*.jpg")
+//                         << QString("*.jpeg")
+//                         << QString("*.avi"));
+
         d.setNameFilters(QStringList()
                          << QString("*.jpg")
                          << QString("*.jpeg"));
-        QDirIterator iterator(d, QDirIterator::Subdirectories);
         int count = 0;
-        while (iterator.hasNext()) {
-            iterator.next();
-            QFileInfo info = iterator.fileInfo();
-            if( info.isFile() ) {
-                QString file = info.filePath();
-                QString name = file.right(file.length() - file.lastIndexOf('/') - 1);
-                QString path = QString::fromUtf8(QString("file:///" + file).toUtf8());
-//                qDebug() << name << path;
-                p->list.append(std::make_tuple(name, path, 0));
-                count ++;
-            }
+        QFileInfoList list = d.entryInfoList();
+        for(int i = 0; i < list.size(); i++) {
+            QString file = list.at(i).filePath();
+            QString name = list.at(i).fileName();
+            QString path = QString::fromUtf8(QString("file:///" + file).toUtf8());
+            int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
+            p->list.append(std::make_tuple(name, path, 0, type));
+            count ++;
         }
         emit searchFinished();
     });
@@ -85,6 +98,7 @@ QVariant ImageListModel::data(const QModelIndex &index, int role) const
         case __name: { return std::get<0>(d); }
         case __path: { return std::get<1>(d); }
         case __selection: { return std::get<2>(d); }
+        case __file_type: { return std::get<3>(d); }
         default: break;
         }
     }
@@ -116,6 +130,7 @@ bool ImageListModel::setData(const QModelIndex &index, const QVariant &value, in
             }
             std::get<2>(d) = flag;
         } break;
+        case __file_type: { std::get<3>(d) = value.toInt(); } break;
         default: { return false; }
         }
         p->list.replace(row, d);
@@ -134,6 +149,7 @@ QHash<int, QByteArray> ImageListModel::roleNames() const
     hash[__name] = "name";
     hash[__path] = "path";
     hash[__selection] = "selection";
+    hash[__file_type] = "fileType";
     return hash;
 }
 
@@ -157,7 +173,16 @@ QString ImageListModel::name()
     return QString("");
 }
 
-QString ImageListModel::newImageUrl()
+int ImageListModel::lastType()
+{
+    if( p->list.size() > 0 ) {
+        auto d = p->list.at(p->list.size() - 1);
+        return std::get<3>(d);
+    }
+    return 0;
+}
+
+QString ImageListModel::lastImagePath()
 {
     if( p->list.size() > 0 ) {
         auto d = p->list.at(p->list.size() - 1);
@@ -223,14 +248,39 @@ void ImageListModel::removeSelection()
     }
 }
 
+void ImageListModel::openVideo(const QString &path)
+{
+#ifdef Q_OS_ANDROID
+    qDebug() << "open video:" << path;
+    p->decode->openStream(path.toStdString());
+    p->videoPlaying = true;
+#endif
+}
+
+bool ImageListModel::videoPlaying()
+{
+    return p->videoPlaying;
+}
+
+QString ImageListModel::videoFrameUrl()
+{
+    return p->provider->qmlUrl();
+}
+
+ImageProvider * ImageListModel::provider()
+{
+    return p->provider;
+}
+
 void ImageListModel::add(const QString &path)
 {
     beginInsertRows(QModelIndex(), p->list.size(), p->list.size());
     QString name = path.right(path.length() - path.lastIndexOf('/') - 1);
     QString file = QString::fromUtf8(QString("file:///" + path).toUtf8());
-    p->list.append(std::make_tuple(name, file, 0));
+    int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
+    p->list.append(std::make_tuple(name, file, 0, type));
     endInsertRows();
-    emit newImageChanged();
+    emit addNewFile();
 }
 
 ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)
@@ -244,6 +294,23 @@ ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)
 
     currentIndex = -1;
     selectionStatus = false;
+
+    videoPlaying = false;
+    provider = new ImageProvider("imagemodel");
+#ifdef Q_OS_ANDROID
+    decode = new VideoProcess;
+    QObject::connect(decode, &VideoProcess::error, f, [=](){
+        qDebug() << QString::fromStdString(decode->decodeError());
+        videoPlaying = false;
+        decode->closeStream();
+    }, Qt::QueuedConnection);
+
+    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
+                     [=](QImage img) {
+        provider->setImage(img);
+        emit f->videoFrameChanged();
+    });
+#endif
 }
 
 ImageListModelPrivate::~ImageListModelPrivate()
@@ -251,4 +318,7 @@ ImageListModelPrivate::~ImageListModelPrivate()
     if( searchThread.joinable() ) {
         searchThread.join();
     }
+#ifdef Q_OS_ANDROID
+    decode->closeDecode();
+#endif
 }

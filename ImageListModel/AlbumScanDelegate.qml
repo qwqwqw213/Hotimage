@@ -67,82 +67,86 @@ Rectangle{
           }
 
           Image {
-              id: image
               opacity: wrapper.opacity
               width: flick.contentWidth - 10
               height: flick.contentHeight - 10
               cache: true
 //              source: photoScan.model.folder + fileName
-              source: path
+              source: fileType == 0 ? path : (ImageModel.videoPlaying ? ImageModel.videoFrameUrl : "")
               anchors.centerIn: parent
               asynchronous: true
               fillMode: Image.PreserveAspectFit
-              MouseArea {
-                  anchors.fill: parent
-                  onDoubleClicked: {
-    //                      flick.contentWidth = initw
-    //                      flick.contentHeight = inith
-                      if( (flick.contentWidth > initw)
-                              || (flick.contentHeight > initHeight) ) {
-                          parallelAnimation.running = true;
-                      }
-                  }
-                  onClicked: {
-                      wrapper.itemClicked()
-                  }
+          }
 
-                  property real pressedY
-                  property real pressedFlickY
-                  onPressed: {
-                      pressedY = mouseY
-                      pressedFlickY = flick.contentY
+          MouseArea {
+              anchors.fill: parent
+              onDoubleClicked: {
+//                      flick.contentWidth = initw
+//                      flick.contentHeight = inith
+                  if( (flick.contentWidth > initw)
+                          || (flick.contentHeight > initHeight) ) {
+                      parallelAnimation.running = true;
                   }
-
-                  onMouseYChanged: {
-//                      console.log("onMouseYChanged", pressedFlickY, pressedY, mouseY)
-                      flick.contentY = pressedFlickY + pressedY - mouseY
+              }
+              onClicked: {
+                  wrapper.itemClicked()
+                  if( fileType === 1 ) {
+//                      imagePlayer.playVideo(path)
+                      ImageModel.openVideo(path)
                   }
               }
 
-              ParallelAnimation {
-                  id: parallelAnimation
-                  running: false
-                  loops: 1
+              property real pressedY
+              property real pressedFlickY
+              onPressed: {
+                  pressedY = mouseY
+                  pressedFlickY = flick.contentY
+              }
 
-                  PropertyAnimation {
-                      target: flick
-                      property: "contentWidth"
-                      from: flick.contentWidth
-                      to: initw
-                      duration: 300
-                      easing.type: Easing.OutCubic
-                  }
-                  PropertyAnimation {
-                      target: flick
-                      property: "contentHeight"
-                      from: flick.contentHeight
-                      to: inith
-                      duration: 300
-                      easing.type: Easing.OutCubic
-                  }
-                  PropertyAnimation {
-                      target: flick
-                      property: "contentX"
-                      from: flick.contentX
-                      to: 0
-                      duration: 300
-                      easing.type: Easing.OutCubic
-                  }
-                  PropertyAnimation {
-                      target: flick
-                      property: "contentY"
-                      from: flick.contentY
-                      to: 0
-                      duration: 300
-                      easing.type: Easing.OutCubic
-                  }
+              onMouseYChanged: {
+//                      console.log("onMouseYChanged", pressedFlickY, pressedY, mouseY)
+                  flick.contentY = pressedFlickY + pressedY - mouseY
               }
           }
-        }
+
+          ParallelAnimation {
+              id: parallelAnimation
+              running: false
+              loops: 1
+
+              PropertyAnimation {
+                  target: flick
+                  property: "contentWidth"
+                  from: flick.contentWidth
+                  to: initw
+                  duration: 300
+                  easing.type: Easing.OutCubic
+              }
+              PropertyAnimation {
+                  target: flick
+                  property: "contentHeight"
+                  from: flick.contentHeight
+                  to: inith
+                  duration: 300
+                  easing.type: Easing.OutCubic
+              }
+              PropertyAnimation {
+                  target: flick
+                  property: "contentX"
+                  from: flick.contentX
+                  to: 0
+                  duration: 300
+                  easing.type: Easing.OutCubic
+              }
+              PropertyAnimation {
+                  target: flick
+                  property: "contentY"
+                  from: flick.contentY
+                  to: 0
+                  duration: 300
+                  easing.type: Easing.OutCubic
+              }
+          }
       }
+    }
 }

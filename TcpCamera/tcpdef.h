@@ -14,9 +14,12 @@
 #define RANGE_MODE      120
 #define SHUTTER_FIX     0
 #define OUTPUT_MODE     5
+
+#define SERVER_IP       "192.168.1.1"
+#else
+#define SERVER_IP       "192.168.254.195"
 #endif
 
-#define SERVER_IP       "192.168.254.195"
 #define SERVER_PORT     27015
 
 typedef struct

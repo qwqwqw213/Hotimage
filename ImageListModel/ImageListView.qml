@@ -30,41 +30,77 @@ Item {
             model: ImageModel
 
             delegate: Rectangle {
+                id: delegate
                 width: imageList.cellWidth
                 height: imageList.cellHeight
                 color: "transparent"
-                Image {
-                    id: photo
-                    asynchronous: true
-                    source: path
-                    width: parent.width - 2
-                    height: parent.height - 2
-                    fillMode: Image.PreserveAspectCrop
+
+                Loader {
                     anchors.centerIn: parent
-                    smooth: true
-                    onStatusChanged: {
-                        if( status === Image.Ready ) {
-                            photoLoading.running = false
-                        }
-                        else if( status === Image.Error ) {
-                            photoLoading.running = false
-                        }
-                        else {
-                            photoLoading.running = true
+                    Component {
+                        id: photoType
+                        Image {
+                            asynchronous: true
+                            source: path
+                            width: imageList.cellWidth - 2
+                            height: imageList.cellHeight - 2
+                            fillMode: Image.PreserveAspectCrop
+                            anchors.centerIn: parent
+                            smooth: true
+//                            onStatusChanged: {
+//                                if( status === Image.Ready ) {
+//                                    photoLoading.running = false
+//                                }
+//                                else if( status === Image.Error ) {
+//                                    photoLoading.running = false
+//                                }
+//                                else {
+//                                    photoLoading.running = true
+//                                }
+//                            }
+
+                            // 选择标识
+                            Text {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 5
+                                anchors.top: parent.top
+                                anchors.topMargin: 5
+                                font.family: "FontAwesome"
+                                font.pixelSize: 30
+                                text: selection ? "\uf192" : "\uf10c"
+                                color: selection ? "#6f9f9f" : "white"
+                                visible: ImageModel.selectionStatus
+                            }
+
+//                            BusyIndicator {
+//                                id: photoLoading
+//                                anchors.centerIn: parent
+//                            }
                         }
                     }
 
-                    // 选择标识
-                    Text {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 15
-                        anchors.top: parent.top
-                        anchors.topMargin: 15
-                        font.family: "FontAwesome"
-                        font.pixelSize: 30
-                        text: selection ? "\uf192" : "\uf10c"
-                        color: selection ? "#6f9f9f" : "white"
-                        visible: ImageModel.selectionStatus
+                    Component {
+                        id: videoType
+                        Rectangle {
+                            width: imageList.cellWidth - 2
+                            height: imageList.cellHeight - 2
+                            color: "red"
+                        }
+                    }
+                    asynchronous: true
+                    sourceComponent: fileType == 0 ? photoType : videoType
+                    onStatusChanged: {
+                        if( status == Loader.Loading ) {
+                            photoLoading.running = true
+                        }
+                        else if( status == Loader.Ready ) {
+                            photoLoading.running = false
+                        }
+                    }
+
+                    BusyIndicator {
+                        id: photoLoading
+                        anchors.centerIn: parent
                     }
                 }
 
@@ -73,8 +109,18 @@ Item {
                     id:mouseArea
                     anchors.fill: parent
                     onClicked: {
-                        ImageModel.currentIndex = index
-                        imagePlayer.show(index)
+
+                        if( ImageModel.selectionStatus === 0 ) {
+                            ImageModel.currentIndex = index
+                            imagePlayer.show(index)
+                        }
+
+//                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
+//                        if( component.status === Component.Ready ) {
+//                            var play = component.createObject(imageListView)
+//                            play.show(index)
+//                        }
+
 
                         if( ImageModel.selectionStatus ) {
                             selection = !selection
@@ -84,11 +130,6 @@ Item {
                         if( ImageModel.selectionStatus ) {
                         }
                     }
-                }
-
-                BusyIndicator {
-                    id: photoLoading
-                    anchors.horizontalCenter: parent.horizontalCenter
                 }
             }
 
@@ -140,7 +181,7 @@ Item {
                 width: 60
                 height: 60
                 anchors.left: parent.left
-                anchors.leftMargin: 30
+                anchors.leftMargin: 10
                 color: "transparent"
                 Text {
                     anchors.centerIn: parent
@@ -173,7 +214,7 @@ Item {
                 width: 60
                 height: 60
                 anchors.right: parent.right
-                anchors.rightMargin: 30
+                anchors.rightMargin: 10
                 color: "transparent"
                 Text {
                     anchors.centerIn: parent

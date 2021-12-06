@@ -3,6 +3,8 @@
 
 #include "QAbstractListModel"
 
+#include "ImageProvider/imageprovider.h"
+
 class ImageListModelPrivate;
 class ImageListModel : public QAbstractListModel
 {
@@ -13,6 +15,12 @@ public:
         __name = Qt::UserRole + 1,
         __path,
         __selection,
+        __file_type,
+    };
+    enum FileType
+    {
+        __image = 0,
+        __video
     };
     explicit ImageListModel(QObject *parent = nullptr);
     ~ImageListModel();
@@ -31,14 +39,27 @@ public:
     Q_PROPERTY(QString name READ name CONSTANT)
     QString name();
 
-    Q_PROPERTY(QString newImageUrl READ newImageUrl NOTIFY newImageChanged)
-    QString newImageUrl();
+    Q_PROPERTY(int lastType  READ lastType NOTIFY addNewFile)
+    int lastType();
+
+    Q_PROPERTY(QString lastImagePath READ lastImagePath NOTIFY addNewFile)
+    QString lastImagePath();
 
     Q_PROPERTY(int selectionStatus READ selectionStatus WRITE setSelectionStatus NOTIFY selectionStatusChanged)
     bool selectionStatus();
     void setSelectionStatus(const bool &status);
 
     Q_INVOKABLE void removeSelection();
+
+    Q_INVOKABLE void openVideo(const QString &path);
+
+    Q_PROPERTY(bool videoPlaying READ videoPlaying CONSTANT)
+    bool videoPlaying();
+
+    Q_PROPERTY(QString videoFrameUrl READ videoFrameUrl NOTIFY videoFrameChanged)
+    QString videoFrameUrl();
+
+    ImageProvider * provider();
 
 public Q_SLOTS:
     void add(const QString &path);
@@ -48,10 +69,12 @@ private:
     QScopedPointer<ImageListModelPrivate> p;
 
 Q_SIGNALS:
-    void newImageChanged();
+    void addNewFile();
     void searchFinished();
     void currentIndexChanged();
     void selectionStatusChanged();
+
+    void videoFrameChanged();
 };
 
 #endif // IMAGELISTMODEL_H

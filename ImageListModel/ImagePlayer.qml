@@ -3,7 +3,6 @@ import QtQuick.Controls 2.12
 import QtQuick 2.4
 import Qt.labs.folderlistmodel 2.14
 
-
 Rectangle{
     id: imagePlayer
 //    property alias photoScanModel: photoScan.model
@@ -11,7 +10,9 @@ Rectangle{
     color: "black"
 
     function show(index) {
-        photoScan.contentX = index * width
+//        photoScan.contentX = index * width
+        photoScan.currentIndex = index
+        photoScan.positionViewAtIndex(index, ListView.Beginning)
         visible = true
         state = "show"
     }
@@ -40,13 +41,7 @@ Rectangle{
                     title.state = "show"
                 }
             }
-            Component.onCompleted: {
-                if( index == photoScan.currentIndex ) {
-                    title.text = name
-                }
-            }
         }
-        currentIndex: 0
 
         property real maxContentX: width * (ImageModel.rowCount() - 1)
         onMovementStarted: {
@@ -54,10 +49,11 @@ Rectangle{
         }
 
         onMovementEnded: {
-
+            console.log("move end")
         }
 
         onCurrentIndexChanged: {
+            console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
         }
 
@@ -72,6 +68,8 @@ Rectangle{
 
             }
         }
+
+//        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
 
     Connections {
@@ -95,7 +93,7 @@ Rectangle{
             width: 60
             height: 60
             anchors.left: parent.left
-            anchors.leftMargin: 30
+            anchors.leftMargin: 10
             color: "transparent"
             Text {
                 anchors.centerIn: parent

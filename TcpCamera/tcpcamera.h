@@ -78,7 +78,7 @@ private:
 
 Q_SIGNALS:
     void msg(const QString &str);
-    void videoFrameChanged(QPixmap frame);
+    void videoFrameChanged();
     void captureFinished(const QString &path);
     void connectStatusChanged();
     void paletteChanged();

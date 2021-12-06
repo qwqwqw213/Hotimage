@@ -218,6 +218,8 @@ enum RecvPageType
         byte += (char)t.format;
         return byte;
     }
+#else
+    void disconnect() { connected = false; }
 #endif
 
     // 高位在前

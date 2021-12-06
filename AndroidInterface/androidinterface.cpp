@@ -76,6 +76,7 @@ AndroidInterface::AndroidInterface(QObject *parent)
     : QObject(parent)
     , p(new AndroidInterfacePrivate(this))
 {
+    android_self = this;
 }
 
 AndroidInterface::~AndroidInterface()
@@ -115,6 +116,22 @@ void AndroidInterface::setRotationScreen(const int &index)
 #endif
 }
 
+void AndroidInterface::requestPhotoWritePermission()
+{
+#ifdef Q_OS_ANDROID
+    QtAndroid::PermissionResult result = QtAndroid::checkPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+    if( result == QtAndroid::PermissionResult::Denied ) {
+        QtAndroid::PermissionResultMap resultHash = QtAndroid::requestPermissionsSync(QStringList({"android.permission.WRITE_EXTERNAL_STORAGE"}));
+        if( resultHash["android.permission.WRITE_EXTERNAL_STORAGE"] == QtAndroid::PermissionResult::Denied ) {
+            qDebug() << "request write permission success";
+        }
+    }
+    else {
+//        qDebug() << "has write permission";
+    }
+#endif
+}
+
 AndroidInterfacePrivate::AndroidInterfacePrivate(AndroidInterface *parent)
 {
     f = parent;
@@ -128,3 +145,5 @@ AndroidInterfacePrivate::~AndroidInterfacePrivate()
 {
 
 }
+
+AndroidInterface * AndroidInterface::android_self = nullptr;
