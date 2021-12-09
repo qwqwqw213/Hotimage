@@ -4,7 +4,6 @@
 
 #ifdef Q_OS_ANDROID
 #include "VideoProcess/videoprocess.h"
-#include "ImageProvider/imageprovider.h"
 #endif
 
 #include "QDebug"
@@ -21,7 +20,7 @@ public:
     VideoProcess *decode;
 #endif
     ImageProvider *provider;
-    bool videoPlaying;
+    int videoIndex;
 
     typedef std::tuple<QString, QString, int, int> Image;
     QVector<Image> list;
@@ -248,18 +247,23 @@ void ImageListModel::removeSelection()
     }
 }
 
-void ImageListModel::openVideo(const QString &path)
+void ImageListModel::openVideo(const int &index)
 {
 #ifdef Q_OS_ANDROID
-    qDebug() << "open video:" << path;
-    p->decode->openStream(path.toStdString());
-    p->videoPlaying = true;
+    if( p->videoIndex == -1 ) {
+        p->videoIndex = index;
+        auto d = p->list.at(index);
+        QString path = std::get<1>(d);
+        QString file = path.right(path.length() - QString("file:///").length());
+        qDebug() << "open video:" << index << file;
+        p->decode->openStream(file.toStdString());
+    }
 #endif
 }
 
-bool ImageListModel::videoPlaying()
+int ImageListModel::videoIndex()
 {
-    return p->videoPlaying;
+    return p->videoIndex;
 }
 
 QString ImageListModel::videoFrameUrl()
@@ -295,14 +299,22 @@ ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)
     currentIndex = -1;
     selectionStatus = false;
 
-    videoPlaying = false;
+    videoIndex = -1;
     provider = new ImageProvider("imagemodel");
 #ifdef Q_OS_ANDROID
     decode = new VideoProcess;
     QObject::connect(decode, &VideoProcess::error, f, [=](){
-        qDebug() << QString::fromStdString(decode->decodeError());
-        videoPlaying = false;
+        qDebug() << QString::fromStdString(decode->lastError());
+        videoIndex = -1;
         decode->closeStream();
+    }, Qt::QueuedConnection);
+
+    QObject::connect(decode, &VideoProcess::statusChanged, f, [=](){
+        if( !decode->status() ) {
+            videoIndex = -1;
+            decode->closeStream();
+        }
+        emit f->videoStatusChanged();
     }, Qt::QueuedConnection);
 
     QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),

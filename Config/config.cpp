@@ -3,6 +3,7 @@
 #include "ImageListModel/imagelistmodel.h"
 #include "TcpCamera/tcpcamera.h"
 #include "AndroidInterface/androidinterface.h"
+#include "TcpCamera/imageview.h"
 
 #include "QDebug"
 #include "QScreen"
@@ -74,7 +75,7 @@ Config::~Config()
 
 }
 
-int Config::init(QApplication *a, QQmlApplicationEngine *e)
+int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 {
     // 读配置文件
     p->readSetting();
@@ -114,7 +115,7 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
     }
     p->fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
 
-    p->screen = QApplication::primaryScreen();
+    p->screen = QGuiApplication::primaryScreen();
     p->screen->setOrientationUpdateMask(Qt::PortraitOrientation |
                                      Qt::LandscapeOrientation |
                                      Qt::InvertedLandscapeOrientation |
@@ -166,6 +167,8 @@ int Config::init(QApplication *a, QQmlApplicationEngine *e)
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
+
+    qmlRegisterType<ImageView>("Custom.ImageView", 1, 1,"ImageView");
 
     return 1;
 }
@@ -332,7 +335,7 @@ void ConfigPrivate::readSetting()
 #ifdef Q_OS_ANDROID
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
-    QString path = QApplication::applicationDirPath() + QString("/setting.ini");
+    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
 #endif
     qDebug() << "read setting path:" << path;
     QSettings *s = new QSettings(path, QSettings::IniFormat);
@@ -348,7 +351,7 @@ void ConfigPrivate::saveSetting()
 #ifdef Q_OS_ANDROID
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
-    QString path = QApplication::applicationDirPath() + QString("/setting.ini");
+    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
 #endif
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 

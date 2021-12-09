@@ -93,7 +93,7 @@ Rectangle{
             width: 60
             height: 60
             anchors.left: parent.left
-            anchors.leftMargin: 10
+            anchors.leftMargin: 5
             color: "transparent"
             Text {
                 anchors.centerIn: parent

@@ -97,7 +97,7 @@ Drawer {
                 id: emissSlider
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = 0
+                    item.from = 0.1
                     item.to = 1
                     item.step = 0.01
                     item.value = TcpCamera.emiss
@@ -173,23 +173,49 @@ Drawer {
                 width: flick.itemWidth
                 height: flick.itemHeight
                 color: "transparent"
+
+
+
                 MouseArea {
                     anchors.fill: parent
                     enabled: !btnSaveTimer.running
+
+                    function isInvalidParam(value) {
+                        if( value < 0.00001 && value > -0.00001 ) {
+                            return true
+                        }
+                        return false
+                    }
+
                     onReleased: {
-                        console.log(emissSlider.item.value,
-                                    reflectedSlider.item.value,
-                                    ambientSlider.item.value,
-                                    humidnessSlider.item.value,
-                                    correctionSlider.item.value,
-                                    distanceSlider.item.value)
-                        TcpCamera.setCameraParam(emissSlider.item.value,
-                                                 reflectedSlider.item.value,
-                                                 ambientSlider.item.value,
-                                                 humidnessSlider.item.value,
-                                                 correctionSlider.item.value,
-                                                 distanceSlider.item.value)
-                        btnSaveTimer.start()
+                        if( emissSlider.item.value < 0.001 && emissSlider.item.value > -0.001 ) {
+                            console.log("fail")
+                        }
+
+                        if( isInvalidParam(emissSlider.item.value)
+                                || isInvalidParam(reflectedSlider.item.value)
+                                || isInvalidParam(ambientSlider.item.value)
+                                || isInvalidParam(humidnessSlider.item.value) )
+                        {
+                            messagebox.showMsg(qsTr("Param can't be set zero"))
+                        }
+                        else
+                        {
+                            messagebox.showMsg(qsTr("Save success"))
+                            console.log(emissSlider.item.value,
+                                        reflectedSlider.item.value,
+                                        ambientSlider.item.value,
+                                        humidnessSlider.item.value,
+                                        correctionSlider.item.value,
+                                        distanceSlider.item.value)
+                            TcpCamera.setCameraParam(emissSlider.item.value,
+                                                     reflectedSlider.item.value,
+                                                     ambientSlider.item.value,
+                                                     humidnessSlider.item.value,
+                                                     correctionSlider.item.value,
+                                                     distanceSlider.item.value)
+                            btnSaveTimer.start()
+                        }
                     }
                 }
                 Timer {

@@ -8,7 +8,7 @@
 
 #include "AndroidInterface/androidinterface.h"
 
-#include "QApplication"
+#include "QGuiApplication"
 
 #include "QDebug"
 #include "QThread"
@@ -239,7 +239,7 @@ void TcpCamera::setShowTemp(const bool &show)
 bool TcpCamera::encoding()
 {
 #ifdef Q_OS_ANDROID
-    return p->encode->encodeRunning();
+    return p->encode->status();
 #else
     return false;
 #endif
@@ -249,12 +249,13 @@ void TcpCamera::openRecode()
 {
     if( isConnected() ) {
 #ifdef Q_OS_ANDROID
-        if( p->encode->encodeRunning() ) {
+        if( p->encode->status() ) {
             p->encode->closeEncode();
 
             emit msg(tr("Save record path:") + p->encode->filePath());
         }
         else {
+            emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
 #ifdef Q_OS_ANDROID
@@ -351,6 +352,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
         provider->release();
         emit f->videoFrameChanged();
+//        emit f->videoFrame(QImage());
 
         if( temperatureData ) {
             free(temperatureData);
@@ -369,10 +371,11 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     QObject::connect(encode, &VideoProcess::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
     QObject::connect(encode, &VideoProcess::error, f, [=](){
         encode->closeEncode();
-        qDebug() << QString::fromStdString(encode->encodeError());
+        qDebug() << QString::fromStdString(encode->lastError());
         emit f->msg(tr("Record video fail"));
         emit f->encodingChanged();
     }, Qt::QueuedConnection);
+    QObject::connect(encode, &VideoProcess::statusChanged, f, &TcpCamera::encodingChanged);
 #endif
 }
 
@@ -521,6 +524,7 @@ void TcpCameraPrivate::onReadyRead()
         floatCoreTemper=coreTemper/10.0f-273.15f;
         memcpy((unsigned short*)cameraSoftVersion,temp+amountPixels+24,16*sizeof(uint8_t));//camera soft version
         memcpy((unsigned short*)sn,temp+amountPixels+32,32*sizeof(uint8_t));//SN
+
         int userArea=amountPixels+127;
         memcpy(&correction,temp+userArea,sizeof( float));//修正
         userArea=userArea+2;
@@ -562,7 +566,8 @@ void TcpCameraPrivate::onReadyRead()
                           RANGE_MODE,
                           OUTPUT_MODE);
 
-        if( (frameCount % 100) == 0 ) {
+        if( (frameCount % 100) == 0 )
+        {
 //            qDebug("centerTmp:%.2f, maxTmp:%.2f, minTmp:%.2f, avgTmp:%.2f\n"
 //                   "emiss:%.2f, refltmp:%.2f, airtmp:%.2f, humi:%.2f, distance:%d, fix:%.2f\n"
 //                   "shufferTemp:%.2f, coreTemp:%.2f",
@@ -640,13 +645,14 @@ void TcpCameraPrivate::onReadyRead()
                         str);
         }
 
-        if( encode->encodeRunning() ) {
+        if( encode->status() ) {
             encode->pushEncode(provider->image());
         }
 #endif
 
 
         emit f->videoFrameChanged();
+//        emit f->videoFrame(provider->image());
         buf.remove(0, data_size);
     }
 }
@@ -664,11 +670,11 @@ void TcpCameraPrivate::readSetting()
     cfg.ip = SERVER_IP;
     cfg.port = SERVER_PORT;
     cfg.set.palette = s->value("Normal/palette", 0).toUInt();
-    cfg.set.emiss = s->value("Normal/emiss", 0.0).toDouble();
-    cfg.set.reflected = s->value("Normal/reflected", 0.0).toDouble();
-    cfg.set.ambient = s->value("Normal/ambient", 0.0).toDouble();
-    cfg.set.humidness = s->value("Normal/humidness", 0.0).toDouble();
-    cfg.set.correction = s->value("Normal/correction", 0.0).toDouble();
+    cfg.set.emiss = s->value("Normal/emiss", 1.0).toDouble();
+    cfg.set.reflected = s->value("Normal/reflected", 1.0).toDouble();
+    cfg.set.ambient = s->value("Normal/ambient", 1.0).toDouble();
+    cfg.set.humidness = s->value("Normal/humidness", 1.0).toDouble();
+    cfg.set.correction = s->value("Normal/correction", 1.0).toDouble();
     cfg.set.distance = s->value("Normal/distance", 0).toUInt();
 
     showTemp = s->value("normal/showtemp", false).toBool();
@@ -713,7 +719,7 @@ void TcpCameraPrivate::capture()
 #ifdef Q_OS_ANDROID
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 #else
-            QString path = QApplication::applicationDirPath();
+            QString path = QGuiApplication::applicationDirPath();
 #endif
             if( !path.isEmpty() ) {
                 path.append("/Hotimage");
@@ -998,7 +1004,7 @@ void TcpCameraPrivate::unpack(const int &data_size)
                     str);
     }
 
-    if( encode->encodeRunning() ) {
+    if( encode->status() ) {
         encode->pushEncode(provider->image());
     }
 #endif

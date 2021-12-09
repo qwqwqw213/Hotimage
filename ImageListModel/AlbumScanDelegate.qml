@@ -72,9 +72,10 @@ Rectangle{
               height: flick.contentHeight - 10
               cache: true
 //              source: photoScan.model.folder + fileName
-              source: fileType == 0 ? path : (ImageModel.videoPlaying ? ImageModel.videoFrameUrl : "")
+              source: fileType == 0 ?
+                          path : (ImageModel.videoIndex === index ? ImageModel.videoFrameUrl : "")
               anchors.centerIn: parent
-              asynchronous: true
+              asynchronous: ImageModel.videoIndex === index ? false : true
               fillMode: Image.PreserveAspectFit
           }
 
@@ -90,9 +91,11 @@ Rectangle{
               }
               onClicked: {
                   wrapper.itemClicked()
-                  if( fileType === 1 ) {
-//                      imagePlayer.playVideo(path)
-                      ImageModel.openVideo(path)
+                  if( fileType === 1 )
+                  {
+                      if( ImageModel.videoIndex === -1 ) {
+                          ImageModel.openVideo(index)
+                      }
                   }
               }
 

@@ -8,6 +8,7 @@
 #include "condition_variable"
 
 #include "QDebug"
+#include "QThread"
 
 static int ffmpeg_init = 0;
 
@@ -18,11 +19,17 @@ public:
     explicit VideoProcessPrivate(VideoProcess *parent = nullptr);
     ~VideoProcessPrivate();
 
+    std::string error;
+    std::thread thread;
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool status;
+
     EncodeConfig config;
+    QVector<QImage> encode_queue;
     struct _encode
     {
         qint64 second;
-        bool running;
         AVFormatContext *fmtCnt;
         AVOutputFormat *outCnt;
         AVStream *stream;
@@ -33,22 +40,15 @@ public:
         AVPacket packet;
         int linesize[4];
     } *encode;
-    std::thread encode_thread;
-    std::mutex encode_mutex;
-    std::condition_variable encode_condition;
-    std::string encode_error;
-    QVector<QImage> encode_queue;
+
 
     void open_encode(const EncodeConfig &cfg);
     bool encode_frame(const uint8_t *data);
     bool flush_encoder(AVFormatContext *fmt_ctx, AVCodecContext *codecCnt, const unsigned int &stream_index);
     void release_encode();
 
-    std::mutex stream_mutex;
-    std::condition_variable stream_condition;
     struct _decode
     {
-        int play;
         int video_index;
         int fps_count;
         double current_time;
@@ -63,8 +63,7 @@ public:
         AVPacket packet;
         AVCodecParserContext *codecParserCnt;
     } *decode;
-    std::string decode_error;
-    std::thread read_stream_thread;
+
     void open_stream(const std::string &url);
     int find_stream(const char *url);
     int read_video_stream();
@@ -77,6 +76,52 @@ public:
     void release_decode();
 
     std::string format(const char *format, ...);
+
+    class Stream
+    {
+    public:
+        Stream() {}
+        ~Stream() {
+            mutex.lock();
+            while (canTake()) {
+                uint8_t *buf = NULL;
+                int size;
+                take(&buf, size);
+                release(&buf);
+            }
+            mutex.unlock();
+        }
+        void push(uint8_t *buffer, const int &size) {
+            uint8_t *buf = new uint8_t[size];
+            memcpy(buf, buffer, size);
+            mutex.lock();
+            queue.push(std::make_tuple(buf, size));
+            mutex.unlock();
+        }
+        bool canTake() { return !queue.empty(); }
+        void take(uint8_t **buf, int &size) {
+            if( !canTake() ) {
+                return;
+            }
+            auto d = queue.front();
+            (*buf) = std::get<0>(d);
+            size = std::get<1>(d);
+            mutex.lock();
+            queue.pop();
+            mutex.unlock();
+        }
+        void release(uint8_t **buf) {
+            if( (*buf) == NULL ) {
+                return;
+            }
+            delete [] (*buf);
+            *buf = NULL;
+        }
+    private:
+        std::queue<std::tuple<uint8_t *, int>> queue;
+        std::mutex mutex;
+    };
+    Stream *h264_stream;
 
 private:
     VideoProcess *f;
@@ -98,11 +143,6 @@ VideoProcess::~VideoProcess()
 
 }
 
-bool VideoProcess::encodeRunning()
-{
-    return (p->encode != NULL);
-}
-
 bool VideoProcess::openEncode(const EncodeConfig &config)
 {
     p->open_encode(config);
@@ -113,7 +153,7 @@ void VideoProcess::pushEncode(QImage img)
 {
     if( p->encode ) {
         p->encode_queue.append(img);
-        p->encode_condition.notify_all();
+        p->condition.notify_all();
     }
 }
 
@@ -145,19 +185,15 @@ QString VideoProcess::filePath()
 bool VideoProcess::closeEncode()
 {
     if( p->encode ) {
-        p->encode->running = false;
+        p->status = false;
+        emit statusChanged();
     }
 
-    if( p->encode_thread.joinable() ) {
-        p->encode_condition.notify_all();
-        p->encode_thread.join();
+    if( p->thread.joinable() ) {
+        p->condition.notify_all();
+        p->thread.join();
     }
     return true;
-}
-
-std::string VideoProcess::encodeError()
-{
-    return p->encode_error;
 }
 
 void VideoProcess::openStream(const std::string &url)
@@ -229,6 +265,11 @@ void VideoProcess::seek(const int &sec)
     p->seek_stream(sec);
 }
 
+bool VideoProcess::status()
+{
+    return p->status;
+}
+
 int VideoProcess::openDecode()
 {
     return p->open_h264_decode();
@@ -236,7 +277,12 @@ int VideoProcess::openDecode()
 
 void VideoProcess::closeDecode()
 {
-    p->release_decode();
+    if( p->decode ) {
+        p->status = false;
+        p->condition.notify_all();
+        p->thread.join();
+    }
+//    p->release_decode();
 }
 
 int VideoProcess::pushPacket(uint8_t *data, const int &size)
@@ -244,12 +290,17 @@ int VideoProcess::pushPacket(uint8_t *data, const int &size)
     if( !data ) {
         return -1;
     }
-    return p->send_h264_data(data, size);
+
+    p->h264_stream->push(data, size);
+    p->condition.notify_all();
+
+//    return p->send_h264_data(buf, size);
+    return 0;
 }
 
-std::string VideoProcess::decodeError()
+std::string VideoProcess::lastError()
 {
-    return p->decode_error;
+    return p->error;
 }
 
 VideoProcessPrivate::VideoProcessPrivate(VideoProcess *parent)
@@ -258,6 +309,8 @@ VideoProcessPrivate::VideoProcessPrivate(VideoProcess *parent)
 
     encode = NULL;
     decode = NULL;
+
+    status = false;
 }
 
 VideoProcessPrivate::~VideoProcessPrivate()
@@ -271,13 +324,13 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
         return;
     }
     config = cfg;
-    encode_thread = std::thread([=](){
+    thread = std::thread([=](){
         int ret = 0;
         std::string str = config.filePath.toStdString();
         const char *filePath = str.c_str();
         std::string error("");
         AVRational fps;
-        encode_error = "";
+        error = "";
         encode = (_encode *)malloc(sizeof (*encode));
         if( !encode ) {
             error = "malloc fail";
@@ -378,10 +431,12 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
 
         /* 写文件 */
         encode->frame->pts = 0;
-        encode->running = true;
-        while (encode->running) {
-            std::unique_lock<std::mutex> lock(encode_mutex);
-            encode_condition.wait(lock);
+        status = true;
+        emit f->statusChanged();
+
+        while (status) {
+            std::unique_lock<std::mutex> lock(mutex);
+            condition.wait(lock);
             lock.unlock();
 
             while (encode_queue.size()) {
@@ -397,7 +452,7 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
             av_make_error_string(err, 512, ret);
             std::string ffmpeg_err(err);
             error += (" ERROR: " + ffmpeg_err);
-            encode_error = error;
+            error = error;
             emit f->error();
         }
     });
@@ -517,15 +572,15 @@ void VideoProcessPrivate::release_encode()
 
 void VideoProcessPrivate::open_stream(const std::string &url)
 {
-    if( decode || read_stream_thread.joinable() ) {
+    if( decode || thread.joinable() ) {
         return;
     }
 
-    read_stream_thread = std::thread([=](){
+    thread = std::thread([=](){
         int res = 0;
         decode = (_decode *)malloc(sizeof (*decode));
         if( !decode ) {
-            decode_error = "decode mallo fail";
+            error = "decode mallo fail";
             res = -1;
         }
 
@@ -548,18 +603,20 @@ int VideoProcessPrivate::find_stream(const char *url)
 {
     int res = avformat_open_input(&decode->fmtCnt, url, NULL, NULL);
     if( res < 0 ) {
-        decode_error = "open input fail, url:" + std::string(url);
+        error = "open input fail, url:" + std::string(url);
         return -1;
     }
 
     res = avformat_find_stream_info(decode->fmtCnt, NULL);
     if( res < 0 ) {
-        decode_error = "find stream info fail";
+        error = "find stream info fail";
         return -1;
     }
 
+    qDebug() << "stream size:" << decode->fmtCnt->nb_streams;
     for(uint32_t i = 0; i < decode->fmtCnt->nb_streams; i ++) {
         AVStream *stream = decode->fmtCnt->streams[i];
+        qDebug() << "stream type:" << stream->codec->codec_type;
         if( stream->codec->codec_type == AVMEDIA_TYPE_VIDEO ) {
             decode->stream = stream;
             decode->video_index = i;
@@ -571,31 +628,31 @@ int VideoProcessPrivate::find_stream(const char *url)
     }
 
     if( !decode->codecCnt ) {
-        decode_error = "find video codec fail";
+        error = "find video codec fail";
         return -1;
     }
 
     decode->codec = avcodec_find_decoder(decode->codecCnt->codec_id);
     if( !decode->codec ) {
-        decode_error = "find decoder fail";
+        error = "find decoder fail, codec id: " + std::to_string(decode->codecCnt->codec_id);
         return -1;
     }
 
     res = avcodec_open2(decode->codecCnt, decode->codec, NULL);
     if( res < 0 ) {
-        decode_error = "codec open fail";
+        error = "codec open fail";
         return -1;
     }
 
     decode->frame = av_frame_alloc();
     if( !decode->frame ) {
-        decode_error = "alloc frame error";
+        error = "alloc frame error";
         return -1;
     }
 
     decode->rgbFrame = av_frame_alloc();
     if( !decode->rgbFrame ) {
-        decode_error = "alloc rgb frame error";
+        error = "alloc rgb frame error";
         return -1;
     }
     decode->rgbFrame->width = -1;
@@ -607,11 +664,15 @@ int VideoProcessPrivate::find_stream(const char *url)
 int VideoProcessPrivate::read_video_stream()
 {
     if( !decode->fmtCnt ) {
-        decode_error = "avformat context is null";
+        error = "avformat context is null";
         return -1;
     }
 
     int res;
+    qDebug() << "- codec info -\n"
+             << "   width:" << decode->codecCnt->width
+             << "   height:" << decode->codecCnt->height
+             << "   pixel format:" << decode->codecCnt->pix_fmt;
     decode->sws = sws_getContext(decode->codecCnt->width, decode->codecCnt->height, decode->codecCnt->pix_fmt,
                                  decode->codecCnt->width, decode->codecCnt->height, AV_PIX_FMT_RGB24,
                                  SWS_FAST_BILINEAR, NULL, NULL, NULL);
@@ -623,7 +684,7 @@ int VideoProcessPrivate::read_video_stream()
                          decode->rgbFrame->width, decode->rgbFrame->height,
                          AV_PIX_FMT_RGB24, 1);
     if( res < 0 ) {
-        decode_error = "alloc rgb frame data fail";
+        error = "alloc rgb frame data fail";
         return -1;
     }
 
@@ -634,11 +695,11 @@ int VideoProcessPrivate::read_video_stream()
 
     av_init_packet(&decode->packet);
     qint64 start_ms = QDateTime::currentDateTime().toMSecsSinceEpoch();
-    decode->play = 1;
+    status = true;
+    emit f->statusChanged();
 
-    emit f->startPlay();
-
-    while (decode->play)
+    qDebug() << QThread::currentThreadId() << "start play stream";
+    while (status)
     {
         res = av_read_frame(decode->fmtCnt, &decode->packet);
         if( res < 0 ) {
@@ -646,11 +707,13 @@ int VideoProcessPrivate::read_video_stream()
             emit f->frame(img);
 
             qDebug() << "read stream finished";
-            emit f->readStreamFinished();
+            status = 0;
+            emit f->statusChanged();
+            break;
 
-            std::unique_lock<std::mutex> lock(stream_mutex);
-            stream_condition.wait(lock);
-            lock.unlock();
+//            std::unique_lock<std::mutex> lock(stream_mutex);
+//            condition.wait(lock);
+//            lock.unlock();
         }
         if( decode->packet.stream_index == decode->video_index )
         {
@@ -699,7 +762,7 @@ void VideoProcessPrivate::seek_stream(const int &sec)
     int res = av_seek_frame(decode->fmtCnt, decode->video_index, s, AVSEEK_FLAG_ANY);
     qDebug() << "seek:" << res;
 
-    stream_condition.notify_all();
+    condition.notify_all();
 }
 
 void VideoProcessPrivate::close_video_stream()
@@ -708,11 +771,13 @@ void VideoProcessPrivate::close_video_stream()
         return;
     }
 
-    stream_condition.notify_all();
+    qDebug() << "close stream";
 
-    decode->play = 0;
-    if( read_stream_thread.joinable() ) {
-        read_stream_thread.join();
+    status = false;
+    condition.notify_all();
+
+    if( thread.joinable() ) {
+        thread.join();
     }
 
     if( decode->fmtCnt ) {
@@ -738,58 +803,87 @@ int VideoProcessPrivate::open_h264_decode()
         return 0;
     }
 
-    decode = (_decode *)malloc(sizeof (*decode));
-    if( !decode ) {
-        qDebug() << "decode malloc fail";
-        return -1;
-    }
-    memset(decode, 0, sizeof (*decode));
+    thread = std::thread([=](){
+        decode = (_decode *)malloc(sizeof (*decode));
+        if( !decode ) {
+            qDebug() << "decode malloc fail";
+            emit f->error();
+            return;
+        }
+        memset(decode, 0, sizeof (*decode));
 
-    // find decoder
-    decode->codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-    if( !decode->codec ) {
-        decode_error = "find h264 decoder fail";
-        return -1;
-    }
+        h264_stream = new VideoProcessPrivate::Stream;
 
-    // init code context
-    decode->codecCnt = avcodec_alloc_context3(decode->codec);
-    if( !decode->codecCnt ) {
-        decode_error = "alloc code context fail";
-        return -1;
-    }
+        // find decoder
+        decode->codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+        if( !decode->codec ) {
+            error = "find h264 decoder fail";
+            emit f->error();
+            return;
+        }
 
-    // init parser context
-    decode->codecParserCnt = av_parser_init(AV_CODEC_ID_H264);
-    if( !decode->codecParserCnt ) {
-        decode_error = "parser init fail";
-        return -1;
-    }
+        // init code context
+        decode->codecCnt = avcodec_alloc_context3(decode->codec);
+        if( !decode->codecCnt ) {
+            error = "alloc code context fail";
+            emit f->error();
+            return;
+        }
 
-    if( decode->codec->capabilities & AV_CODEC_CAP_TRUNCATED ) {
-        decode->codecCnt->flags |= AV_CODEC_FLAG_TRUNCATED;
-    }
+        // init parser context
+        decode->codecParserCnt = av_parser_init(AV_CODEC_ID_H264);
+        if( !decode->codecParserCnt ) {
+            error = "parser init fail";
+            emit f->error();
+            return;
+        }
 
-    // open code
-    int res = avcodec_open2(decode->codecCnt, decode->codec, NULL);
-    if( res < 0 ) {
-        decode_error = "open code fail";
-        return -1;
-    }
+        if( decode->codec->capabilities & AV_CODEC_CAP_TRUNCATED ) {
+            decode->codecCnt->flags |= AV_CODEC_FLAG_TRUNCATED;
+        }
 
-    decode->frame = av_frame_alloc();
-    if( !decode->frame ) {
-        decode_error = "alloc frame error";
-        return -1;
-    }
+        // open code
+        int res = avcodec_open2(decode->codecCnt, decode->codec, NULL);
+        if( res < 0 ) {
+            error = "open code fail";
+            emit f->error();
+            return;
+        }
 
-    decode->rgbFrame = av_frame_alloc();
-    if( !decode->rgbFrame ) {
-        decode_error = "alloc rgb frame error";
-        return -1;
-    }
-    decode->rgbFrame->width = -1;
-    decode->rgbFrame->height = -1;
+        decode->frame = av_frame_alloc();
+        if( !decode->frame ) {
+            error = "alloc frame error";
+            emit f->error();
+            return;
+        }
+
+        decode->rgbFrame = av_frame_alloc();
+        if( !decode->rgbFrame ) {
+            error = "alloc rgb frame error";
+            emit f->error();
+            return;
+        }
+        decode->rgbFrame->width = -1;
+        decode->rgbFrame->height = -1;
+
+        status = true;
+        while (status) {
+            if( h264_stream->canTake() ) {
+                uint8_t *buf = NULL;
+                int size;
+                h264_stream->take(&buf, size);
+                if( send_h264_data(buf, size) == 0 ) {
+                    h264_stream->release(&buf);
+                }
+            }
+
+            std::unique_lock<std::mutex> lock(mutex);
+            lock.lock();
+            condition.wait(lock);
+        }
+
+        release_decode();
+    });
     return 0;
 }
 
@@ -800,7 +894,6 @@ int VideoProcessPrivate::send_h264_data(uint8_t *data, const int &size)
         return -1;
     }
 
-    int res = 0;
     uint8_t *packet_buf = NULL;
     int packet_size = 0;
     int len = av_parser_parse2(decode->codecParserCnt, decode->codecCnt,
@@ -868,7 +961,7 @@ int VideoProcessPrivate::send_h264_data(uint8_t *data, const int &size)
 //        }
 //    }
 
-    return res;
+    return 0;
 }
 
 void VideoProcessPrivate::decode_packet(AVPacket *packet, const bool &flush)
@@ -938,6 +1031,11 @@ void VideoProcessPrivate::release_decode()
 
     if( decode->codecParserCnt ) {
         av_parser_close(decode->codecParserCnt);
+    }
+
+    if( h264_stream ) {
+        delete h264_stream;
+        h264_stream = NULL;
     }
 
     free(decode);

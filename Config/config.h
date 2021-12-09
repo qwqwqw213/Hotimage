@@ -3,7 +3,8 @@
 
 #include <QObject>
 #include <QQmlApplicationEngine>
-#include <QApplication>
+//#include <QApplication>
+#include "QGuiApplication"
 
 #define REBOOT_CODE             (-1)
 
@@ -21,7 +22,7 @@ public:
     explicit Config(QObject *parent = nullptr);
     ~Config();
 
-    int init(QApplication *a, QQmlApplicationEngine *e);
+    int init(QGuiApplication *a, QQmlApplicationEngine *e);
 
     // 添加CONSTANT关键字
     // 屏蔽QML depends on non-NOTIFYable properties 警告

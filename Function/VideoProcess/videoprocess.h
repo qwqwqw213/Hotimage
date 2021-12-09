@@ -44,13 +44,11 @@ public:
     /*
      *  视频编码
      */
-    bool encodeRunning();
     bool openEncode(const EncodeConfig &config);
     void pushEncode(QImage img);
     QString recordTime();
     bool closeEncode();
     QString filePath();
-    std::string encodeError();
 
     /*
      *  视频播放
@@ -69,8 +67,14 @@ public:
     int openDecode();
     void closeDecode();
     int pushPacket(uint8_t *data, const int &size);
-    std::string decodeError();
 
+    /*
+     *  解码器 编码器状态
+     *  true  运行中
+     *  false 未打开
+     */
+    bool status();
+    std::string lastError();
     inline AVPixelFormat pixel(const int &QImageFormat);
 
 private:
@@ -78,12 +82,11 @@ private:
     QScopedPointer<VideoProcessPrivate> p;
 
 Q_SIGNALS:
-    void startPlay();
+    void statusChanged();
 
     void recordTimeChanged();
     void error();
 
-    void readStreamFinished();
     void frame(QImage);
 };
 

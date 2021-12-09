@@ -85,6 +85,7 @@ Q_SIGNALS:
     void showTempChanged();
     void encodingChanged();
     void recordTimeChanged();
+    void videoFrame(QImage);
 };
 
 #endif // RECV_H

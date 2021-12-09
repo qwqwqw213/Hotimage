@@ -1,4 +1,4 @@
-QT += widgets quick quickcontrols2
+QT += gui quick quickcontrols2
 
 CONFIG += c++11
 
@@ -18,6 +18,7 @@ SOURCES += \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
         ImageListModel/imagelistmodel.cpp \
+        TcpCamera/imageview.cpp \
         TcpCamera/tcpcamera.cpp \
         main.cpp
 
@@ -40,6 +41,7 @@ HEADERS += \
     Function/ImageProvider/imageprovider.h \
     Function/MadgwickAHRS.hpp \
     ImageListModel/imagelistmodel.h \
+    TcpCamera/imageview.h \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
     TcpCamera/tcpcamera.h \
@@ -55,15 +57,7 @@ greaterThan(QT_MAJOR_VERSION,4){
         TARGET_ARCH=$${QMAKE_HOST.arch}
 }
 
-
-
 android {
-
-contains(TARGET_ARCH, arm64-v8a){
-BUILD_LIB=arm64-v8a
-} else {
-BUILD_LIB=armeabi-v7a
-}
 
 
 QT += \
@@ -94,28 +88,14 @@ DISTFILES += \
 
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 
+contains(TARGET_ARCH, arm64-v8a){
+BUILD_LIB=arm64-v8a
+} else {
+BUILD_LIB=armeabi-v7a
+}
+message("build lib:" $$BUILD_LIB $$ANDROID_ABIS)
 
-message("build lib:" $$BUILD_LIB)
-
-#LIBS += -L$$PWD/libs/armeabi-v7a/ \
-#    -lthermometry \
-#    -lavcodec \
-#    -lavfilter \
-#    -lavformat \
-#    -lavutil \
-#    -lswresample \
-#    -lswscale
-
-#ANDROID_EXTRA_LIBS = \
-#    $$PWD/libs/armeabi-v7a/libthermometry.so \
-#    $$PWD/libs/armeabi-v7a/libavcodec.so \
-#    $$PWD/libs/armeabi-v7a/libavfilter.so \
-#    $$PWD/libs/armeabi-v7a/libavformat.so \
-#    $$PWD/libs/armeabi-v7a/libavutil.so \
-#    $$PWD/libs/armeabi-v7a/libswresample.so \
-#    $$PWD/libs/armeabi-v7a/libswscale.so
-
-LIBS += -L$$PWD/libs/arm64-v8a/ \
+LIBS += -L$$PWD/libs/$$ANDROID_ABIS/ \
     -lthermometry \
     -lavcodec \
     -lavfilter \
@@ -125,13 +105,13 @@ LIBS += -L$$PWD/libs/arm64-v8a/ \
     -lswscale
 
 ANDROID_EXTRA_LIBS = \
-    $$PWD/libs/arm64-v8a/libthermometry.so \
-    $$PWD/libs/arm64-v8a/libavcodec.so \
-    $$PWD/libs/arm64-v8a/libavfilter.so \
-    $$PWD/libs/arm64-v8a/libavformat.so \
-    $$PWD/libs/arm64-v8a/libavutil.so \
-    $$PWD/libs/arm64-v8a/libswresample.so \
-    $$PWD/libs/arm64-v8a/libswscale.so
+    $$PWD/libs/$$ANDROID_ABIS/libthermometry.so \
+    $$PWD/libs/$$ANDROID_ABIS/libavcodec.so \
+    $$PWD/libs/$$ANDROID_ABIS/libavfilter.so \
+    $$PWD/libs/$$ANDROID_ABIS/libavformat.so \
+    $$PWD/libs/$$ANDROID_ABIS/libavutil.so \
+    $$PWD/libs/$$ANDROID_ABIS/libswresample.so \
+    $$PWD/libs/$$ANDROID_ABIS/libswscale.so
 
 
 INCLUDEPATH += $$PWD/libs

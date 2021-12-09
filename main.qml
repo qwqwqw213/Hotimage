@@ -4,6 +4,8 @@ import QtQuick.Window 2.12
 import QtQuick.Shapes 1.14
 import Qt.labs.platform 1.1
 
+import Custom.ImageView 1.1
+
 import "./ImageListModel"
 import "./Setting"
 import "./Loading"
@@ -42,6 +44,14 @@ Window {
         id: mainView
 //        anchors.fill: parent
         color: "black"
+
+        property bool videoPlay: true
+        StackView.onDeactivated: {
+            videoPlay = false
+        }
+        StackView.onActivating: {
+            videoPlay = true
+        }
 
         // 顶部按钮栏
         Rectangle {
@@ -134,6 +144,43 @@ Window {
             }
         }
 
+//        ImageView {
+//            id: cameraFrame
+//            width: parent.width * 0.7
+//            height: parent.height
+//            x: parent.width * 0.1
+//            y: 0
+//            camera: TcpCamera
+
+//            // 录像标志
+//            Text {
+//                anchors.left: parent.left
+//                anchors.leftMargin: 10
+//                anchors.top: parent.top
+//                anchors.topMargin: 10
+//                font.family: "FontAwesome"
+//                font.pixelSize: 30
+//                text: "\uf03d" + " " + TcpCamera.recordTime
+//                color: "red"
+//                visible: TcpCamera.encoding
+
+//                SequentialAnimation on color {
+//                    loops: Animation.Infinite
+//                    running: visible
+//                    ColorAnimation {
+//                        from: "red"
+//                        to: "black"
+//                        duration: 800
+//                    }
+//                    ColorAnimation {
+//                        from: "black"
+//                        to: "red"
+//                        duration: 800
+//                    }
+//                }
+//            }
+//        }
+
         // 摄像头图像
         Image {
             id: cameraFrame
@@ -141,8 +188,8 @@ Window {
             height: parent.height
             x: parent.width * 0.1
             y: 0
-            source: TcpCamera.isConnected ?
-                        (stackView.depth == 1 ? TcpCamera.videoFrameUrl : "") : ""
+            source: mainView.videoPlay ?
+                        (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
 
             // 录像标志
             Text {
@@ -170,22 +217,13 @@ Window {
                         duration: 800
                     }
                 }
-
-//                Text {
-//                    anchors.left: parent.right
-//                    anchors.leftMargin: 20
-//                    anchors.verticalCenter: parent.verticalCenter
-//                    text: TcpCamera.recodeTime
-//                    font.pixelSize: 30
-//                    color: "red"
-//                }
             }
 
             MouseArea {
                 anchors.fill: parent
                 onPressed: {
 //                    Config.setRotation()
-//                    messagebox.showMsg("test message box")
+                    messagebox.showMsg("test message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest ")
                 }
             }
         }
@@ -345,7 +383,9 @@ Window {
                     }
                     onReleased: {
                         btnPhoto.m_scale = 1.0
-                        stackView.push("qrc:/ImageListModel/ImageListView.qml")
+//                        stackView.push("qrc:/ImageListModel/ImageListView.qml")
+                        stackView.push(imageListView)
+//                        imageListView.y = 0
                     }
                 }
 
@@ -422,43 +462,45 @@ Window {
         }
     }
 
+    ImageListView {
+        id: imageListView
+//        visible: false
+//        y: parent.height
+    }
+
     StackView {
         id: stackView
         anchors.fill: parent
         initialItem: mainView
 
         pushEnter: Transition {
-            YAnimator {
-                target: stackView.currentItem
-                from: height
+            XAnimator {
+                from: width
                 to: 0
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         pushExit: Transition {
-            YAnimator {
-                target: stackView.currentItem
+            XAnimator {
                 from: 0
-                to: 0 - height
+                to: 0 - width
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         popEnter: Transition {
-            YAnimator {
-                target: stackView.currentItem
-                from: 0 - height
+            XAnimator {
+                from: 0 - width
                 to: 0
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         popExit: Transition {
-            YAnimator {
-                target: stackView.currentItem
+            XAnimator {
                 from: 0
-                to: height
+                to: width
                 duration: 200
                 easing.type: Easing.OutCurve
             }

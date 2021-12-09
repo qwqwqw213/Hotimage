@@ -6,11 +6,18 @@ Item {
 //    anchors.fill: parent
 //    width: parent.width
 //    height: parent.height
+//    y: height
     onVisibleChanged: {
         if( !visible ) {
             ImageModel.selectionStatus = false
         }
     }
+
+//    Behavior on y {
+//        NumberAnimation {
+//            duration: 300
+//        }
+//    }
 
     MouseArea {
         anchors.fill: parent
@@ -25,9 +32,11 @@ Item {
             y: 60
             width: parent.width
             height: parent.height - 60
-            cellWidth: width / 4
-            cellHeight: width / 4
+            cellWidth: width > height ? (width / 4) : (width / 3)
+            cellHeight: cellWidth
             model: ImageModel
+
+//            Component.onCompleted: positionViewAtEnd()
 
             delegate: Rectangle {
                 id: delegate
@@ -35,102 +44,154 @@ Item {
                 height: imageList.cellHeight
                 color: "transparent"
 
-                Loader {
+                Image {
+                    asynchronous: true
+                    source: fileType == 0 ? path : ""
+                    width: imageList.cellWidth - 2
+                    height: imageList.cellHeight - 2
+                    fillMode: Image.PreserveAspectCrop
                     anchors.centerIn: parent
-                    Component {
-                        id: photoType
-                        Image {
-                            asynchronous: true
-                            source: path
-                            width: imageList.cellWidth - 2
-                            height: imageList.cellHeight - 2
-                            fillMode: Image.PreserveAspectCrop
-                            anchors.centerIn: parent
-                            smooth: true
-//                            onStatusChanged: {
-//                                if( status === Image.Ready ) {
-//                                    photoLoading.running = false
-//                                }
-//                                else if( status === Image.Error ) {
-//                                    photoLoading.running = false
-//                                }
-//                                else {
-//                                    photoLoading.running = true
-//                                }
-//                            }
+                    smooth: true
 
-                            // 选择标识
-                            Text {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 5
-                                anchors.top: parent.top
-                                anchors.topMargin: 5
-                                font.family: "FontAwesome"
-                                font.pixelSize: 30
-                                text: selection ? "\uf192" : "\uf10c"
-                                color: selection ? "#6f9f9f" : "white"
-                                visible: ImageModel.selectionStatus
+                    // 选择标识
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 5
+                        anchors.top: parent.top
+                        anchors.topMargin: 5
+                        font.family: "FontAwesome"
+                        font.pixelSize: 30
+                        text: selection ? "\uf192" : "\uf10c"
+                        color: selection ? "#6f9f9f" : "white"
+                        visible: ImageModel.selectionStatus
+                    }
+
+                    MouseArea {
+                        id:mouseArea
+                        anchors.fill: parent
+                        onClicked: {
+
+                            if( ImageModel.selectionStatus === 0 ) {
+                                ImageModel.currentIndex = index
+                                imagePlayer.show(index)
                             }
 
-//                            BusyIndicator {
-//                                id: photoLoading
-//                                anchors.centerIn: parent
-//                            }
-                        }
-                    }
+    //                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
+    //                        if( component.status === Component.Ready ) {
+    //                            var play = component.createObject(imageListView)
+    //                            play.show(index)
+    //                        }
 
-                    Component {
-                        id: videoType
-                        Rectangle {
-                            width: imageList.cellWidth - 2
-                            height: imageList.cellHeight - 2
-                            color: "red"
-                        }
-                    }
-                    asynchronous: true
-                    sourceComponent: fileType == 0 ? photoType : videoType
-                    onStatusChanged: {
-                        if( status == Loader.Loading ) {
-                            photoLoading.running = true
-                        }
-                        else if( status == Loader.Ready ) {
-                            photoLoading.running = false
-                        }
-                    }
 
-                    BusyIndicator {
-                        id: photoLoading
-                        anchors.centerIn: parent
+                            if( ImageModel.selectionStatus ) {
+                                selection = !selection
+                            }
+                        }
+                        onPositionChanged: {
+                            if( ImageModel.selectionStatus ) {
+                            }
+                        }
                     }
                 }
+
+
+//                Loader {
+//                    anchors.centerIn: parent
+//                    Component {
+//                        id: photoType
+//                        Image {
+//                            asynchronous: true
+//                            source: path
+//                            width: imageList.cellWidth - 2
+//                            height: imageList.cellHeight - 2
+//                            fillMode: Image.PreserveAspectCrop
+//                            anchors.centerIn: parent
+//                            smooth: true
+////                            onStatusChanged: {
+////                                if( status === Image.Ready ) {
+////                                    photoLoading.running = false
+////                                }
+////                                else if( status === Image.Error ) {
+////                                    photoLoading.running = false
+////                                }
+////                                else {
+////                                    photoLoading.running = true
+////                                }
+////                            }
+
+//                            // 选择标识
+//                            Text {
+//                                anchors.right: parent.right
+//                                anchors.rightMargin: 5
+//                                anchors.top: parent.top
+//                                anchors.topMargin: 5
+//                                font.family: "FontAwesome"
+//                                font.pixelSize: 30
+//                                text: selection ? "\uf192" : "\uf10c"
+//                                color: selection ? "#6f9f9f" : "white"
+//                                visible: ImageModel.selectionStatus
+//                            }
+
+////                            BusyIndicator {
+////                                id: photoLoading
+////                                anchors.centerIn: parent
+////                            }
+//                        }
+//                    }
+
+//                    Component {
+//                        id: videoType
+//                        Rectangle {
+//                            width: imageList.cellWidth - 2
+//                            height: imageList.cellHeight - 2
+//                            color: "red"
+//                        }
+//                    }
+
+//                    sourceComponent: fileType == 0 ? photoType : videoType
+//                    onStatusChanged: {
+//                        if( status == Loader.Loading ) {
+//                            photoLoading.running = true
+//                        }
+//                        else if( status == Loader.Ready ) {
+//                            photoLoading.running = false
+//                        }
+//                    }
+
+//                    BusyIndicator {
+//                        id: photoLoading
+//                        anchors.centerIn: parent
+//                    }
+//                }
 
                 // 选择 鼠标事件
-                MouseArea {
-                    id:mouseArea
-                    anchors.fill: parent
-                    onClicked: {
+//                MouseArea {
+//                    id:mouseArea
+//                    anchors.fill: parent
+//                    onClicked: {
 
-                        if( ImageModel.selectionStatus === 0 ) {
-                            ImageModel.currentIndex = index
-                            imagePlayer.show(index)
-                        }
-
-//                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
-//                        if( component.status === Component.Ready ) {
-//                            var play = component.createObject(imageListView)
-//                            play.show(index)
+//                        if( ImageModel.selectionStatus === 0 ) {
+//                            ImageModel.currentIndex = index
+//                            imagePlayer.show(index)
 //                        }
 
+////                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
+////                        if( component.status === Component.Ready ) {
+////                            var play = component.createObject(imageListView)
+////                            play.show(index)
+////                        }
 
-                        if( ImageModel.selectionStatus ) {
-                            selection = !selection
-                        }
-                    }
-                    onPositionChanged: {
-                        if( ImageModel.selectionStatus ) {
-                        }
-                    }
-                }
+
+//                        if( ImageModel.selectionStatus ) {
+//                            selection = !selection
+//                        }
+//                    }
+//                    onPositionChanged: {
+//                        if( ImageModel.selectionStatus ) {
+//                        }
+//                    }
+//                }
+
             }
 
             ScrollBar.vertical: ScrollBar {
@@ -175,13 +236,17 @@ Item {
             height: 60
             color: "#2f4f4f"
 
+            MouseArea {
+                anchors.fill: parent
+            }
+
             // 返回按钮
             Rectangle {
                 id: btnReturn
                 width: 60
                 height: 60
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: 5
                 color: "transparent"
                 Text {
                     anchors.centerIn: parent
@@ -196,6 +261,7 @@ Item {
                     onClicked: {
                         AndroidApi.setRotationScreen(0)
                         stackView.pop()
+//                        imageListView.y = imageListView.height
                     }
 
                 }
@@ -259,7 +325,7 @@ Item {
                 width: 60
                 height: 60
                 anchors.right: parent.right
-                anchors.rightMargin: 30
+                anchors.rightMargin: 5
                 color: "transparent"
                 Text {
                     anchors.centerIn: parent
@@ -332,12 +398,19 @@ Item {
 
     ImagePlayer {
         id: imagePlayer
-//        visible: false
-        visible: true
+        visible: false
+//        visible: true
+    }
+
+//    StackView.onActivating: {
+//        imageList.positionViewAtEnd()
+//    }
+
+    Component.onCompleted: {
+        imageList.positionViewAtEnd()
     }
 
     StackView.onActivated: {
-//        console.log("123")
         AndroidApi.setRotationScreen(-1)
     }
 

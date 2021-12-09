@@ -51,10 +51,10 @@ public:
 
     Q_INVOKABLE void removeSelection();
 
-    Q_INVOKABLE void openVideo(const QString &path);
+    Q_INVOKABLE void openVideo(const int &index);
 
-    Q_PROPERTY(bool videoPlaying READ videoPlaying CONSTANT)
-    bool videoPlaying();
+    Q_PROPERTY(int videoIndex READ videoIndex NOTIFY videoStatusChanged)
+    int videoIndex();
 
     Q_PROPERTY(QString videoFrameUrl READ videoFrameUrl NOTIFY videoFrameChanged)
     QString videoFrameUrl();
@@ -74,6 +74,7 @@ Q_SIGNALS:
     void currentIndexChanged();
     void selectionStatusChanged();
 
+    void videoStatusChanged();
     void videoFrameChanged();
 };
 
