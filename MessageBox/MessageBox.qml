@@ -32,6 +32,7 @@ Popup {
         anchors.centerIn: parent
         color: "white"
         wrapMode: Text.Wrap
+        font.pixelSize: 20
 
         onContentWidthChanged: {
             if( contentWidth + 20 > popup._w ) {

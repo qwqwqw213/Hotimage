@@ -269,15 +269,24 @@ Drawer {
 
         }
 
-        onVisibleChanged: {
-            if( visible === true ) {
-                emissSlider.item.value = TcpCamera.emiss
-                reflectedSlider.item.value = TcpCamera.reflected
-                ambientSlider.item.value = TcpCamera.ambient
-                humidnessSlider.item.value = TcpCamera.humidness
-                correctionSlider.item.value = TcpCamera.correction
-                distanceSlider.item.value = TcpCamera.distance
-            }
+//        onVisibleChanged: {
+//            if( visible === true ) {
+//                emissSlider.item.value = TcpCamera.emiss
+//                reflectedSlider.item.value = TcpCamera.reflected
+//                ambientSlider.item.value = TcpCamera.ambient
+//                humidnessSlider.item.value = TcpCamera.humidness
+//                correctionSlider.item.value = TcpCamera.correction
+//                distanceSlider.item.value = TcpCamera.distance
+//            }
+//        }
+
+        Component.onCompleted: {
+            emissSlider.item.value = TcpCamera.emiss
+            reflectedSlider.item.value = TcpCamera.reflected
+            ambientSlider.item.value = TcpCamera.ambient
+            humidnessSlider.item.value = TcpCamera.humidness
+            correctionSlider.item.value = TcpCamera.correction
+            distanceSlider.item.value = TcpCamera.distance
         }
     }
 

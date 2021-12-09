@@ -316,11 +316,11 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         handshake.disconnect();
         QObject::connect(socket, &QTcpSocket::readyRead, this, &TcpCameraPrivate::onReadyRead, Qt::QueuedConnection);
         QObject::connect(socket, &QTcpSocket::disconnected, [=](){
+            handshake.disconnect();
             if( !exit ) {
                 qDebug() << "socket disconnect";
                 emit f->connectStatusChanged();
 
-                socket->disconnectFromHost();
                 socket->connectToHost(cfg.ip, cfg.port);
                 while (!socket->waitForConnected(3000) && !exit) {
 //                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
@@ -416,6 +416,7 @@ void TcpCameraPrivate::onReadyRead()
 //                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
             qDebug() << QThread::currentThreadId()
+                     << "handshake success"
                      << "camera size:" << cfg.cam.w << "*" << cfg.cam.h
                      << "format:" << cfg.cam.format;
 
@@ -670,6 +671,7 @@ void TcpCameraPrivate::readSetting()
     cfg.ip = SERVER_IP;
     cfg.port = SERVER_PORT;
     cfg.set.palette = s->value("Normal/palette", 0).toUInt();
+    cfg.set.mode = s->value("Normal/mode", CAM_OUTPUT_YUYV_MODE).toUInt();
     cfg.set.emiss = s->value("Normal/emiss", 1.0).toDouble();
     cfg.set.reflected = s->value("Normal/reflected", 1.0).toDouble();
     cfg.set.ambient = s->value("Normal/ambient", 1.0).toDouble();
@@ -694,6 +696,7 @@ void TcpCameraPrivate::saveSetting()
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     s->setValue("Normal/palette", cfg.set.palette);
+    s->setValue("Normal/mode", cfg.set.mode);
     s->setValue("Normal/emiss", cfg.set.emiss);
     s->setValue("Normal/reflected", cfg.set.reflected);
     s->setValue("Normal/ambient", cfg.set.ambient);

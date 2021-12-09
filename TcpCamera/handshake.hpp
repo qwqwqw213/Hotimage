@@ -5,10 +5,14 @@
 #define PAGE_HEAD                       0x30
 #define DECODE_PAGE_SIZE                1490
 
+#define CAM_OUTPUT_NUC16_MODE           0x04
+#define CAM_OUTPUT_YUYV_MODE            0x05
+
 #ifndef ANDROID_APP
 
-#define CAM_SHUTTER         0x8000
-#define CAM_PALETTE         0x8800
+#define CAM_SHUTTER                     0x8000
+#define CAM_PALETTE                     0x8800
+
 
 #include "Drive_Socket.hpp"
 #include "Drive_V4L2Reader.hpp"
@@ -135,8 +139,18 @@ public:
 
 typedef struct
 {
+    /*  数据包类型, see RecvPageType  */
     uint8_t type;
+    /*  调色盘, 索引: 0 - 6  */
     uint8_t palette;
+    /*
+     *  04 整帧温度 输出nuc 16图像
+     *  05 只有最大最小中心温度 输出yuyv图像
+     */
+    uint8_t mode;
+    /*  模组设置参数
+     *  发射率 \ 反射温度 \ 环境温度 \ 湿度 \ 距离 \ 修正值
+     */
     float emiss;
     float reflected;
     float ambient;
@@ -168,6 +182,7 @@ enum RecvPageType
         __shuffer,
         __palette,
         __config,
+        __mode,
     };
     HandShake() { connected = false; }
     ~HandShake() { }
@@ -316,12 +331,13 @@ enum RecvPageType
         switch (t.type) {
         case __handshake: {
             byte[2] = t.palette;
-            byte.replace(3, 4, qfloat2byte(t.emiss));
-            byte.replace(7, 4, qfloat2byte(t.reflected));
-            byte.replace(11, 4, qfloat2byte(t.ambient));
-            byte.replace(15, 4, qfloat2byte(t.humidness));
-            byte.replace(19, 2, qint2byte(t.distance, 2));
-            byte.replace(21, 4, qfloat2byte(t.correction));
+            byte[3] = t.mode;
+            byte.replace(4, 4, qfloat2byte(t.emiss));
+            byte.replace(8, 4, qfloat2byte(t.reflected));
+            byte.replace(12, 4, qfloat2byte(t.ambient));
+            byte.replace(16, 4, qfloat2byte(t.humidness));
+            byte.replace(20, 2, qint2byte(t.distance, 2));
+            byte.replace(22, 4, qfloat2byte(t.correction));
             break;
         }
         case __palette: {
@@ -337,50 +353,13 @@ enum RecvPageType
             byte.replace(20, 4, qfloat2byte(t.correction));
         }
             break;
+        case __mode: {
+            byte[2] = t.mode;
+        }
+            break;
         default: break;
         }
         return byte;
-    }
-
-    std::string s_pack(const t_setting_page &t)
-    {
-        std::string str;
-        str += (uint8_t)PAGE_HEAD;
-        str += t.type;
-        switch (t.type) {
-        case __handshake: {
-            str += (uint8_t)t.palette;
-            str += float2byte(t.emiss);
-            str += float2byte(t.reflected);
-            str += float2byte(t.ambient);
-            str += float2byte(t.humidness);
-            str += int2byte(t.distance, 2);
-            str += float2byte(t.correction);
-//            byte.replace(3, 4, qfloat2byte(t.emiss));
-//            byte.replace(7, 4, qfloat2byte(t.reflected));
-//            byte.replace(11, 4, qfloat2byte(t.ambient));
-//            byte.replace(15, 4, qfloat2byte(t.humidness));
-//            byte.replace(19, 2, qint2byte(t.distance, 2));
-//            byte.replace(21, 4, qfloat2byte(t.correction));
-            str += '0';
-            break;
-        }
-        case __palette: {
-//            byte[2] = t.palette;
-        }
-            break;
-        case __config: {
-//            byte.replace(2, 4, qfloat2byte(t.emiss));
-//            byte.replace(6, 4, qfloat2byte(t.reflected));
-//            byte.replace(10, 4, qfloat2byte(t.ambient));
-//            byte.replace(14, 4, qfloat2byte(t.humidness));
-//            byte.replace(18, 2, qint2byte(t.distance, 2));
-//            byte.replace(20, 4, qfloat2byte(t.correction));
-        }
-            break;
-        default: break;
-        }
-        return str;
     }
 #endif
 
@@ -408,22 +387,35 @@ private:
             {
             case HandShake::__handshake: {
                 connected = true;
-                ctl.v4l2Control(fd, CAM_PALETTE | buf[2]);
+                int palette = buf[2];
+                int mode = buf[3];
+                ctl.v4l2Control(fd, 0x8000 | mode);
+                usleep(10000);
+                if( mode == 0x05 ) {
+                    ctl.v4l2Control(fd, CAM_PALETTE | palette);
+                }
 
-                float emiss = byte2float(&buf[3]);
+                float emiss = byte2float(&buf[4]);
                 ctl.sendEmissivity(fd, emiss);
-                float refltmp = byte2float(&buf[7]);
+                usleep(10000);
+                float refltmp = byte2float(&buf[8]);
                 ctl.sendReflection(fd, refltmp);
-                float airtmp = byte2float(&buf[11]);
+                usleep(10000);
+                float airtmp = byte2float(&buf[12]);
                 ctl.sendAmb(fd, airtmp);
-                float humi = byte2float(&buf[15]);
+                usleep(10000);
+                float humi = byte2float(&buf[16]);
                 ctl.sendHumidity(fd, humi);
-                unsigned short distance = byte2int(&buf[19], 2);
+                usleep(10000);
+                unsigned short distance = byte2int(&buf[20], 2);
                 ctl.sendDistance(fd, distance);
-                float fix = byte2float(&buf[21]);
+                usleep(10000);
+                float fix = byte2float(&buf[22]);
                 ctl.sendCorrection(fd, fix);
+                usleep(10000);
                 std::cout << "handshake succrss, init param:\n"
-                          << "palette" << (int)(buf[2]) << "\n"
+                          << "palette" << palette << "\n"
+                          << "mode:" << mode << "\n"
                           << "emiss:" << emiss << "\n"
                           << "refltmp:" << refltmp << "\n"
                           << "airtmp:" << airtmp << "\n"

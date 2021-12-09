@@ -223,7 +223,7 @@ Window {
                 anchors.fill: parent
                 onPressed: {
 //                    Config.setRotation()
-                    messagebox.showMsg("test message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest ")
+//                    messagebox.showMsg("test message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest ")
                 }
             }
         }

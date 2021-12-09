@@ -17,7 +17,7 @@
 
 #define SERVER_IP       "192.168.1.1"
 #else
-#define SERVER_IP       "192.168.254.195"
+#define SERVER_IP       "192.168.254.134"
 #endif
 
 #define SERVER_PORT     27015
