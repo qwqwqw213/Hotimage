@@ -3,7 +3,8 @@
 #include "ImageListModel/imagelistmodel.h"
 #include "TcpCamera/tcpcamera.h"
 #include "AndroidInterface/androidinterface.h"
-#include "TcpCamera/imageview.h"
+#include "VideoProcess/videoprocess.h"
+#include "ImagePaintView/imagepaintview.h"
 
 #include "QDebug"
 #include "QScreen"
@@ -43,6 +44,9 @@ public:
     qreal accelerometer_y;
     qreal accelerometer_z;
 #endif
+
+    VideoProcess *decode;
+    ImageProvider *decodeProvider;
 
 
     QScopedPointer<AndroidInterface> androidInterface;
@@ -122,7 +126,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                                      Qt::InvertedPortraitOrientation);
     QObject::connect(p->screen, static_cast<void (QScreen::*)(Qt::ScreenOrientation)>(&QScreen::orientationChanged),
                      [=](Qt::ScreenOrientation orientation){
-//        qDebug() << "orientationChanged screen:" << orientation << p->screen->availableGeometry();
+        qDebug() << "orientationChanged screen:" << orientation << p->screen->availableGeometry();
     });
 
     QRect r = p->screen->availableGeometry();
@@ -168,7 +172,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
 
-    qmlRegisterType<ImageView>("Custom.ImageView", 1, 1,"ImageView");
+    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
     return 1;
 }
@@ -235,6 +239,11 @@ ConfigPrivate::ConfigPrivate(Config *parent)
     f = parent;
 
     ts = new QTranslator(f);
+
+
+    decode = new VideoProcess(f);
+    decodeProvider = new ImageProvider("videostream");
+
 
     oldRotation = 0;
 #ifdef Q_OS_ANDROID
@@ -326,6 +335,8 @@ ConfigPrivate::~ConfigPrivate()
     gyroscope->deleteLater();
     delete madgwick;
 #endif
+
+    decode->closeStream();
 
     saveSetting();
 }

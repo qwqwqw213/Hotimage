@@ -2,13 +2,14 @@
 
 #include "thread"
 
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
 #include "VideoProcess/videoprocess.h"
-#endif
+//#endif
 
 #include "QDebug"
 #include "QDirIterator"
 #include "QFile"
+#include "QThread"
 
 class ImageListModelPrivate
 {
@@ -16,11 +17,10 @@ public:
     explicit ImageListModelPrivate(ImageListModel *parent);
     ~ImageListModelPrivate();
 
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     VideoProcess *decode;
-#endif
+//#endif
     ImageProvider *provider;
-    int videoIndex;
 
     typedef std::tuple<QString, QString, int, int> Image;
     QVector<Image> list;
@@ -60,19 +60,29 @@ void ImageListModel::search(const QString &path)
         QDir d;
         d.setPath(path);
         d.setSorting(QDir::Time | QDir::Reversed);
-//        d.setNameFilters(QStringList()
-//                         << QString("*.jpg")
-//                         << QString("*.jpeg")
-//                         << QString("*.avi"));
-
         d.setNameFilters(QStringList()
                          << QString("*.jpg")
-                         << QString("*.jpeg"));
+                         << QString("*.jpeg")
+                         << QString("*.avi"));
+
+//        d.setNameFilters(QStringList()
+//                         << QString("*.jpg")
+//                         << QString("*.jpeg"));
         int count = 0;
         QFileInfoList list = d.entryInfoList();
         for(int i = 0; i < list.size(); i++) {
             QString file = list.at(i).filePath();
             QString name = list.at(i).fileName();
+            if( name.indexOf("IMG_") >= 0 ) {
+                QString strDatetime = name.right(name.length() - QString("IMG_").length());
+                name = QString("%1-%2-%3 %4:%5:%6")
+                        .arg(strDatetime.mid(0, 4))
+                        .arg(strDatetime.mid(4, 2))
+                        .arg(strDatetime.mid(6, 2))
+                        .arg(strDatetime.mid(8, 2))
+                        .arg(strDatetime.mid(10, 2))
+                        .arg(strDatetime.mid(12, 2));
+            }
             QString path = QString::fromUtf8(QString("file:///" + file).toUtf8());
             int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
             p->list.append(std::make_tuple(name, path, 0, type));
@@ -249,21 +259,16 @@ void ImageListModel::removeSelection()
 
 void ImageListModel::openVideo(const int &index)
 {
-#ifdef Q_OS_ANDROID
-    if( p->videoIndex == -1 ) {
-        p->videoIndex = index;
+//#ifdef Q_OS_ANDROID
+    if( !p->decode->status() ) {
         auto d = p->list.at(index);
         QString path = std::get<1>(d);
         QString file = path.right(path.length() - QString("file:///").length());
         qDebug() << "open video:" << index << file;
-        p->decode->openStream(file.toStdString());
+//        p->decode->openStream(file.toStdString());
+        p->decode->openStream("F:\\QtProject\\VideoDecode\\VIDEO_20211129114503.avi");
     }
-#endif
-}
-
-int ImageListModel::videoIndex()
-{
-    return p->videoIndex;
+//#endif
 }
 
 QString ImageListModel::videoFrameUrl()
@@ -299,30 +304,28 @@ ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)
     currentIndex = -1;
     selectionStatus = false;
 
-    videoIndex = -1;
     provider = new ImageProvider("imagemodel");
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     decode = new VideoProcess;
     QObject::connect(decode, &VideoProcess::error, f, [=](){
         qDebug() << QString::fromStdString(decode->lastError());
-        videoIndex = -1;
         decode->closeStream();
+        emit f->videoStatusChanged();
     }, Qt::QueuedConnection);
 
     QObject::connect(decode, &VideoProcess::statusChanged, f, [=](){
         if( !decode->status() ) {
-            videoIndex = -1;
             decode->closeStream();
         }
         emit f->videoStatusChanged();
     }, Qt::QueuedConnection);
 
     QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
-                     [=](QImage img) {
-        provider->setImage(img);
+                     f, [=](QImage img) {
+        provider->addQueue(img);
         emit f->videoFrameChanged();
-    });
-#endif
+    }, Qt::QueuedConnection);
+//#endif
 }
 
 ImageListModelPrivate::~ImageListModelPrivate()
@@ -330,7 +333,7 @@ ImageListModelPrivate::~ImageListModelPrivate()
     if( searchThread.joinable() ) {
         searchThread.join();
     }
-#ifdef Q_OS_ANDROID
-    decode->closeDecode();
-#endif
+//#ifdef Q_OS_ANDROID
+    decode->closeStream();
+//#endif
 }

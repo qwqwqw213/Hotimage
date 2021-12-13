@@ -3,16 +3,37 @@ import QtQuick.Controls 2.12
 import QtQuick 2.4
 import Qt.labs.folderlistmodel 2.14
 
+import Custom.ImagePaintView 1.1
+
 Rectangle{
     id: imagePlayer
 //    property alias photoScanModel: photoScan.model
     anchors.fill: parent
     color: "black"
 
+    function hideTitle() {
+        if( title.state !== "hide" ) {
+            title.state = "hide"
+            bottom.y = height
+        }
+    }
+
+    function autoTitle(state) {
+        if( title.state === "show" ) {
+            title.state = "hide"
+            bottom.y = height
+        }
+        else {
+            title.state = "show"
+            bottom.y = height - bottom.height
+        }
+    }
+
     function show(index) {
 //        photoScan.contentX = index * width
         photoScan.currentIndex = index
         photoScan.positionViewAtIndex(index, ListView.Beginning)
+        miniPhtotList.positionViewAtIndex(index, ListView.Center)
         visible = true
         state = "show"
     }
@@ -29,18 +50,19 @@ Rectangle{
         highlightRangeMode: ListView.StrictlyEnforceRange
         orientation: ListView.Horizontal
         snapMode: ListView.SnapOneItem
+
         delegate: AlbumScanDelegate {
             opacity: imagePlayer.opacity
             width: photoScan.width
             height: photoScan.height
-            onItemClicked: {
-                if( title.state === "show" ) {
-                    title.state = "hide"
-                }
-                else {
-                    title.state = "show"
-                }
-            }
+//            onItemClicked: {
+//                if( title.state === "show" ) {
+//                    title.state = "hide"
+//                }
+//                else {
+//                    title.state = "show"
+//                }
+//            }
         }
 
         property real maxContentX: width * (ImageModel.rowCount() - 1)
@@ -49,12 +71,16 @@ Rectangle{
         }
 
         onMovementEnded: {
-            console.log("move end")
+            imageList.positionViewAtIndex(ImageModel.currentIndex,  ListView.End)
         }
 
         onCurrentIndexChanged: {
             console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
+            imagePaintView.closeStream()
+            if( !miniPhtotList.moving ) {
+                miniPhtotList.positionViewAtIndex(ImageModel.currentIndex,  ListView.Center)
+            }
         }
 
         onContentXChanged: {
@@ -70,6 +96,20 @@ Rectangle{
         }
 
 //        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
+    }
+
+//    Image {
+//        visible: ImageModel.videoIndex >= 0 ? true : false
+//        opacity: imagePlayer.opacity
+//        width: photoScan.width
+//        height: photoScan.height
+//        source: ImageModel.videoFrameUrl
+//        cache: false
+//    }
+    ImagePaintView {
+        id: imagePaintView
+        width: photoScan.width
+        height: photoScan.height
     }
 
     Connections {
@@ -219,60 +259,69 @@ Rectangle{
 //        console.log("floder = ", Config.albumFolder, width, height, photoScan.width)
 //    }
 
-//    GridView {
-//        id: photoList
-//        width: parent.width
-//        height: parent.height * 0.1
-////        anchors.left: parent.left
-//        anchors.bottom: parent.bottom
-//        model: scanModel
-//        cellWidth: width > height ? height : width
-//        cellHeight: cellWidth
-//        flow: GridView.FlowTopToBottom
-//        layoutDirection: GridView.LeftToRight
-//        highlightFollowsCurrentItem: true
-//        z: 2
 
-////        x: width / 2 - cellWidth / 2
+    Rectangle {
+        id: bottom
+        Behavior on y {
+            YAnimator {
+                duration: 160
+                easing.type: Easing.OutCurve
+            }
+        }
 
-//        property int maxContentX: cellWidth * scanModel.count - ((width / cellWidth) * cellWidth)
-//        onContentXChanged: {
-//            if( (atXBeginning == false)
-//                    && (atXEnd == false) ) {
-////                photoScan.positionViewAtIndex(contentX / cellWidth, ListView.Beginning)
-//            }
-//        }
+        x: 0
+        y: parent.height - height
+        width: parent.width
+        height: 60
+        color: "#2f4f4f"
+        z: 2
+        GridView {
+            id: miniPhtotList
+            width: parent.width
+            height: parent.height
+            anchors.bottom: parent.bottom
+            model: ImageModel
+            cellWidth: width > height ? height : width
+            cellHeight: cellWidth
+            flow: GridView.FlowTopToBottom
+            layoutDirection: GridView.LeftToRight
+            leftMargin: width / 2 - cellWidth / 2
+            rightMargin: width / 2 - cellWidth / 2
 
-//        delegate: Rectangle {
-//            id: itembg
-//            width: photoList.cellWidth
-//            height: photoList.cellHeight
-//            color: "transparent"
-
-//            Image {
-//                asynchronous: true
-//                id: photo
-//                cache: true
-//                sourceSize: Qt.size(parent.width, parent.height)
-//                source: scanModel.folder + fileName
-//                anchors.centerIn: parent
-//                width: parent.width - 2
-//                height: parent.height - 2
-//                smooth: true
-//                fillMode: Image.PreserveAspectCrop
-//            }
-
-//            MouseArea{
-//                anchors.fill: parent
-//                onClicked: {
-//                    photoList.currentIndex = index
-//                    photoList.positionViewAtIndex(index, ListView.Center)
-//                    console.log("gridView item clicked", photoList.currentIndex)
+            // 底部滑动, 更改当前播放的图片
+//            onContentXChanged: {
+//                var index = Number((contentX + leftMargin) / cellWidth)
+//                if( index > 0 && photoScan.currentIndex !== index ) {
 //                    photoScan.positionViewAtIndex(index, ListView.Beginning)
 //                }
 //            }
-//        }
 
-//        Component.onCompleted: console.log(x, y, width, height, cellWidth, cellHeight)
-//    }
+            delegate: Rectangle {
+                id: itembg
+                width: miniPhtotList.cellWidth
+                height: miniPhtotList.cellHeight
+                color: "transparent"
+                Image {
+                    asynchronous: true
+                    id: photo
+                    cache: true
+                    sourceSize: Qt.size(parent.width, parent.height)
+                    source: fileType == 0 ? path : ""
+                    anchors.centerIn: parent
+                    width: parent.width - 2
+                    height: parent.height - 2
+                    smooth: true
+                    fillMode: Image.PreserveAspectCrop
+                }
+
+                MouseArea{
+                    anchors.fill: parent
+                    onClicked: {
+                        miniPhtotList.positionViewAtIndex(index, ListView.Center)
+                        photoScan.positionViewAtIndex(index, ListView.Beginning)
+                    }
+                }
+            }
+        }
+    }
 }

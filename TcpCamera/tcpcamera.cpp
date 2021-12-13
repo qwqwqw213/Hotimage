@@ -2,9 +2,9 @@
 
 #ifdef Q_OS_ANDROID
 #include "xtherm/thermometry.h"
-
-#include "VideoProcess/videoprocess.h"
 #endif
+#include "VideoProcess/videoprocess.h"
+
 
 #include "AndroidInterface/androidinterface.h"
 
@@ -33,10 +33,11 @@ public:
     explicit TcpCameraPrivate(TcpCamera *parent = nullptr);
     ~TcpCameraPrivate();
 
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     VideoProcess *encode;
-#endif
+//#endif
 
+    QImage image;
     ImageProvider *provider;
 
     tcp_config cfg;
@@ -238,21 +239,23 @@ void TcpCamera::setShowTemp(const bool &show)
 
 bool TcpCamera::encoding()
 {
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     return p->encode->status();
-#else
-    return false;
-#endif
+//#else
+//    return false;
+//#endif
 }
 
 void TcpCamera::openRecode()
 {
     if( isConnected() ) {
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
         if( p->encode->status() ) {
+            QString path = p->encode->filePath();
+            emit captureFinished(path);
+            emit msg(tr("Save record path:") + path);
             p->encode->closeEncode();
-
-            emit msg(tr("Save record path:") + p->encode->filePath());
+            qDebug() << QThread::currentThreadId() << "close encode";
         }
         else {
             emit recordTimeChanged();
@@ -261,7 +264,7 @@ void TcpCamera::openRecode()
 #ifdef Q_OS_ANDROID
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 #else
-            QString path = QApplication::applicationDirPath();
+            QString path = QGuiApplication::applicationDirPath();
 #endif
             path.append("/Hotimage");
             if( !QFileInfo::exists(path) ) {
@@ -269,28 +272,28 @@ void TcpCamera::openRecode()
                 d.mkdir(path);
             }
 
-            path.append("/VIDEO_" + fileName);
+            path.append("/REC_" + fileName);
 
             cfg.filePath = path;
             cfg.width = p->cfg.cam.w;
-            cfg.height = p->cfg.cam.h;
+            cfg.height = p->cfg.cam.h - IMAGE_Y_OFFSET;
             cfg.fps = 25;
             cfg.encodePixel = p->encode->pixel(QImage::Format_RGB888);
             p->encode->openEncode(cfg);
         }
 
         emit encodingChanged();
-#endif
+//#endif
     }
 }
 
 QString TcpCamera::recordTime()
 {
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     return p->encode->recordTime();
-#else
-    return QString("00:00");
-#endif
+//#else
+//    return QString("00:00");
+//#endif
 }
 
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
@@ -303,6 +306,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         captureThread.join();
     }, Qt::QueuedConnection);
 
+    image = QImage();
     provider = new ImageProvider("tcpcamera");
 
     temperatureData = NULL;
@@ -337,6 +341,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
 //            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
+//            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
             socket->connectToHost(cfg.ip, cfg.port);
         }
 
@@ -350,7 +355,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         socket = NULL;
         handshake.disconnect();
 
-        provider->release();
+        provider->clear();
         emit f->videoFrameChanged();
 //        emit f->videoFrame(QImage());
 
@@ -366,7 +371,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     });
     this->moveToThread(thread);
 
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     encode = new VideoProcess;
     QObject::connect(encode, &VideoProcess::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
     QObject::connect(encode, &VideoProcess::error, f, [=](){
@@ -376,7 +381,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         emit f->encodingChanged();
     }, Qt::QueuedConnection);
     QObject::connect(encode, &VideoProcess::statusChanged, f, &TcpCamera::encodingChanged);
-#endif
+//#endif
 }
 
 TcpCameraPrivate::~TcpCameraPrivate()
@@ -407,7 +412,8 @@ void TcpCameraPrivate::onReadyRead()
         else {
             buf.remove(0, res);
 //            image = QImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET, QImage::Format_RGB888);
-            provider->setEmptyRgbImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
+//            provider->setEmptyRgbImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
+            image = QImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET, QImage::Format_RGB888);
 
             frameSize = convert().frameSize(cfg.cam.format, cfg.cam.w, cfg.cam.h);
 //            emit f->msg(QString("handshake success\n"
@@ -583,7 +589,8 @@ void TcpCameraPrivate::onReadyRead()
 #endif
         timer0 = timer1;
         timer1 = clock();
-        uint8_t *bit = provider->data();
+//        uint8_t *bit = provider->data();
+        uint8_t *bit = image.bits();
 
         fps = CLOCKS_PER_SEC / (double)(timer1 - timer0);
         if( cfg.cam.format == __yuyv ) {
@@ -598,7 +605,7 @@ void TcpCameraPrivate::onReadyRead()
 #ifdef Q_OS_ANDROID
         // 画温度信息
         if( showTemp ) {
-            QPainter pr(&provider->image());
+            QPainter pr(&image);
             QFontMetrics metrics(pr.font());
             // 最大温度
             pr.setPen(Qt::red);
@@ -645,13 +652,13 @@ void TcpCameraPrivate::onReadyRead()
                         Qt::AlignCenter,
                         str);
         }
-
-        if( encode->status() ) {
-            encode->pushEncode(provider->image());
-        }
 #endif
+        if( encode->status() ) {
+            encode->pushEncode(image);
+        }
 
 
+        provider->addQueue(image);
         emit f->videoFrameChanged();
 //        emit f->videoFrame(provider->image());
         buf.remove(0, data_size);
@@ -717,7 +724,7 @@ void TcpCameraPrivate::capture()
 {
     if( !captureThread.joinable() ) {
         captureThread = std::thread([=](){
-            QPixmap pix = QPixmap::fromImage(provider->image());
+            QPixmap pix = QPixmap::fromImage(image);
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
 #ifdef Q_OS_ANDROID
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
@@ -944,7 +951,7 @@ void TcpCameraPrivate::unpack(const int &data_size)
 #endif
     timer0 = timer1;
     timer1 = clock();
-    uint8_t *bit = provider->data();
+    uint8_t *bit = image.bits();
 
     fps = CLOCKS_PER_SEC / (double)(timer1 - timer0);
     if( cfg.cam.format == __yuyv ) {
@@ -959,7 +966,7 @@ void TcpCameraPrivate::unpack(const int &data_size)
 #ifdef Q_OS_ANDROID
     // 画温度信息
     if( showTemp ) {
-        QPainter pr(&provider->image());
+        QPainter pr(&image);
         QFontMetrics metrics(pr.font());
         // 最大温度
         pr.setPen(Qt::red);
@@ -1006,12 +1013,10 @@ void TcpCameraPrivate::unpack(const int &data_size)
                     Qt::AlignCenter,
                     str);
     }
-
-    if( encode->status() ) {
-        encode->pushEncode(provider->image());
-    }
 #endif
-
+    if( encode->status() ) {
+        encode->pushEncode(image);
+    }
 
     emit f->videoFrameChanged();
     unpackMutex.lock();

@@ -1,21 +1,36 @@
 #include "imageprovider.h"
 
 #include "QDebug"
+#include "QThread"
+#include "QQueue"
+#include "QMutex"
+
+class ImageProviderPrivate
+{
+public:
+    ImageProviderPrivate(ImageProvider *parent, const QString &url);
+    ~ImageProviderPrivate();
+
+    quint64 index;
+    QString rawUrl;
+    QString qmlUrl;
+
+    QQueue<QImage> queue;
+    QMutex mutex;
+
+private:
+    ImageProvider *f;
+};
 
 ImageProvider::ImageProvider(const QString &url)
     : QQuickImageProvider(QQuickImageProvider::Image)
+    , p(new ImageProviderPrivate(this, url))
 {
-    m_image = QImage();
 
-    m_requesTime = 0;
-
-    m_url = url;
-    m_qmlUrl = QString("image://%1/").arg(url);
 }
 
 ImageProvider::~ImageProvider()
 {
-    m_image = QImage();
 }
 
 QImage ImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
@@ -23,11 +38,14 @@ QImage ImageProvider::requestImage(const QString &id, QSize *size, const QSize &
     Q_UNUSED(id)
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
-    m_requesTime ++;
-    if( m_requesTime > 200 ) {
-        m_requesTime = 0;
+    p->index ++;
+    if( !p->queue.isEmpty() ) {
+        p->mutex.lock();
+        QImage img = p->queue.dequeue();
+        p->mutex.unlock();
+        return img;
     }
-    return m_image;
+    return QImage();
 }
 
 QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
@@ -35,44 +53,52 @@ QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize
     Q_UNUSED(id)
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
-    m_requesTime ++;
-    if( m_requesTime > 200 ) {
-        m_requesTime = 0;
+    p->index ++;
+    if( !p->queue.isEmpty() ) {
+        p->mutex.lock();
+        QImage img = p->queue.dequeue();
+        p->mutex.unlock();
+        return QPixmap::fromImage(img);
     }
-    return QPixmap::fromImage(m_image);
+    return QPixmap();
 }
 
-void ImageProvider::setEmptyRgbImage(const int &w, const int &h)
+void ImageProvider::addQueue(QImage image)
 {
-    m_image = QImage(w, h, QImage::Format_RGB888);
+//    m_image = image;
+    p->mutex.lock();
+    p->queue.enqueue(image);
+    p->mutex.unlock();
 }
 
-void ImageProvider::setImage(QImage image)
+void ImageProvider::clear()
 {
-    m_image.swap(image);
-}
-
-uint8_t * ImageProvider::data()
-{
-    return m_image.bits();
-}
-
-QImage & ImageProvider::image()
-{
-    return m_image;
+    p->queue.clear();
 }
 
 QString ImageProvider::url()
 {
-    return m_url;
+    return p->rawUrl;
 }
 
 QString ImageProvider::qmlUrl()
 {
-    return m_qmlUrl + QString::number(m_requesTime);
+    return p->qmlUrl + QString::number(p->index);
 }
 
-void ImageProvider::release()
+ImageProviderPrivate::ImageProviderPrivate(ImageProvider *parent, const QString &url)
 {
-    m_image = QImage();
+    f = parent;
+
+
+    index = 0;
+    rawUrl = url;
+    qmlUrl = QString("image://%1/").arg(url);
+
+    queue.clear();
+}
+
+ImageProviderPrivate::~ImageProviderPrivate()
+{
+    queue.clear();
 }

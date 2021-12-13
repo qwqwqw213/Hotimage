@@ -4,8 +4,6 @@ import QtQuick.Window 2.12
 import QtQuick.Shapes 1.14
 import Qt.labs.platform 1.1
 
-import Custom.ImageView 1.1
-
 import "./ImageListModel"
 import "./Setting"
 import "./Loading"
@@ -17,6 +15,8 @@ Window {
     width: Config.width
     height: Config.height
     title: qsTr("Hotimage")
+
+    color: "black"
 
     onVisibleChanged: {
         console.log("main visble status:", visible)
@@ -51,6 +51,9 @@ Window {
         }
         StackView.onActivating: {
             videoPlay = true
+        }
+        StackView.onActivated: {
+            AndroidApi.setRotationScreen(0)
         }
 
         // 顶部按钮栏
@@ -143,43 +146,6 @@ Window {
                 }
             }
         }
-
-//        ImageView {
-//            id: cameraFrame
-//            width: parent.width * 0.7
-//            height: parent.height
-//            x: parent.width * 0.1
-//            y: 0
-//            camera: TcpCamera
-
-//            // 录像标志
-//            Text {
-//                anchors.left: parent.left
-//                anchors.leftMargin: 10
-//                anchors.top: parent.top
-//                anchors.topMargin: 10
-//                font.family: "FontAwesome"
-//                font.pixelSize: 30
-//                text: "\uf03d" + " " + TcpCamera.recordTime
-//                color: "red"
-//                visible: TcpCamera.encoding
-
-//                SequentialAnimation on color {
-//                    loops: Animation.Infinite
-//                    running: visible
-//                    ColorAnimation {
-//                        from: "red"
-//                        to: "black"
-//                        duration: 800
-//                    }
-//                    ColorAnimation {
-//                        from: "black"
-//                        to: "red"
-//                        duration: 800
-//                    }
-//                }
-//            }
-//        }
 
         // 摄像头图像
         Image {
@@ -482,17 +448,29 @@ Window {
             }
         }
         pushExit: Transition {
-            XAnimator {
-                from: 0
-                to: 0 - width
+//            XAnimator {
+//                from: 0
+//                to: 0 - width
+//                duration: 200
+//                easing.type: Easing.OutCurve
+//            }
+            ScaleAnimator {
+                from: 1.0
+                to: 0.9
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         popEnter: Transition {
-            XAnimator {
-                from: 0 - width
-                to: 0
+//            XAnimator {
+//                from: 0 - width
+//                to: 0
+//                duration: 200
+//                easing.type: Easing.OutCurve
+//            }
+            ScaleAnimator {
+                from: 0.9
+                to: 1.0
                 duration: 200
                 easing.type: Easing.OutCurve
             }

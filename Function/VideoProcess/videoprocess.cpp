@@ -184,15 +184,15 @@ QString VideoProcess::filePath()
 
 bool VideoProcess::closeEncode()
 {
-    if( p->encode ) {
-        p->status = false;
-        emit statusChanged();
-    }
+    p->status = false;
+    p->condition.notify_all();
 
     if( p->thread.joinable() ) {
-        p->condition.notify_all();
         p->thread.join();
     }
+
+    p->encode_queue.clear();
+    emit statusChanged();
     return true;
 }
 
@@ -446,15 +446,14 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
         }
 
     FFMPEG_FAIL:
-        release_encode();
         if( ret < 0 ) {
             char err[512];
             av_make_error_string(err, 512, ret);
             std::string ffmpeg_err(err);
             error += (" ERROR: " + ffmpeg_err);
-            error = error;
             emit f->error();
         }
+        release_encode();
     });
 }
 
@@ -568,6 +567,8 @@ void VideoProcessPrivate::release_encode()
 
     free(encode);
     encode = NULL;
+
+    qDebug() << "close encode";
 }
 
 void VideoProcessPrivate::open_stream(const std::string &url)
@@ -623,6 +624,9 @@ int VideoProcessPrivate::find_stream(const char *url)
             decode->codecCnt = stream->codec;
             decode->fps_count = stream->nb_frames;
             decode->total_time = decode->fmtCnt->duration / 1000000.0;
+            qDebug() << "- stream info - \n"
+                     << "   fps:" << stream->nb_frames << "\n"
+                     << "   total time:" << decode->total_time << "\n";
             break;
         }
     }
@@ -734,9 +738,6 @@ int VideoProcessPrivate::read_video_stream()
                       decode->frame->data, decode->frame->linesize, 0, decode->frame->height,
                       decode->rgbFrame->data, decode->rgbFrame->linesize);
 
-
-
-
             while (1)
             {
                 qint64 msec = QDateTime::currentDateTime().toMSecsSinceEpoch() - start_ms;
@@ -749,6 +750,8 @@ int VideoProcessPrivate::read_video_stream()
         }
     }
     av_packet_unref(&decode->packet);
+
+
     return 0;
 }
 
@@ -795,6 +798,9 @@ void VideoProcessPrivate::close_video_stream()
     if( decode->sws ) {
         sws_freeContext(decode->sws);
     }
+
+    free(decode);
+    decode = NULL;
 }
 
 int VideoProcessPrivate::open_h264_decode()

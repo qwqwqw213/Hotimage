@@ -36,6 +36,9 @@ Item {
             cellHeight: cellWidth
             model: ImageModel
 
+//            bottomMargin: bottom.y < imageListView.height ? bottom.height : 0
+            bottomMargin: imageListView.height - bottom.y
+
 //            Component.onCompleted: positionViewAtEnd()
 
             delegate: Rectangle {
@@ -199,25 +202,7 @@ Item {
             }
 
             onContentYChanged: {
-                var temp = contentHeight - height - 60;
-//                if( contentY > temp ) {
-//                    temp = 60 - (contentY - temp)
-//                    y = temp > 0 ? temp : 0
-//                }
-//                if( contentY < 60 ) {
-//                    temp = 60 - contentY
-//                    y = temp < 60 ? temp : 60
-//                }
-//                if( contentY <= 60 ) {
-//                    if( y < 60 ) {
-//                        y = 60
-//                    }
-//                }
-//                if( contentY > temp ) {
-//                    if( y > 0 ) {
-//                        y = 0
-//                    }
-//                }
+//                console.log(contentY)
             }
         }
 
@@ -259,7 +244,6 @@ Item {
                     id: btnReturnArea
                     anchors.fill: parent
                     onClicked: {
-                        AndroidApi.setRotationScreen(0)
                         stackView.pop()
 //                        imageListView.y = imageListView.height
                     }
@@ -297,6 +281,7 @@ Item {
                         selectionStatus = !selectionStatus
                         ImageModel.selectionStatus = selectionStatus
 
+//                        bottom.y = ImageModel.selectionStatus ? imageListView.height - bottom.height : imageListView.height
                         bottom.state = ImageModel.selectionStatus ? "show" : "hide"
                     }
                 }
@@ -317,7 +302,14 @@ Item {
             width: parent.width
             height: 60
             color: "#2f4f4f"
-//            y: parent.height - 60
+//            y: imageListView.height
+
+            onYChanged: {
+                var temp = imageList.contentHeight + (imageList.height * 2)
+                if( imageList.contentY >= temp && ready ) {
+                    imageList.contentY = temp + imageListView.height - y
+                }
+            }
 
             // 删除按钮
             Rectangle {
@@ -361,7 +353,7 @@ Item {
                     name: "show"
                     PropertyChanges {
                         target: bottom
-                        y: imageListView.height - height
+                        y: imageListView.height - bottom.height
                     }
                 }
             ]
@@ -369,8 +361,9 @@ Item {
                 Transition {
                     from: "hide"
                     to: "show"
-                    YAnimator {
+                    PropertyAnimation {
                         target: bottom
+                        property: "y"
                         duration: 160
                         easing.type: Easing.OutCurve
                     }
@@ -378,13 +371,24 @@ Item {
                 Transition {
                     from: "show"
                     to: "hide"
-                    YAnimator {
+                    PropertyAnimation {
                         target: bottom
+                        property: "y"
                         duration: 160
                         easing.type: Easing.OutCurve
                     }
                 }
             ]
+
+            // Behavior的效果不好
+            // 在 StackView 切换界面时, 会先从顶部移动到底部
+            /*
+            Behavior on y {
+                NumberAnimation {
+                    duration: 200
+                }
+            }
+            */
         }
 
     }
@@ -410,8 +414,13 @@ Item {
         imageList.positionViewAtEnd()
     }
 
+    property bool ready: false
     StackView.onActivated: {
         AndroidApi.setRotationScreen(-1)
+        ready = true
+    }
+    StackView.onDeactivated: {
+        ready = false
     }
 
     signal currentIndexChanged(var index, var source)

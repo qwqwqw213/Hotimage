@@ -18,7 +18,7 @@ SOURCES += \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
         ImageListModel/imagelistmodel.cpp \
-        TcpCamera/imageview.cpp \
+        ImagePaintView/imagepaintview.cpp \
         TcpCamera/tcpcamera.cpp \
         main.cpp
 
@@ -41,7 +41,7 @@ HEADERS += \
     Function/ImageProvider/imageprovider.h \
     Function/MadgwickAHRS.hpp \
     ImageListModel/imagelistmodel.h \
-    TcpCamera/imageview.h \
+    ImagePaintView/imagepaintview.h \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
     TcpCamera/tcpcamera.h \
@@ -51,10 +51,41 @@ DEFINES += ANDROID_APP
 DEPENDPATH += $$PWD/Function
 INCLUDEPATH += $$PWD/Function
 
+win32 {
+
 greaterThan(QT_MAJOR_VERSION,4){
         TARGET_ARCH=$${QT_ARCH}
 }else{
         TARGET_ARCH=$${QMAKE_HOST.arch}
+}
+
+contains(TARGET_ARCH, x86_64){
+        message('64 bit function')
+        BUILD_LIB=x64/
+}else{
+        message('32 bit function')
+        BUILD_LIB=x86/
+}
+
+HEADERS += \
+    libs/win32/libavcodec/avcodec.h \
+    libs/win32/libavformat/avformat.h \
+    libs/win32/libavutil/avutil.h \
+    libs/win32/libswscale/swscale.h \
+    Function/VideoProcess/videoprocess.h
+
+SOURCES += \
+    Function/VideoProcess/videoprocess.cpp
+
+LIBS += -L$$PWD/libs/win32/$$BUILD_LIB \
+    -lavcodec \
+    -lavformat \
+    -lavutil \
+    -lswscale
+
+
+INCLUDEPATH += $$PWD/libs/win32
+DEPENDPATH += $$PWD/libs/win32
 }
 
 android {

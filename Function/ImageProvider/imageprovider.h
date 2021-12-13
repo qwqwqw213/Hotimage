@@ -3,6 +3,7 @@
 
 #include "QQuickImageProvider"
 
+class ImageProviderPrivate;
 class ImageProvider : public QQuickImageProvider
 {
 public:
@@ -12,23 +13,15 @@ public:
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
-    void setEmptyRgbImage(const int &w, const int &h);
-    void setImage(QImage image);
-
-    uint8_t * data();
-
-    QImage &image();
+    void addQueue(QImage image);
+    void clear();
 
     QString url();
     QString qmlUrl();
 
-    void release();
-
 private:
-    QImage m_image;
-    quint8 m_requesTime;
-    QString m_url;
-    QString m_qmlUrl;
+    friend class ImageProviderPrivate;
+    QScopedPointer<ImageProviderPrivate> p;
 };
 
 #endif // IMAGEPROVIDER_H

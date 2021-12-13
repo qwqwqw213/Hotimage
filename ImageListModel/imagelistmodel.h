@@ -53,9 +53,6 @@ public:
 
     Q_INVOKABLE void openVideo(const int &index);
 
-    Q_PROPERTY(int videoIndex READ videoIndex NOTIFY videoStatusChanged)
-    int videoIndex();
-
     Q_PROPERTY(QString videoFrameUrl READ videoFrameUrl NOTIFY videoFrameChanged)
     QString videoFrameUrl();
 
