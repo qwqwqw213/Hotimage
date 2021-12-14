@@ -252,10 +252,12 @@ void TcpCamera::openRecode()
 //#ifdef Q_OS_ANDROID
         if( p->encode->status() ) {
             QString path = p->encode->filePath();
+            //  2021-12-24
+            //  此信号会调用capture thread的join()
+            //  未处理好导致以为是closeEncode()里thread join()报错
             emit captureFinished(path);
             emit msg(tr("Save record path:") + path);
             p->encode->closeEncode();
-            qDebug() << QThread::currentThreadId() << "close encode";
         }
         else {
             emit recordTimeChanged();
@@ -303,7 +305,9 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
     f = parent;
     QObject::connect(f, &TcpCamera::captureFinished, f, [=](){
-        captureThread.join();
+        if( captureThread.joinable() ) {
+            captureThread.join();
+        }
     }, Qt::QueuedConnection);
 
     image = QImage();
@@ -386,10 +390,10 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
 TcpCameraPrivate::~TcpCameraPrivate()
 {
-#ifdef Q_OS_ANDROID
+//#ifdef Q_OS_ANDROID
     encode->closeEncode();
     encode->deleteLater();
-#endif
+//#endif
     saveSetting();
 
     closeUnpack();

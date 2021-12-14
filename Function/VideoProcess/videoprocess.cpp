@@ -145,6 +145,7 @@ VideoProcess::~VideoProcess()
 
 bool VideoProcess::openEncode(const EncodeConfig &config)
 {
+    qDebug() << QThread::currentThreadId() << "open encode";
     p->open_encode(config);
     return true;
 }
@@ -184,15 +185,16 @@ QString VideoProcess::filePath()
 
 bool VideoProcess::closeEncode()
 {
-    p->status = false;
-    p->condition.notify_all();
+    if( p->status ) {
+        qDebug() << QThread::currentThreadId() << "close encode";
+        p->status = false;
+        p->condition.notify_all();
 
-    if( p->thread.joinable() ) {
         p->thread.join();
-    }
 
-    p->encode_queue.clear();
-    emit statusChanged();
+        p->encode_queue.clear();
+        emit statusChanged();
+    }
     return true;
 }
 
@@ -323,6 +325,7 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
     if( encode ) {
         return;
     }
+
     config = cfg;
     thread = std::thread([=](){
         int ret = 0;
@@ -573,7 +576,7 @@ void VideoProcessPrivate::release_encode()
 
 void VideoProcessPrivate::open_stream(const std::string &url)
 {
-    if( decode || thread.joinable() ) {
+    if( decode ) {
         return;
     }
 
