@@ -29,6 +29,7 @@ Item {
 
         GridView {
             id: imageList
+            x: 0
             y: 60
             width: parent.width
             height: parent.height - 60
@@ -49,12 +50,21 @@ Item {
 
                 Image {
                     asynchronous: true
-                    source: fileType == 0 ? path : ""
+//                    source: fileType == 0 ? path : ""
+                    source: path
                     width: imageList.cellWidth - 2
                     height: imageList.cellHeight - 2
                     fillMode: Image.PreserveAspectCrop
                     anchors.centerIn: parent
                     smooth: true
+                    Text {
+                        visible: fileType === 1
+                        anchors.centerIn: parent
+                        font.family: "FontAwesome"
+                        font.pixelSize: parent.width * 0.35
+                        text: "\uf144"
+                        color: mouseArea.pressed ? "#a0a0a0" : "white"
+                    }
 
                     // 选择标识
                     Text {
@@ -68,132 +78,30 @@ Item {
                         color: selection ? "#6f9f9f" : "white"
                         visible: ImageModel.selectionStatus
                     }
+                }
 
-                    MouseArea {
-                        id:mouseArea
-                        anchors.fill: parent
-                        onClicked: {
-
-                            if( ImageModel.selectionStatus === 0 ) {
-                                ImageModel.currentIndex = index
-                                imagePlayer.show(index)
-                            }
-
-    //                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
-    //                        if( component.status === Component.Ready ) {
-    //                            var play = component.createObject(imageListView)
-    //                            play.show(index)
-    //                        }
-
-
-                            if( ImageModel.selectionStatus ) {
-                                selection = !selection
-                            }
+                MouseArea {
+                    id: mouseArea
+                    anchors.fill: parent
+                    onClicked: {
+                        if( ImageModel.selectionStatus ) {
+                            selection = !selection
                         }
-                        onPositionChanged: {
-                            if( ImageModel.selectionStatus ) {
-                            }
+                        else {
+                            ImageModel.currentIndex = index
+                            imagePlayer.show(index,
+                                             delegate.x + imageList.x + 1,
+                                             delegate.y - imageList.contentY + imageList.y + 1,
+                                             imageList.cellWidth - 2,
+                                             imageList.cellHeight - 2,
+                                             fileType === 0 ? path : "")
+                        }
+                    }
+                    onPositionChanged: {
+                        if( ImageModel.selectionStatus ) {
                         }
                     }
                 }
-
-
-//                Loader {
-//                    anchors.centerIn: parent
-//                    Component {
-//                        id: photoType
-//                        Image {
-//                            asynchronous: true
-//                            source: path
-//                            width: imageList.cellWidth - 2
-//                            height: imageList.cellHeight - 2
-//                            fillMode: Image.PreserveAspectCrop
-//                            anchors.centerIn: parent
-//                            smooth: true
-////                            onStatusChanged: {
-////                                if( status === Image.Ready ) {
-////                                    photoLoading.running = false
-////                                }
-////                                else if( status === Image.Error ) {
-////                                    photoLoading.running = false
-////                                }
-////                                else {
-////                                    photoLoading.running = true
-////                                }
-////                            }
-
-//                            // 选择标识
-//                            Text {
-//                                anchors.right: parent.right
-//                                anchors.rightMargin: 5
-//                                anchors.top: parent.top
-//                                anchors.topMargin: 5
-//                                font.family: "FontAwesome"
-//                                font.pixelSize: 30
-//                                text: selection ? "\uf192" : "\uf10c"
-//                                color: selection ? "#6f9f9f" : "white"
-//                                visible: ImageModel.selectionStatus
-//                            }
-
-////                            BusyIndicator {
-////                                id: photoLoading
-////                                anchors.centerIn: parent
-////                            }
-//                        }
-//                    }
-
-//                    Component {
-//                        id: videoType
-//                        Rectangle {
-//                            width: imageList.cellWidth - 2
-//                            height: imageList.cellHeight - 2
-//                            color: "red"
-//                        }
-//                    }
-
-//                    sourceComponent: fileType == 0 ? photoType : videoType
-//                    onStatusChanged: {
-//                        if( status == Loader.Loading ) {
-//                            photoLoading.running = true
-//                        }
-//                        else if( status == Loader.Ready ) {
-//                            photoLoading.running = false
-//                        }
-//                    }
-
-//                    BusyIndicator {
-//                        id: photoLoading
-//                        anchors.centerIn: parent
-//                    }
-//                }
-
-                // 选择 鼠标事件
-//                MouseArea {
-//                    id:mouseArea
-//                    anchors.fill: parent
-//                    onClicked: {
-
-//                        if( ImageModel.selectionStatus === 0 ) {
-//                            ImageModel.currentIndex = index
-//                            imagePlayer.show(index)
-//                        }
-
-////                        var component = Qt.createComponent("qrc:/ImageListModel/ImagePlayer.qml")
-////                        if( component.status === Component.Ready ) {
-////                            var play = component.createObject(imageListView)
-////                            play.show(index)
-////                        }
-
-
-//                        if( ImageModel.selectionStatus ) {
-//                            selection = !selection
-//                        }
-//                    }
-//                    onPositionChanged: {
-//                        if( ImageModel.selectionStatus ) {
-//                        }
-//                    }
-//                }
 
             }
 
@@ -202,7 +110,7 @@ Item {
             }
 
             onContentYChanged: {
-//                console.log(contentY)
+
             }
         }
 

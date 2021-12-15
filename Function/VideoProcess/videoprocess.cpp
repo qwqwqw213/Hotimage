@@ -145,7 +145,6 @@ VideoProcess::~VideoProcess()
 
 bool VideoProcess::openEncode(const EncodeConfig &config)
 {
-    qDebug() << QThread::currentThreadId() << "open encode";
     p->open_encode(config);
     return true;
 }
@@ -186,7 +185,6 @@ QString VideoProcess::filePath()
 bool VideoProcess::closeEncode()
 {
     if( p->status ) {
-        qDebug() << QThread::currentThreadId() << "close encode";
         p->status = false;
         p->condition.notify_all();
 
@@ -777,33 +775,33 @@ void VideoProcessPrivate::close_video_stream()
         return;
     }
 
-    qDebug() << "close stream";
-
-    status = false;
-    condition.notify_all();
-
     if( thread.joinable() ) {
+        qDebug() << "close stream";
+
+        status = false;
+        condition.notify_all();
+
         thread.join();
-    }
 
-    if( decode->fmtCnt ) {
-        avformat_close_input(&decode->fmtCnt);
-    }
+        if( decode->fmtCnt ) {
+            avformat_close_input(&decode->fmtCnt);
+        }
 
-    if( decode->frame ) {
-        av_frame_free(&decode->frame);
-    }
+        if( decode->frame ) {
+            av_frame_free(&decode->frame);
+        }
 
-    if( decode->rgbFrame ) {
-        av_frame_free(&decode->rgbFrame);
-    }
+        if( decode->rgbFrame ) {
+            av_frame_free(&decode->rgbFrame);
+        }
 
-    if( decode->sws ) {
-        sws_freeContext(decode->sws);
-    }
+        if( decode->sws ) {
+            sws_freeContext(decode->sws);
+        }
 
-    free(decode);
-    decode = NULL;
+        free(decode);
+        decode = NULL;
+    }
 }
 
 int VideoProcessPrivate::open_h264_decode()

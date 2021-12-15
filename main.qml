@@ -301,8 +301,8 @@ Window {
                 color: "transparent"
 
                 Rectangle {
-                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale + 2
+                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale + 2
                     rotation: window.oldRotation
                     color: "transparent"
                     border.color: "white"
@@ -310,36 +310,55 @@ Window {
                     anchors.centerIn: parent
                 }
 
-                Loader {
-                    Component {
-                        id: imageType
-                        Image {
-                            source: ImageModel.lastImagePath
-                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
-                            rotation: window.oldRotation
-                        }
-                    }
-                    Component {
-                        id: videoType
-                        Rectangle {
-                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
-                            rotation: window.oldRotation
-                            color: "transparent"
-                            Text {
-                                anchors.centerIn: parent
-                                font.family: "FontAwesome"
-                                font.pixelSize: parent.width * 0.5
-                                text: "\uf144"
-                                color: "white"
-                                rotation: oldRotation
-                            }
-                        }
-                    }
+                Image {
+                    source: ImageModel.lastImagePath
+                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale
                     anchors.centerIn: parent
-                    sourceComponent: ImageModel.lastType === 0 ? imageType : videoType
+                    rotation: window.oldRotation
+                    Text {
+                        visible: ImageModel.lastType === 1
+                        anchors.centerIn: parent
+                        font.family: "FontAwesome"
+                        font.pixelSize: parent.width * 0.5
+                        text: "\uf144"
+                        color: "white"
+                        rotation: oldRotation
+                    }
                 }
+
+
+
+//                Loader {
+//                    Component {
+//                        id: imageType
+//                        Image {
+//                            source: ImageModel.lastImagePath
+//                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+//                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+//                            rotation: window.oldRotation
+//                        }
+//                    }
+//                    Component {
+//                        id: videoType
+//                        Rectangle {
+//                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
+//                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+//                            rotation: window.oldRotation
+//                            color: "transparent"
+//                            Text {
+//                                anchors.centerIn: parent
+//                                font.family: "FontAwesome"
+//                                font.pixelSize: parent.width * 0.5
+//                                text: "\uf144"
+//                                color: "white"
+//                                rotation: oldRotation
+//                            }
+//                        }
+//                    }
+//                    anchors.centerIn: parent
+//                    sourceComponent: ImageModel.lastType === 0 ? imageType : videoType
+//                }
 
                 MouseArea {
                     id: btnPhotoArea

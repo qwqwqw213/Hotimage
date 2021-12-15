@@ -158,13 +158,13 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 #else
     p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
 #endif
-    ImageProvider *provider = p->imageModel->provider();
-    e->addImageProvider(provider->url(), provider);
+    VideoScanImage *scanProvider = p->imageModel->provider();
+    e->addImageProvider(scanProvider->url(), scanProvider);
     e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
 
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
-    provider = p->tcpCamera->provider();
+    ImageProvider *provider = p->tcpCamera->provider();
     e->addImageProvider(provider->url(), provider);
     e->rootContext()->setContextProperty("TcpCamera", p->tcpCamera.data());
 

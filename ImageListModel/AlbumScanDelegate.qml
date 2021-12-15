@@ -29,7 +29,6 @@ Rectangle{
     Flickable {
       id: flick
       anchors.fill: parent
-      anchors.centerIn: parent
       contentWidth: initw
       contentHeight: inith
       z:1
@@ -90,13 +89,15 @@ Rectangle{
               width: flick.contentWidth - 10
               height: flick.contentHeight - 10
               cache: true
-              source: fileType == 0 ? path : ""
+//              source: fileType == 0 ? path : ""
+              source: path
               anchors.centerIn: parent
               asynchronous: true
               fillMode: Image.PreserveAspectFit
           }
 
           MouseArea {
+              id: mouseArea
               Timer {
                   id: timer
                   interval: 100
@@ -172,11 +173,45 @@ Rectangle{
                   wrapper.itemClicked()
                   if( fileType === 1 )
                   {
-//                      ImageModel.openVideo(index)
-                      imagePaintView.openStream(path)
+                      if( imagePaintView.playing ) {
+                          imagePaintView.closeStream()
+                          imagePlayer.autoTitle()
+                      }
+                      else {
+                          timer.start();
+                      }
                   }
+                  else {
+                      timer.start();
+                  }
+              }
+          }
 
-                  timer.start();
+          Text {
+              id: btnVideoPlay
+              visible: fileType == 1
+              anchors.centerIn: parent
+              font.family: "FontAwesome"
+              font.pixelSize: parent.width > parent.height ? parent.width * 0.15 : parent.height * 0.15
+              text: "\uf144"
+              color: btnVideoPlayArea.pressed ? "#a0a0a0" : "white"
+
+              MouseArea {
+                  id: btnVideoPlayArea
+                  width: btnVideoPlay.contentWidth
+                  height: btnVideoPlay.contentHeight
+                  anchors.centerIn: parent
+                  onClicked: {
+                      console.log("play video")
+                      if( imagePaintView.playing ) {
+                          imagePaintView.closeStream()
+                          imagePlayer.autoTitle()
+                      }
+                      else {
+                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
+                          imagePlayer.hideTitle()
+                      }
+                  }
               }
           }
 

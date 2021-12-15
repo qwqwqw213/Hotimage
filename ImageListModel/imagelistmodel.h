@@ -3,7 +3,9 @@
 
 #include "QAbstractListModel"
 
-#include "ImageProvider/imageprovider.h"
+#include "VideoScanImage/videoscanimage.h"
+
+// image gallery
 
 class ImageListModelPrivate;
 class ImageListModel : public QAbstractListModel
@@ -16,6 +18,7 @@ public:
         __path,
         __selection,
         __file_type,
+        __file_path
     };
     enum FileType
     {
@@ -51,12 +54,7 @@ public:
 
     Q_INVOKABLE void removeSelection();
 
-    Q_INVOKABLE void openVideo(const int &index);
-
-    Q_PROPERTY(QString videoFrameUrl READ videoFrameUrl NOTIFY videoFrameChanged)
-    QString videoFrameUrl();
-
-    ImageProvider * provider();
+    VideoScanImage *provider();
 
 public Q_SLOTS:
     void add(const QString &path);

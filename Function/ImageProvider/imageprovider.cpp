@@ -15,8 +15,10 @@ public:
     QString rawUrl;
     QString qmlUrl;
 
-    QQueue<QImage> queue;
-    QMutex mutex;
+//    QQueue<QImage> queue;
+//    QMutex mutex;
+
+    QImage image;
 
 private:
     ImageProvider *f;
@@ -39,13 +41,14 @@ QImage ImageProvider::requestImage(const QString &id, QSize *size, const QSize &
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
     p->index ++;
-    if( !p->queue.isEmpty() ) {
-        p->mutex.lock();
-        QImage img = p->queue.dequeue();
-        p->mutex.unlock();
-        return img;
-    }
-    return QImage();
+//    if( !p->queue.isEmpty() ) {
+//        p->mutex.lock();
+//        QImage img = p->queue.dequeue();
+//        p->mutex.unlock();
+//        qDebug() << p->queue.size();
+//        return img;
+//    }
+    return p->image;
 }
 
 QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
@@ -54,26 +57,43 @@ QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
     p->index ++;
-    if( !p->queue.isEmpty() ) {
-        p->mutex.lock();
-        QImage img = p->queue.dequeue();
-        p->mutex.unlock();
-        return QPixmap::fromImage(img);
+//    if( !p->queue.isEmpty() ) {
+//        p->mutex.lock();
+//        QImage img = p->queue.dequeue();
+//        p->mutex.unlock();
+//        return QPixmap::fromImage(img);
+//    }
+    return QPixmap::fromImage(p->image);
+}
+
+//void ImageProvider::addQueue(QImage image)
+//{
+//    p->mutex.lock();
+//    p->queue.enqueue(image);
+//    p->mutex.unlock();
+//}
+
+//void ImageProvider::clear()
+//{
+//    p->queue.clear();
+//}
+
+QImage *ImageProvider::image(const int &w, const int &h)
+{
+    if( p->image.isNull() ) {
+        p->image = QImage(w, h, QImage::Format_RGB888);
     }
-    return QPixmap();
+    return &p->image;
 }
 
-void ImageProvider::addQueue(QImage image)
+QImage ImageProvider::image()
 {
-//    m_image = image;
-    p->mutex.lock();
-    p->queue.enqueue(image);
-    p->mutex.unlock();
+    return p->image;
 }
 
-void ImageProvider::clear()
+void ImageProvider::release()
 {
-    p->queue.clear();
+    p->image = QImage();
 }
 
 QString ImageProvider::url()
@@ -90,15 +110,15 @@ ImageProviderPrivate::ImageProviderPrivate(ImageProvider *parent, const QString 
 {
     f = parent;
 
-
     index = 0;
     rawUrl = url;
     qmlUrl = QString("image://%1/").arg(url);
 
-    queue.clear();
+    image = QImage();
+//    queue.clear();
 }
 
 ImageProviderPrivate::~ImageProviderPrivate()
 {
-    queue.clear();
+//    queue.clear();
 }

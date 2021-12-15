@@ -15,12 +15,22 @@ public:
 
     void paint(QPainter *painter) override;
 
-    Q_INVOKABLE void openStream(const QString &path);
+    Q_INVOKABLE void openStream(const QString &path, const int &w, const int &h);
     Q_INVOKABLE void closeStream();
+
+    Q_PROPERTY(bool playing READ playing NOTIFY playStatusChanged)
+    bool playing();
 
 private:
     QImage m_image;
     VideoProcess *decode;
+    qreal m_x;
+    qreal m_y;
+    int m_w;
+    int m_h;
+
+Q_SIGNALS:
+    void playStatusChanged();
 
 public Q_SLOTS:
     void updateImage(QImage image);

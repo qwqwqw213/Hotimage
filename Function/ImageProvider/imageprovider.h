@@ -13,8 +13,12 @@ public:
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
-    void addQueue(QImage image);
-    void clear();
+//    void addQueue(QImage image);
+//    void clear();
+
+    QImage *image(const int &w, const int &h);
+    QImage image();
+    void release();
 
     QString url();
     QString qmlUrl();

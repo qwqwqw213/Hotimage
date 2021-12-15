@@ -29,12 +29,12 @@ Rectangle{
         }
     }
 
-    function show(index) {
-//        photoScan.contentX = index * width
+    function show(index, x, y, w, h, path) {
         photoScan.currentIndex = index
         photoScan.positionViewAtIndex(index, ListView.Beginning)
         miniPhtotList.positionViewAtIndex(index, ListView.Center)
         visible = true
+//        zoomInRect.show(x, y, w, h, path)
         state = "show"
     }
 
@@ -50,9 +50,10 @@ Rectangle{
         highlightRangeMode: ListView.StrictlyEnforceRange
         orientation: ListView.Horizontal
         snapMode: ListView.SnapOneItem
+        visible: imagePlayer.state == "show"
 
         delegate: AlbumScanDelegate {
-            opacity: imagePlayer.opacity
+//            opacity: imagePlayer.opacity
             width: photoScan.width
             height: photoScan.height
 //            onItemClicked: {
@@ -98,18 +99,40 @@ Rectangle{
 //        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
 
-//    Image {
-//        visible: ImageModel.videoIndex >= 0 ? true : false
-//        opacity: imagePlayer.opacity
-//        width: photoScan.width
-//        height: photoScan.height
-//        source: ImageModel.videoFrameUrl
-//        cache: false
+//    Rectangle {
+//        id: zoomInRect
+//        z: 2
+//        x: 0
+//        y: 0
+//        width: parent.width
+//        height: parent.height
+//        color: "transparent"
+//        Image {
+//            id: zoomInImage
+//            anchors.fill: parent
+//            cache: true
+//            asynchronous: true
+//            fillMode: Image.PreserveAspectCrop
+//        }
+
+//        function show(x, y, w, h, path) {
+//            console.log(x, y, w, h)
+//            zoomInRect.x = x
+//            zoomInRect.y = y
+//            zoomInRect.width = w
+//            zoomInRect.height = h
+//            zoomInImage.source = path
+//        }
+
 //    }
+
     ImagePaintView {
+        x: photoScan.currentIndex * photoScan.width - photoScan.contentX
         id: imagePaintView
         width: photoScan.width
         height: photoScan.height
+        z: 1
+        visible: playing
     }
 
     Connections {
@@ -146,6 +169,7 @@ Rectangle{
                 id: btnReturnArea
                 anchors.fill: parent
                 onClicked: {
+                    imagePaintView.closeStream()
                     imagePlayer.state = "hide"
                 }
             }
@@ -306,15 +330,25 @@ Rectangle{
                     id: photo
                     cache: true
                     sourceSize: Qt.size(parent.width, parent.height)
-                    source: fileType == 0 ? path : ""
+//                    source: fileType == 0 ? path : ""
+                    source: path
                     anchors.centerIn: parent
                     width: parent.width - 2
                     height: parent.height - 2
                     smooth: true
                     fillMode: Image.PreserveAspectCrop
+                    Text {
+                        visible: fileType === 1
+                        anchors.centerIn: parent
+                        font.family: "FontAwesome"
+                        font.pixelSize: parent.width * 0.35
+                        text: "\uf144"
+                        color: mouseArea.pressed ? "#a0a0a0" : "white"
+                    }
                 }
 
                 MouseArea{
+                    id: mouseArea
                     anchors.fill: parent
                     onClicked: {
                         miniPhtotList.positionViewAtIndex(index, ListView.Center)

@@ -14,6 +14,16 @@ ImagePaintView::ImagePaintView(QQuickItem *parent)
     decode = new VideoProcess(this);
     QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
                      this, &ImagePaintView::updateImage, Qt::QueuedConnection);
+    QObject::connect(decode, &VideoProcess::error, this, [=](){
+        decode->closeStream();
+        emit playStatusChanged();
+    }, Qt::QueuedConnection);
+    QObject::connect(decode, &VideoProcess::statusChanged, this, [=](){
+        if( !decode->status() ) {
+            decode->closeStream();
+        }
+        emit playStatusChanged();
+    }, Qt::QueuedConnection);
 }
 
 ImagePaintView::~ImagePaintView()
@@ -31,21 +41,31 @@ void ImagePaintView::updateImage(QImage image)
 void ImagePaintView::paint(QPainter *painter)
 {
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
-    painter->drawPixmap(0, 0,
-                        this->width(), this->height(),
+    painter->drawPixmap(m_x, m_y,
+                        m_w, m_h,
                         QPixmap::fromImage(m_image));
 }
 
-void ImagePaintView::openStream(const QString &path)
+void ImagePaintView::openStream(const QString &path, const int &w, const int &h)
 {
     if( !decode->status() ) {
-        QString file = path.right(path.length() - QString("file:///").length());
-        qDebug() << "open video:" << file;
-        decode->openStream(file.toStdString());
+        m_w = w;
+        m_h = h;
+        m_x = (this->width() - m_w) / 2.0;
+        m_y = (this->height() - m_h) / 2.0;
+        decode->openStream(path.toStdString());
     }
 }
 
 void ImagePaintView::closeStream()
 {
     decode->closeStream();
+    m_image = QImage();
+    update();
+    emit playStatusChanged();
+}
+
+bool ImagePaintView::playing()
+{
+    return decode->status();
 }

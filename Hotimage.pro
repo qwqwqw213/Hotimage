@@ -17,6 +17,7 @@ SOURCES += \
         AndroidInterface/androidinterface.cpp \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
+        ImageListModel/VideoScanImage/videoscanimage.cpp \
         ImageListModel/imagelistmodel.cpp \
         ImagePaintView/imagepaintview.cpp \
         TcpCamera/tcpcamera.cpp \
@@ -40,6 +41,7 @@ HEADERS += \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
     Function/MadgwickAHRS.hpp \
+    ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
     ImagePaintView/imagepaintview.h \
     TcpCamera/tcpdef.h \
