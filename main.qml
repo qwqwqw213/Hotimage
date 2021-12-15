@@ -507,7 +507,7 @@ Window {
     }
 
     Loading {
-        visible: !TcpCamera.isConnected
+        visible: TcpCamera.isConnected
         anchors.fill: parent
         text: qsTr("Camera connecting...")
     }

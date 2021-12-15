@@ -370,6 +370,7 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
         encode->codecCnt->time_base = av_inv_q(fps);
         encode->codecCnt->bit_rate = 500000;
         encode->codecCnt->gop_size = config.fps / 2;
+        qDebug() << "encode codec_id:" << encode->codecCnt->codec_id;
         if (encode->codecCnt->codec_id == AV_CODEC_ID_H264)
         {
             encode->codecCnt->qmin = 10;
@@ -739,6 +740,7 @@ int VideoProcessPrivate::read_video_stream()
                       decode->frame->data, decode->frame->linesize, 0, decode->frame->height,
                       decode->rgbFrame->data, decode->rgbFrame->linesize);
 
+            emit f->frame(img);
             while (1)
             {
                 qint64 msec = QDateTime::currentDateTime().toMSecsSinceEpoch() - start_ms;
@@ -746,7 +748,7 @@ int VideoProcessPrivate::read_video_stream()
                     break;
                 }
                 decode->current_time = msec / 1000.0;
-                emit f->frame(img);
+//                emit f->frame(img);
             }
         }
     }

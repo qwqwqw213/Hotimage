@@ -3,7 +3,7 @@ import QtQuick.Controls 2.12
 import QtQuick 2.4
 import Qt.labs.folderlistmodel 2.14
 
-import Custom.ImagePaintView 1.1
+//import Custom.ImagePaintView 1.1
 
 Rectangle{
     id: imagePlayer
@@ -14,18 +14,18 @@ Rectangle{
     function hideTitle() {
         if( title.state !== "hide" ) {
             title.state = "hide"
-            bottom.y = height
+            bottom.state = "hide"
         }
     }
 
     function autoTitle(state) {
         if( title.state === "show" ) {
             title.state = "hide"
-            bottom.y = height
+            bottom.state = "hide"
         }
         else {
             title.state = "show"
-            bottom.y = height - bottom.height
+            bottom.state = "show"
         }
     }
 
@@ -53,17 +53,8 @@ Rectangle{
         visible: imagePlayer.state == "show"
 
         delegate: AlbumScanDelegate {
-//            opacity: imagePlayer.opacity
             width: photoScan.width
             height: photoScan.height
-//            onItemClicked: {
-//                if( title.state === "show" ) {
-//                    title.state = "hide"
-//                }
-//                else {
-//                    title.state = "show"
-//                }
-//            }
         }
 
         property real maxContentX: width * (ImageModel.rowCount() - 1)
@@ -78,13 +69,15 @@ Rectangle{
         onCurrentIndexChanged: {
             console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
-            imagePaintView.closeStream()
+//            imagePaintView.closeStream()
+            VideoPlayer.closeStream()
             if( !miniPhtotList.moving ) {
                 miniPhtotList.positionViewAtIndex(ImageModel.currentIndex,  ListView.Center)
             }
         }
 
         onContentXChanged: {
+
             if( atXBeginning < 0 ) {
 //                photoList.contentX = contentX
             }
@@ -99,41 +92,157 @@ Rectangle{
 //        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
 
-//    Rectangle {
-//        id: zoomInRect
-//        z: 2
-//        x: 0
-//        y: 0
-//        width: parent.width
-//        height: parent.height
-//        color: "transparent"
-//        Image {
-//            id: zoomInImage
-//            anchors.fill: parent
-//            cache: true
-//            asynchronous: true
-//            fillMode: Image.PreserveAspectCrop
-//        }
-
-//        function show(x, y, w, h, path) {
-//            console.log(x, y, w, h)
-//            zoomInRect.x = x
-//            zoomInRect.y = y
-//            zoomInRect.width = w
-//            zoomInRect.height = h
-//            zoomInImage.source = path
-//        }
-
-//    }
-
-    ImagePaintView {
-        x: photoScan.currentIndex * photoScan.width - photoScan.contentX
-        id: imagePaintView
-        width: photoScan.width
-        height: photoScan.height
+    /*
+//    ImagePaintView {
+//        id: imagePaintView
+//        x: photoScan.currentIndex * imagePlayer.width - photoScan.contentX
+//        width: photoScan.width
+//        height: photoScan.height
+//        z: 1
+//        visible: playing
+    Image {
+        x: photoScan.currentIndex * imagePlayer.width - photoScan.contentX
+//        width: photoScan.width
+        width: VideoPlayer.imageWidth
+//        height: photoScan.height
+        height: VideoPlayer.imageHeight
         z: 1
-        visible: playing
+        visible: VideoPlayer.playing
+        source: VideoPlayer.playing ? VideoPlayer.frameUrl : ""
+
+        // 滚动条
+        Rectangle {
+            id: progressBar
+            width: parent.width * 0.85
+            height: 60
+            x: (parent.width - width) / 2.0
+            y: parent.height - height - 10
+            radius: 10
+            color: "#D0505050"
+
+//            opacity: imagePaintView.playing ? 1 : 0
+            opacity: VideoPlayer.playing ? 1 : 0
+
+            Behavior on opacity {
+                OpacityAnimator {
+                    duration: 200
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            // 暂停按钮
+            Text {
+                id: btnPause
+                text: "\uf28b"
+                font.family: "FontAwesome"
+                font.pixelSize: parent.height * 0.75
+                anchors.left: parent.left
+                anchors.leftMargin: contentWidth / 2
+                anchors.verticalCenter: parent.verticalCenter
+                color: btnPauseArea.pressed ? "#a0a0a0" : "white"
+                MouseArea {
+                    id: btnPauseArea
+                    anchors.fill: parent
+                    onClicked: {
+//                        console.log("video pause")
+//                        imagePaintView.closeStream()
+                        VideoPlayer.closeStream()
+                        imagePlayer.autoTitle()
+                    }
+                }
+            }
+
+            // 进度条底条
+            Rectangle {
+                width: parent.width * 0.55
+                height: 6
+                x: parent.width - parent.width * 0.15 - width
+                anchors.verticalCenter: parent.verticalCenter
+                color: "#505050"
+                radius: 10
+
+                Text {
+                    id: currentTime
+                    anchors.right: parent.left
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+//                    text: imagePaintView.currentTime
+                    text: VideoPlayer.currentTime
+                    font.pixelSize: parent.height * 2.5
+                    color: "white"
+                }
+
+                Text {
+                    id: totalTime
+                    anchors.left: parent.right
+                    anchors.leftMargin:  10
+                    anchors.verticalCenter: parent.verticalCenter
+//                    text: imagePaintView.totalTime
+                    text: VideoPlayer.totalTime
+                    font.pixelSize: parent.height * 2.5
+                    color: "white"
+                }
+
+                //  进度条
+                Rectangle {
+                    id: bar
+//                    width: parent.width * imagePaintView.progress
+                    width: parent.width * VideoPlayer.progress
+                    height: parent.height
+                    color: "white"
+                    radius: 10
+                }
+
+                // 进度条球
+                Rectangle {
+                    width: parent.height + 4
+                    height: width
+                    x: bar.width - width / 2
+                    radius: 100
+                    color: "white"
+                    anchors.verticalCenter: parent.verticalCenter
+                    border.width: 1
+                    border.color: "#a0a0a0"
+                }
+
+                MouseArea {
+                    property real pressW
+                    property real pressX
+                    width: parent.width
+                    height: parent.height * 6
+                    enabled: false
+                    anchors.verticalCenter: parent.verticalCenter
+                    onPressed: {
+                        pressX = mouseX
+                        bar.width = pressX
+                        pressW = bar.width
+                    }
+
+                    onMouseXChanged: {
+                        var w = pressW + mouseX - pressX
+                        if( w < 0 ) {
+                            w = 0
+                        }
+                        if( w > width ) {
+                            w = width
+                        }
+                        bar.width = w
+                    }
+
+                    onReleased: {
+
+                    }
+                }
+            }
+
+            signal drag(int time)
+        }
+
     }
+    */
 
     Connections {
         target: ImageModel
@@ -169,7 +278,8 @@ Rectangle{
                 id: btnReturnArea
                 anchors.fill: parent
                 onClicked: {
-                    imagePaintView.closeStream()
+//                    imagePaintView.closeStream()
+                    VideoPlayer.closeStream()
                     imagePlayer.state = "hide"
                 }
             }
@@ -286,15 +396,56 @@ Rectangle{
 
     Rectangle {
         id: bottom
-        Behavior on y {
-            YAnimator {
-                duration: 160
-                easing.type: Easing.OutCurve
-            }
-        }
 
-        x: 0
-        y: parent.height - height
+        // behavio 在屏幕旋转的时候 不会更新坐标
+        // 需要替换为 states
+//        Behavior on y {
+//            YAnimator {
+//                duration: 160
+//                easing.type: Easing.OutCurve
+//            }
+//        }
+
+        state: "show"
+        states: [
+            State {
+                name: "hide"
+                PropertyChanges {
+                    target: bottom
+                    y: imagePlayer.height
+                }
+            },
+            State {
+                name: "show"
+                PropertyChanges {
+                    target: bottom
+                    y: imagePlayer.height - height
+                }
+            }
+        ]
+        transitions: [
+            Transition {
+                from: "hide"
+                to: "show"
+                YAnimator {
+                    target: bottom
+                    duration: 160
+                    easing.type: Easing.OutCurve
+                }
+            },
+            Transition {
+                from: "show"
+                to: "hide"
+                YAnimator {
+                    target: bottom
+                    duration: 160
+                    easing.type: Easing.OutCurve
+                }
+            }
+        ]
+
+//        x: 0
+//        y: parent.height - height
         width: parent.width
         height: 60
         color: "#2f4f4f"

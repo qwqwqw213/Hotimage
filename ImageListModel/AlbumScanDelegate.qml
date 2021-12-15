@@ -46,7 +46,7 @@ Rectangle{
           id: pinchArea
           width: Math.max(flick.contentWidth, flick.width)
           height: Math.max(flick.contentHeight, flick.height)
-          enabled: pinchAreaBool
+          enabled: fileType === 0
           property real initialWidth
           property real initialHeight
 
@@ -85,7 +85,7 @@ Rectangle{
 
           Image {
               id: image
-              opacity: wrapper.opacity
+//              visible: !VideoPlayer.playing
               width: flick.contentWidth - 10
               height: flick.contentHeight - 10
               cache: true
@@ -132,7 +132,7 @@ Rectangle{
               anchors.fill: parent
               onDoubleClicked: {
                   var ret = isValidClicked(mouseX, mouseY)
-                  if( ret.res )
+                  if( ret.res && fileType === 0 )
                   {
                       imagePlayer.hideTitle()
 
@@ -173,9 +173,19 @@ Rectangle{
                   wrapper.itemClicked()
                   if( fileType === 1 )
                   {
-                      if( imagePaintView.playing ) {
-                          imagePaintView.closeStream()
-                          imagePlayer.autoTitle()
+//                      if( imagePaintView.playing ) {
+//                          imagePaintView.closeStream()
+//                          imagePlayer.autoTitle()
+//                      }
+                      if( VideoPlayer.playing ) {
+//                          VideoPlayer.closeStream()
+//                          imagePlayer.autoTitle()
+                          if( progressBar.opacity > 0 ) {
+                              progressBar.opacity = 0
+                          }
+                          else {
+                              progressBar.opacity = 1
+                          }
                       }
                       else {
                           timer.start();
@@ -189,7 +199,9 @@ Rectangle{
 
           Text {
               id: btnVideoPlay
-              visible: fileType == 1
+              visible: fileType === 1 ?
+                           (VideoPlayer.playing ? (VideoPlayer.playIndex === index ? false : true) : true)
+                         : false
               anchors.centerIn: parent
               font.family: "FontAwesome"
               font.pixelSize: parent.width > parent.height ? parent.width * 0.15 : parent.height * 0.15
@@ -202,16 +214,156 @@ Rectangle{
                   height: btnVideoPlay.contentHeight
                   anchors.centerIn: parent
                   onClicked: {
-                      console.log("play video")
-                      if( imagePaintView.playing ) {
-                          imagePaintView.closeStream()
-                          imagePlayer.autoTitle()
-                      }
-                      else {
-                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
+                      if( !VideoPlayer.playing ) {
+                          console.log("video play index:", index)
+//                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
+                          VideoPlayer.openStream(filePath, image.paintedWidth, image.paintedHeight, index)
                           imagePlayer.hideTitle()
+                          progressBar.opacity = 1
                       }
                   }
+              }
+          }
+
+          // VideoView
+          Image {
+              visible: VideoPlayer.playing ?
+                           ((VideoPlayer.playIndex === index) ? true : false)
+                         : false
+              width: flick.contentWidth - 10
+              height: flick.contentHeight - 10
+              source: VideoPlayer.playIndex === index ? VideoPlayer.frameUrl : ""
+              anchors.centerIn: parent
+              fillMode: Image.PreserveAspectFit
+
+              // 滚动条
+              Rectangle {
+                  id: progressBar
+                  width: parent.width * 0.85
+                  height: 60
+                  x: (parent.width - width) / 2.0
+                  y: parent.height - height - 10
+                  radius: 10
+                  color: "#D0505050"
+
+                  opacity: 0
+
+                  Behavior on opacity {
+                      OpacityAnimator {
+                          duration: 200
+                      }
+                  }
+
+                  MouseArea {
+                      anchors.fill: parent
+                  }
+
+                  // 暂停按钮
+                  Text {
+                      id: btnPause
+                      text: "\uf28b"
+                      font.family: "FontAwesome"
+                      font.pixelSize: parent.height * 0.75
+                      anchors.left: parent.left
+                      anchors.leftMargin: contentWidth / 2
+                      anchors.verticalCenter: parent.verticalCenter
+                      color: btnPauseArea.pressed ? "#a0a0a0" : "white"
+                      MouseArea {
+                          id: btnPauseArea
+                          anchors.fill: parent
+                          onClicked: {
+      //                        console.log("video pause")
+      //                        imagePaintView.closeStream()
+                              VideoPlayer.closeStream()
+                              imagePlayer.autoTitle()
+                          }
+                      }
+                  }
+
+                  // 进度条底条
+                  Rectangle {
+                      width: parent.width * 0.55
+                      height: 6
+                      x: parent.width - parent.width * 0.15 - width
+                      anchors.verticalCenter: parent.verticalCenter
+                      color: "#505050"
+                      radius: 10
+
+                      Text {
+                          id: currentTime
+                          anchors.right: parent.left
+                          anchors.rightMargin: 10
+                          anchors.verticalCenter: parent.verticalCenter
+      //                    text: imagePaintView.currentTime
+                          text: VideoPlayer.currentTime
+                          font.pixelSize: parent.height * 2.5
+                          color: "white"
+                      }
+
+                      Text {
+                          id: totalTime
+                          anchors.left: parent.right
+                          anchors.leftMargin:  10
+                          anchors.verticalCenter: parent.verticalCenter
+      //                    text: imagePaintView.totalTime
+                          text: VideoPlayer.totalTime
+                          font.pixelSize: parent.height * 2.5
+                          color: "white"
+                      }
+
+                      //  进度条
+                      Rectangle {
+                          id: bar
+      //                    width: parent.width * imagePaintView.progress
+                          width: parent.width * VideoPlayer.progress
+                          height: parent.height
+                          color: "white"
+                          radius: 10
+                      }
+
+                      // 进度条球
+                      Rectangle {
+                          width: parent.height + 4
+                          height: width
+                          x: bar.width - width / 2
+                          radius: 100
+                          color: "white"
+                          anchors.verticalCenter: parent.verticalCenter
+                          border.width: 1
+                          border.color: "#a0a0a0"
+                      }
+
+                      MouseArea {
+                          property real pressW
+                          property real pressX
+                          width: parent.width
+                          height: parent.height * 6
+                          enabled: false
+                          anchors.verticalCenter: parent.verticalCenter
+                          onPressed: {
+                              pressX = mouseX
+                              bar.width = pressX
+                              pressW = bar.width
+                          }
+
+                          onMouseXChanged: {
+                              var w = pressW + mouseX - pressX
+                              if( w < 0 ) {
+                                  w = 0
+                              }
+                              if( w > width ) {
+                                  w = width
+                              }
+                              bar.width = w
+                          }
+
+                          onReleased: {
+
+                          }
+                      }
+                  }
+
+                  signal drag(int time)
               }
           }
 

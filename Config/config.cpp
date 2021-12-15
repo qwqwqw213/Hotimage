@@ -3,7 +3,6 @@
 #include "ImageListModel/imagelistmodel.h"
 #include "TcpCamera/tcpcamera.h"
 #include "AndroidInterface/androidinterface.h"
-#include "VideoProcess/videoprocess.h"
 #include "ImagePaintView/imagepaintview.h"
 
 #include "QDebug"
@@ -45,13 +44,11 @@ public:
     qreal accelerometer_z;
 #endif
 
-    VideoProcess *decode;
-    ImageProvider *decodeProvider;
-
 
     QScopedPointer<AndroidInterface> androidInterface;
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
+    QScopedPointer<ImagePaintView> videoPlayer;
 
     QScreen *screen;
 
@@ -162,6 +159,11 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     e->addImageProvider(scanProvider->url(), scanProvider);
     e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
 
+    // 视频播放器模块
+    p->videoPlayer.reset(new ImagePaintView);
+    e->addImageProvider(p->videoPlayer->providerUrl(), p->videoPlayer->provider());
+    e->rootContext()->setContextProperty("VideoPlayer", p->videoPlayer.data());
+
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
     ImageProvider *provider = p->tcpCamera->provider();
@@ -172,7 +174,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
 
-    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
+//    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
     return 1;
 }
@@ -239,10 +241,6 @@ ConfigPrivate::ConfigPrivate(Config *parent)
     f = parent;
 
     ts = new QTranslator(f);
-
-
-    decode = new VideoProcess(f);
-    decodeProvider = new ImageProvider("videostream");
 
 
     oldRotation = 0;
@@ -335,8 +333,6 @@ ConfigPrivate::~ConfigPrivate()
     gyroscope->deleteLater();
     delete madgwick;
 #endif
-
-    decode->closeStream();
 
     saveSetting();
 }

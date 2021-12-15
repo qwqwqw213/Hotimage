@@ -66,15 +66,19 @@ void ImageListModel::search(const QString &path)
         for(int i = 0; i < list.size(); i++) {
             QString file = list.at(i).filePath();
             QString name = list.at(i).fileName();
-            if( name.indexOf("IMG_") >= 0 ) {
-                QString strDatetime = name.right(name.length() - QString("IMG_").length());
-                name = QString("%1-%2-%3 %4:%5:%6")
-                        .arg(strDatetime.mid(0, 4))
-                        .arg(strDatetime.mid(4, 2))
-                        .arg(strDatetime.mid(6, 2))
-                        .arg(strDatetime.mid(8, 2))
-                        .arg(strDatetime.mid(10, 2))
-                        .arg(strDatetime.mid(12, 2));
+            int nameIndex = name.indexOf("_") + 1;
+            if( nameIndex >= 1 ) {
+                QString strDatetime = name.right(name.length() - nameIndex);
+                strDatetime = strDatetime.left(strDatetime.indexOf('.'));
+                if( strDatetime.length() == 14 ) {
+                    name = QString("%1-%2-%3 %4:%5:%6")
+                            .arg(strDatetime.mid(0, 4))
+                            .arg(strDatetime.mid(4, 2))
+                            .arg(strDatetime.mid(6, 2))
+                            .arg(strDatetime.mid(8, 2))
+                            .arg(strDatetime.mid(10, 2))
+                            .arg(strDatetime.mid(12, 2));
+                }
             }
             int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
             QString qmlPath;
