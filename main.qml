@@ -244,11 +244,18 @@ Window {
                 radius: 100
 
                 Rectangle {
+                    id: btnCaptrueIcon
                     anchors.centerIn: parent
-                    width: parent.width * 0.75 * btnCapture.m_scale
+                    width: parent.width * 0.75
                     height: width
                     color: btnCaptureArea.pressed ? "#F01010" : "white"
                     radius: 100
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: 200
+                        }
+                    }
                 }
 
                 MouseArea {
@@ -256,36 +263,12 @@ Window {
                     anchors.fill: parent
                     pressAndHoldInterval: 100
                     onReleased: {
-                        btnCaptureTimer.start()
+                        btnCaptrueIcon.scale = 1.0
                         TcpCamera.capture()
                         captureAnimationView.start()
                     }
                     onPressAndHold: {
-                        btnCaptureTimer.start()
-                    }
-                }
-
-                property var m_scale: 1.0
-                Timer {
-                    id: btnCaptureTimer
-                    interval: 10
-                    running: false
-                    repeat: true
-                    onTriggered: {
-                        if( btnCaptureArea.pressed ) {
-                            btnCapture.m_scale -= 0.1;
-                            if( btnCapture.m_scale < 0.6 ) {
-                                btnCapture.m_scale = 0.6;
-                                btnCaptureTimer.stop()
-                            }
-                        }
-                        else {
-                            btnCapture.m_scale += 0.1;
-                            if( btnCapture.m_scale > 0.9 ) {
-                                btnCapture.m_scale = 1.0;
-                                btnCaptureTimer.stop()
-                            }
-                        }
+                        btnCaptrueIcon.scale = 0.5
                     }
                 }
             }
@@ -300,9 +283,16 @@ Window {
                 anchors.topMargin: height / 2
                 color: "transparent"
 
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
+
                 Rectangle {
-                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale + 2
-                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale + 2
+                    width: btnPhoto.width * 0.8 * btnPhoto.scale + 2
+                    height: btnPhoto.height * 0.8 * btnPhoto.scale + 2
                     rotation: window.oldRotation
                     color: "transparent"
                     border.color: "white"
@@ -312,8 +302,8 @@ Window {
 
                 Image {
                     source: ImageModel.lastImagePath
-                    width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-                    height: btnPhoto.height * 0.8 * btnPhoto.m_scale
+                    width: btnPhoto.width * 0.8 * btnPhoto.scale
+                    height: btnPhoto.height * 0.8 * btnPhoto.scale
                     anchors.centerIn: parent
                     rotation: window.oldRotation
                     Text {
@@ -327,73 +317,24 @@ Window {
                     }
                 }
 
-
-
-//                Loader {
-//                    Component {
-//                        id: imageType
-//                        Image {
-//                            source: ImageModel.lastImagePath
-//                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-//                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
-//                            rotation: window.oldRotation
-//                        }
-//                    }
-//                    Component {
-//                        id: videoType
-//                        Rectangle {
-//                            width: btnPhoto.width * 0.8 * btnPhoto.m_scale
-//                            height: btnPhoto.height * 0.8 * btnPhoto.m_scale
-//                            rotation: window.oldRotation
-//                            color: "transparent"
-//                            Text {
-//                                anchors.centerIn: parent
-//                                font.family: "FontAwesome"
-//                                font.pixelSize: parent.width * 0.5
-//                                text: "\uf144"
-//                                color: "white"
-//                                rotation: oldRotation
-//                            }
-//                        }
-//                    }
-//                    anchors.centerIn: parent
-//                    sourceComponent: ImageModel.lastType === 0 ? imageType : videoType
-//                }
-
                 MouseArea {
                     id: btnPhotoArea
                     anchors.fill: parent
                     onPressed: {
-                        btnPhoto.m_scale = 0.9
+                        btnPhoto.scale = 0.95
                     }
                     onReleased: {
-                        btnPhoto.m_scale = 1.0
-//                        stackView.push("qrc:/ImageListModel/ImageListView.qml")
+                        btnPhoto.scale = 1.0
+                    }
+                    onClicked: {
                         stackView.push(imageListView)
-//                        imageListView.y = 0
                     }
                 }
 
                 Connections {
                     target: ImageModel
                     onAddNewFile: {
-                        btnPhoto.m_scale = 0.5
-                        btnPhotoTimer.start()
-                    }
-                }
-
-                property var m_scale: 1.0
-                Timer {
-                    id: btnPhotoTimer
-                    interval: 10
-                    running: false
-                    repeat: true
-                    onTriggered: {
-                        btnPhoto.m_scale += 0.1
-                        if( btnPhoto.m_scale > 0.9 ) {
-                            btnPhoto.m_scale = 1.0
-                            btnPhotoTimer.stop()
-                        }
+                        btnPhoto.scale = 0.95
                     }
                 }
             }
@@ -507,7 +448,7 @@ Window {
     }
 
     Loading {
-        visible: TcpCamera.isConnected
+        visible: !TcpCamera.isConnected
         anchors.fill: parent
         text: qsTr("Camera connecting...")
     }

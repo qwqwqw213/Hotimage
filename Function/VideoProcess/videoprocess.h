@@ -38,6 +38,11 @@ class VideoProcess : public QObject
     Q_OBJECT
 
 public:
+    enum PlayStatus {
+        __stop = 0,
+        __running,
+        __pause,
+    };
     explicit VideoProcess(QObject *parent = nullptr);
     ~VideoProcess();
 
@@ -59,6 +64,7 @@ public:
     QString totalTime();
     int64_t totalMsecTime();
     int64_t currentMescTime();
+    void pause();
     void seek(const int &sec);
 
     /*
@@ -73,7 +79,7 @@ public:
      *  true  运行中
      *  false 未打开
      */
-    bool status();
+    int status();
     std::string lastError();
     inline AVPixelFormat pixel(const int &QImageFormat);
 

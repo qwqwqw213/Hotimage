@@ -3,7 +3,7 @@
 #include "ImageListModel/imagelistmodel.h"
 #include "TcpCamera/tcpcamera.h"
 #include "AndroidInterface/androidinterface.h"
-#include "ImagePaintView/imagepaintview.h"
+#include "VideoPlayer/videoplayer.h"
 
 #include "QDebug"
 #include "QScreen"
@@ -48,7 +48,7 @@ public:
     QScopedPointer<AndroidInterface> androidInterface;
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
-    QScopedPointer<ImagePaintView> videoPlayer;
+    QScopedPointer<VideoPlayer> videoPlayer;
 
     QScreen *screen;
 
@@ -160,7 +160,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
 
     // 视频播放器模块
-    p->videoPlayer.reset(new ImagePaintView);
+    p->videoPlayer.reset(new VideoPlayer);
     e->addImageProvider(p->videoPlayer->providerUrl(), p->videoPlayer->provider());
     e->rootContext()->setContextProperty("VideoPlayer", p->videoPlayer.data());
 

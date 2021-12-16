@@ -180,11 +180,11 @@ Rectangle{
                       if( VideoPlayer.playing ) {
 //                          VideoPlayer.closeStream()
 //                          imagePlayer.autoTitle()
-                          if( progressBar.opacity > 0 ) {
-                              progressBar.opacity = 0
+                          if( progressBarItem.opacity > 0 ) {
+                              progressBarItem.opacity = 0
                           }
                           else {
-                              progressBar.opacity = 1
+                              progressBarItem.opacity = 1
                           }
                       }
                       else {
@@ -219,7 +219,7 @@ Rectangle{
 //                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
                           VideoPlayer.openStream(filePath, image.paintedWidth, image.paintedHeight, index)
                           imagePlayer.hideTitle()
-                          progressBar.opacity = 1
+                          progressBarItem.opacity = 1
                       }
                   }
               }
@@ -236,11 +236,61 @@ Rectangle{
               anchors.centerIn: parent
               fillMode: Image.PreserveAspectFit
 
-              // 滚动条
+              // 视频顶部按钮
               Rectangle {
-                  id: progressBar
+                  id: btnVideoQuit
+                  width: 50
+                  height: 50
+                  anchors.left: progressBarItem.left
+                  anchors.top: parent.top
+                  anchors.topMargin: 10
+                  radius: 10
+                  color: "#D0505050"
+                  opacity: progressBarItem.opacity
+
+                  Text {
+                      id: btnVideoQuitIcon
+                      font.family: "FontAwesome"
+                      font.pixelSize: parent.height * 0.75
+                      color: btnVideoQuitArea.pressed ? "#f0f0f0" : "white"
+                      text: "\uf00d"
+                      anchors.centerIn: parent
+                      Behavior on scale {
+                          ScaleAnimator {
+                              duration: 200
+                          }
+                      }
+                  }
+
+                  MouseArea {
+                      id: btnVideoQuitArea
+                      anchors.fill: parent
+                      onPressed: {
+                          btnVideoQuitIcon.scale = 0.75
+                      }
+                      onReleased: {
+                          btnVideoQuitIcon.scale = 1
+                      }
+                      onClicked: {
+                          // close video stream
+                          VideoPlayer.closeStream()
+                      }
+                  }
+              }
+
+              // 视频进度条工具栏
+              // 分成两个区域
+              // 按纽栏
+              // 进度条
+              Rectangle {
+                  id: progressBarItem
+
+                  // 判断是否横屏
+                  property bool isLandscape: parent.width > parent.height ?
+                                                 true : false
+
                   width: parent.width * 0.85
-                  height: 60
+                  height: isLandscape ? 60 : 120
                   x: (parent.width - width) / 2.0
                   y: parent.height - height - 10
                   radius: 10
@@ -249,7 +299,7 @@ Rectangle{
                   opacity: 0
 
                   Behavior on opacity {
-                      OpacityAnimator {
+                      NumberAnimation {
                           duration: 200
                       }
                   }
@@ -258,107 +308,144 @@ Rectangle{
                       anchors.fill: parent
                   }
 
-                  // 暂停按钮
-                  Text {
-                      id: btnPause
-                      text: "\uf28b"
-                      font.family: "FontAwesome"
-                      font.pixelSize: parent.height * 0.75
+                  // 按钮栏
+                  Item {
+                      id: toolbar
+                      width: parent.isLandscape ? parent.width * 0.25 : parent.width
+                      height: parent.isLandscape ? parent.height : parent.height / 2
                       anchors.left: parent.left
-                      anchors.leftMargin: contentWidth / 2
-                      anchors.verticalCenter: parent.verticalCenter
-                      color: btnPauseArea.pressed ? "#a0a0a0" : "white"
-                      MouseArea {
-                          id: btnPauseArea
-                          anchors.fill: parent
-                          onClicked: {
-      //                        console.log("video pause")
-      //                        imagePaintView.closeStream()
-                              VideoPlayer.closeStream()
-                              imagePlayer.autoTitle()
+                      anchors.bottom: parent.isLandscape ? progressbar.bottom : parent.bottom
+                      // 暂停按钮
+                      Text {
+                          id: btnPause
+                          text: VideoPlayer.playing === 1 ? "\uf04c" : "\uf04b"
+                          font.family: "FontAwesome"
+                          font.pixelSize: 45
+                          anchors.centerIn: parent.isLandscape ?
+                                                parent : undefined
+                          anchors.horizontalCenter: parent.isLandscape ?
+                                                        undefined : parent.horizontalCenter
+                          color: btnPauseArea.pressed ? "#a0a0a0" : "white"
+                          MouseArea {
+                              id: btnPauseArea
+                              anchors.fill: parent
+                              onClicked: {
+                                  VideoPlayer.pause()
+                              }
                           }
                       }
                   }
 
-                  // 进度条底条
-                  Rectangle {
-                      width: parent.width * 0.55
-                      height: 6
-                      x: parent.width - parent.width * 0.15 - width
-                      anchors.verticalCenter: parent.verticalCenter
-                      color: "#505050"
-                      radius: 10
+                  // 进度条
+                  Item {
+                      id: progressbar
+                      width: parent.isLandscape ? parent.width * 0.75 : parent.width
+                      height: parent.isLandscape ? parent.height : parent.height / 2
+                      anchors.right: parent.right
 
+                      // 当前播放时间
                       Text {
                           id: currentTime
-                          anchors.right: parent.left
-                          anchors.rightMargin: 10
-                          anchors.verticalCenter: parent.verticalCenter
-      //                    text: imagePaintView.currentTime
+                          // 横屏布局
+                          anchors.right: progressBarItem.isLandscape ?
+                                             bottombar.left : undefined
+                          anchors.rightMargin: progressBarItem.isLandscape ?
+                                                   10 : 0
+                          anchors.verticalCenter: progressBarItem.isLandscape ?
+                                                      bottombar.verticalCenter : undefined
+                          // 竖屏布局
+                          anchors.left: progressBarItem.isLandscape ?
+                                            undefined : bottombar.left
+                          anchors.top: progressBarItem.isLandscape ?
+                                           undefined : bottombar.bottom
+                          anchors.topMargin: progressBarItem.isLandscape ?
+                                           0 : 10
                           text: VideoPlayer.currentTime
-                          font.pixelSize: parent.height * 2.5
+                          font.pixelSize: 15
                           color: "white"
                       }
 
+                      // 视频总时间
                       Text {
                           id: totalTime
-                          anchors.left: parent.right
-                          anchors.leftMargin:  10
-                          anchors.verticalCenter: parent.verticalCenter
-      //                    text: imagePaintView.totalTime
+                          // 竖屏布局
+                          anchors.left: progressBarItem.isLandscape ?
+                                            bottombar.right : undefined
+                          anchors.leftMargin: progressBarItem.isLandscape ?
+                                                  10 : 0
+                          anchors.verticalCenter: progressBarItem.isLandscape ?
+                                                      bottombar.verticalCenter : undefined
+
+                          // 竖屏布局
+                          anchors.right: progressBarItem.isLandscape ?
+                                             undefined : bottombar.right
+                          anchors.top: progressBarItem.isLandscape ?
+                                           undefined : bottombar.bottom
+                          anchors.topMargin: progressBarItem.isLandscape ?
+                                           0 : 10
                           text: VideoPlayer.totalTime
-                          font.pixelSize: parent.height * 2.5
+                          font.pixelSize: 15
                           color: "white"
                       }
 
-                      //  进度条
+                      // 进度条底条
                       Rectangle {
-                          id: bar
-      //                    width: parent.width * imagePaintView.progress
-                          width: parent.width * VideoPlayer.progress
-                          height: parent.height
-                          color: "white"
+                          id: bottombar
+                          width: progressBarItem.isLandscape ?
+                                     parent.width * 0.65 : parent.width * 0.85
+                          height: 6
+                          anchors.centerIn: parent
+                          color: "#505050"
                           radius: 10
-                      }
 
-                      // 进度条球
-                      Rectangle {
-                          width: parent.height + 4
-                          height: width
-                          x: bar.width - width / 2
-                          radius: 100
-                          color: "white"
-                          anchors.verticalCenter: parent.verticalCenter
-                          border.width: 1
-                          border.color: "#a0a0a0"
-                      }
-
-                      MouseArea {
-                          property real pressW
-                          property real pressX
-                          width: parent.width
-                          height: parent.height * 6
-                          enabled: false
-                          anchors.verticalCenter: parent.verticalCenter
-                          onPressed: {
-                              pressX = mouseX
-                              bar.width = pressX
-                              pressW = bar.width
+                          //  进度条
+                          Rectangle {
+                              id: rollbar
+                              width: parent.width * VideoPlayer.progress
+                              height: parent.height
+                              color: "white"
+                              radius: 10
                           }
 
-                          onMouseXChanged: {
-                              var w = pressW + mouseX - pressX
-                              if( w < 0 ) {
-                                  w = 0
-                              }
-                              if( w > width ) {
-                                  w = width
-                              }
-                              bar.width = w
+                          // 进度条球
+                          Rectangle {
+                              width: parent.height + 6
+                              height: width
+                              x: rollbar.width
+                              radius: 100
+                              color: "white"
+                              anchors.verticalCenter: parent.verticalCenter
+                              border.width: 1
+                              border.color: "#a0a0a0"
                           }
 
-                          onReleased: {
+                          MouseArea {
+                              property real pressW
+                              property real pressX
+                              width: parent.width
+                              height: parent.height * 6
+                              enabled: false
+                              anchors.verticalCenter: parent.verticalCenter
+                              onPressed: {
+                                  pressX = mouseX
+                                  rollbar.width = pressX
+                                  pressW = rollbar.width
+                              }
 
+                              onMouseXChanged: {
+                                  var w = pressW + mouseX - pressX
+                                  if( w < 0 ) {
+                                      w = 0
+                                  }
+                                  if( w > width ) {
+                                      w = width
+                                  }
+                                  rollbar.width = w
+                              }
+
+                              onReleased: {
+
+                              }
                           }
                       }
                   }

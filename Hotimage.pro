@@ -19,8 +19,8 @@ SOURCES += \
         Function/ImageProvider/imageprovider.cpp \
         ImageListModel/VideoScanImage/videoscanimage.cpp \
         ImageListModel/imagelistmodel.cpp \
-        ImagePaintView/imagepaintview.cpp \
         TcpCamera/tcpcamera.cpp \
+        VideoPlayer/videoplayer.cpp \
         main.cpp
 
 RESOURCES += qml.qrc
@@ -43,10 +43,10 @@ HEADERS += \
     Function/MadgwickAHRS.hpp \
     ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
-    ImagePaintView/imagepaintview.h \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
-    TcpCamera/tcpcamera.h \
+    TcpCamera/tcpcamera.h \ \
+    VideoPlayer/videoplayer.h
 
 DEFINES += ANDROID_APP
 

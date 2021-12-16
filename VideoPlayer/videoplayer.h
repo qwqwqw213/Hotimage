@@ -1,5 +1,5 @@
-#ifndef IMAGEVIEW_H
-#define IMAGEVIEW_H
+#ifndef VIDEOPLAYER_H
+#define VIDEOPLAYER_H
 
 #include "QQuickImageProvider"
 #include "QQuickPaintedItem"
@@ -11,20 +11,21 @@
 
 class VideoProvider;
 
-class ImagePaintView : public QQuickPaintedItem
+class VideoPlayer : public QQuickPaintedItem
 {
     Q_OBJECT
 public:
-    ImagePaintView(QQuickItem *parent = nullptr);
-    ~ImagePaintView();
+    VideoPlayer(QQuickItem *parent = nullptr);
+    ~VideoPlayer();
 
     void paint(QPainter *painter) override;
 
     Q_INVOKABLE void openStream(const QString &path, const int &w, const int &h, const int &index);
+    Q_INVOKABLE void pause();
     Q_INVOKABLE void closeStream();
 
-    Q_PROPERTY(bool playing READ playing NOTIFY playStatusChanged)
-    bool playing();
+    Q_PROPERTY(int playing READ playing NOTIFY playStatusChanged)
+    int playing();
     Q_PROPERTY(int playIndex READ playIndex NOTIFY playStatusChanged)
     int playIndex();
 
@@ -117,4 +118,4 @@ private:
     quint64 frame;
 };
 
-#endif // IMAGEVIEW_H
+#endif // VIDEOPLAYER_H

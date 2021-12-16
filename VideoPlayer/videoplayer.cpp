@@ -1,4 +1,4 @@
-#include "imagepaintview.h"
+#include "videoplayer.h"
 
 #include "QDebug"
 #include "QPainter"
@@ -6,7 +6,7 @@
 
 #include "QElapsedTimer"
 
-ImagePaintView::ImagePaintView(QQuickItem *parent)
+VideoPlayer::VideoPlayer(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
     m_image = QImage();
@@ -14,7 +14,7 @@ ImagePaintView::ImagePaintView(QQuickItem *parent)
 
     decode = new VideoProcess(this);
 //    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
-//                     this, &ImagePaintView::updateImage, Qt::QueuedConnection);
+//                     this, &VideoPlayer::updateImage, Qt::QueuedConnection);
 
     QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
                      [=](QImage img){
@@ -29,7 +29,7 @@ ImagePaintView::ImagePaintView(QQuickItem *parent)
         emit playStatusChanged();
     }, Qt::QueuedConnection);
     QObject::connect(decode, &VideoProcess::statusChanged, this, [=](){
-        if( !decode->status() ) {
+        if( decode->status() == VideoProcess::__stop ) {
             m_index = -1;
             decode->closeStream();
             videoProvider->release();
@@ -40,7 +40,7 @@ ImagePaintView::ImagePaintView(QQuickItem *parent)
     videoProvider = new VideoProvider;
 }
 
-ImagePaintView::~ImagePaintView()
+VideoPlayer::~VideoPlayer()
 {
     m_image = QImage();
     m_index = -1;
@@ -48,14 +48,14 @@ ImagePaintView::~ImagePaintView()
     videoProvider->release();
 }
 
-void ImagePaintView::updateImage(QImage image)
+void VideoPlayer::updateImage(QImage image)
 {
     m_image = image;
     update();
     emit frameUpdate();
 }
 
-void ImagePaintView::paint(QPainter *painter)
+void VideoPlayer::paint(QPainter *painter)
 {
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
     painter->drawPixmap(m_x, m_y,
@@ -63,7 +63,7 @@ void ImagePaintView::paint(QPainter *painter)
                         QPixmap::fromImage(m_image));
 }
 
-void ImagePaintView::openStream(const QString &path, const int &w, const int &h, const int &index)
+void VideoPlayer::openStream(const QString &path, const int &w, const int &h, const int &index)
 {
     if( !decode->status() ) {
         m_w = w;
@@ -76,7 +76,12 @@ void ImagePaintView::openStream(const QString &path, const int &w, const int &h,
     }
 }
 
-void ImagePaintView::closeStream()
+void VideoPlayer::pause()
+{
+    decode->pause();
+}
+
+void VideoPlayer::closeStream()
 {
     decode->closeStream();
     videoProvider->release();
@@ -86,52 +91,52 @@ void ImagePaintView::closeStream()
     emit playStatusChanged();
 }
 
-bool ImagePaintView::playing()
+int VideoPlayer::playing()
 {
     return decode->status();
 }
 
-int ImagePaintView::playIndex()
+int VideoPlayer::playIndex()
 {
     return m_index;
 }
 
-int ImagePaintView::imageWidth()
+int VideoPlayer::imageWidth()
 {
     return m_w;
 }
 
-int ImagePaintView::imageHeight()
+int VideoPlayer::imageHeight()
 {
     return m_h;
 }
 
-QString ImagePaintView::currentTime()
+QString VideoPlayer::currentTime()
 {
     return decode->currentTime();
 }
 
-QString ImagePaintView::totalTime()
+QString VideoPlayer::totalTime()
 {
     return decode->totalTime();
 }
 
-qreal ImagePaintView::progress()
+qreal VideoPlayer::progress()
 {
     return decode->currentMescTime() / (qreal)decode->totalMsecTime();
 }
 
-QString ImagePaintView::frameUrl()
+QString VideoPlayer::frameUrl()
 {
     return videoProvider->qmlUrl();
 }
 
-VideoProvider * ImagePaintView::provider()
+VideoProvider * VideoPlayer::provider()
 {
     return videoProvider;
 }
 
-QString ImagePaintView::providerUrl()
+QString VideoPlayer::providerUrl()
 {
     return videoProvider->url();
 }
