@@ -9,6 +9,7 @@
 
 #include "QDebug"
 #include "QThread"
+#include "QMutex"
 
 static int ffmpeg_init = 0;
 
@@ -24,6 +25,11 @@ public:
     std::mutex mutex;
     std::condition_variable condition;
     int status;
+
+    QImage image;
+
+//    std::mutex read_stream_mutex;
+    QMutex read_stream_mutex;
 
     EncodeConfig config;
     QVector<QImage> encode_queue;
@@ -53,6 +59,8 @@ public:
         int fps_count;
         double current_time;
         double total_time;
+        int64_t cur_dts_ms;
+        int seekFlag;
         AVFormatContext *fmtCnt;
         AVStream *stream;
         AVCodecContext *codecCnt;
@@ -64,10 +72,11 @@ public:
         AVCodecParserContext *codecParserCnt;
     } *decode;
 
-    void open_stream(const std::string &url);
+    void open_stream(const std::string &url, const int &msec);
     int find_stream(const char *url);
     int read_video_stream();
-    void seek_stream(const int &sec);
+    void seek_stream(const int &msec);
+    void jump_stream(const int &flag, const int &msec);
     void close_video_stream();
 
     int open_h264_decode();
@@ -196,9 +205,9 @@ bool VideoProcess::closeEncode()
     return true;
 }
 
-void VideoProcess::openStream(const std::string &url)
+void VideoProcess::openStream(const std::string &url, const int &msec)
 {
-    p->open_stream(url);
+    p->open_stream(url, msec);
 }
 
 void VideoProcess::closeStream()
@@ -260,7 +269,7 @@ int64_t VideoProcess::totalMsecTime()
     return p->decode->total_time * 1000;
 }
 
-void VideoProcess::pause()
+int VideoProcess::pausePlay()
 {
     if( p->status == __running ) {
         p->status = __pause;
@@ -269,11 +278,17 @@ void VideoProcess::pause()
         p->status = __running;
         p->condition.notify_all();
     }
+    return p->status;
 }
 
-void VideoProcess::seek(const int &sec)
+void VideoProcess::seek(const int &msec)
 {
-    p->seek_stream(sec);
+    p->seek_stream(msec);
+}
+
+void VideoProcess::jump(const int &flag, const int &msec)
+{
+    p->jump_stream(flag, msec);
 }
 
 int VideoProcess::status()
@@ -314,12 +329,19 @@ std::string VideoProcess::lastError()
     return p->error;
 }
 
+QImage VideoProcess::image()
+{
+    return p->image;
+}
+
 VideoProcessPrivate::VideoProcessPrivate(VideoProcess *parent)
 {
     f = parent;
 
     encode = NULL;
     decode = NULL;
+
+    image = QImage();
 
     status = VideoProcess::__stop;
 }
@@ -584,7 +606,7 @@ void VideoProcessPrivate::release_encode()
     qDebug() << "close encode";
 }
 
-void VideoProcessPrivate::open_stream(const std::string &url)
+void VideoProcessPrivate::open_stream(const std::string &url, const int &msec)
 {
     if( decode ) {
         return;
@@ -601,6 +623,7 @@ void VideoProcessPrivate::open_stream(const std::string &url)
         if( res == 0 )
         {
             memset(decode, 0, sizeof (*decode));
+            decode->cur_dts_ms = msec;
             res = find_stream(url.c_str());
             if( res == 0 ) {
                 read_video_stream();
@@ -678,6 +701,8 @@ int VideoProcessPrivate::find_stream(const char *url)
     return res;
 }
 
+static QMutex seek_mutex;
+
 int VideoProcessPrivate::read_video_stream()
 {
     if( !decode->fmtCnt ) {
@@ -705,91 +730,138 @@ int VideoProcessPrivate::read_video_stream()
         return -1;
     }
 
-    int fps = 0;
-    QImage img = QImage(*decode->rgbFrame->data,
-                        decode->rgbFrame->width, decode->rgbFrame->height,
-                        QImage::Format_RGB888);
+    image = QImage(*decode->rgbFrame->data,
+                   decode->rgbFrame->width, decode->rgbFrame->height,
+                   QImage::Format_RGB888);
 
     av_init_packet(&decode->packet);
-    qint64 start_ms = QDateTime::currentDateTime().toMSecsSinceEpoch();
-    qint64 wait_ms = 0;
-    qint64 msec = 0;
     status = VideoProcess::__running;
     emit f->statusChanged();
+
+//    decode->old_dts_ms = decode->total_time / 2.0 * AV_TIME_BASE;
+    int64_t seek_usec = decode->cur_dts_ms * 1000;
+    int old_dts_ms = decode->cur_dts_ms;
+    av_seek_frame(decode->fmtCnt, -1, seek_usec, AVSEEK_FLAG_BACKWARD);
 
     qDebug() << QThread::currentThreadId() << "start play stream";
     while (status > VideoProcess::__stop)
     {
+        // 暂停视频
+        if( status == VideoProcess::__pause )
+        {
+            // 视频暂停状态更新
+            emit f->statusChanged();
+            qDebug() << "stream puase";
+            std::unique_lock<std::mutex> lock(mutex);
+            condition.wait(lock);
+            lock.unlock();
+            // 恢复播放状态更新
+            emit f->statusChanged();
+        }
+
+        read_stream_mutex.lock();
         res = av_read_frame(decode->fmtCnt, &decode->packet);
-        if( res < 0 ) {
+
+        if( res < 0 )
+        {
+            status = VideoProcess::__stop;
             decode->current_time = decode->total_time;
-            emit f->frame(img);
+            emit f->frame(image);
 
             qDebug() << "read stream finished";
-            status = VideoProcess::__stop;
             emit f->statusChanged();
+            read_stream_mutex.unlock();
             break;
         }
         if( decode->packet.stream_index == decode->video_index )
         {
             res = avcodec_send_packet(decode->codecCnt, &decode->packet);
             if( res < 0 ) {
+                read_stream_mutex.unlock();
                 continue;
             }
             res = avcodec_receive_frame(decode->codecCnt, decode->frame);
             if( res < 0 ) {
+                read_stream_mutex.unlock();
                 continue;
             }
-
             int64_t cur_dts = decode->packet.dts;
-            int64_t cur_dts_ms = cur_dts * av_q2d(decode->stream->time_base) * 1000;
+            decode->cur_dts_ms = cur_dts * av_q2d(decode->stream->time_base) * 1000;
+            decode->current_time = cur_dts * av_q2d(decode->stream->time_base);
 
-            fps ++;
+            int wait_ms = decode->cur_dts_ms - old_dts_ms;
+            if( decode->seekFlag ) {
+                decode->seekFlag = 0;
+                wait_ms = -1;
+            }
+            old_dts_ms = decode->cur_dts_ms;
+            read_stream_mutex.unlock();
+
             sws_scale(decode->sws,
                       decode->frame->data, decode->frame->linesize, 0, decode->frame->height,
                       decode->rgbFrame->data, decode->rgbFrame->linesize);
 
-            // 暂停视频
-            if( status == VideoProcess::__pause )
-            {
-                // 视频暂停状态更新
-                emit f->statusChanged();
-                qint64 wait_start_ms = QDateTime::currentDateTime().toMSecsSinceEpoch();
-                std::unique_lock<std::mutex> lock(mutex);
-                condition.wait(lock);
-                lock.unlock();
-                wait_ms = wait_ms + (QDateTime::currentDateTime().toMSecsSinceEpoch() - wait_start_ms);
-                // 恢复播放状态更新
-                emit f->statusChanged();
+            emit f->frame(image);
+
+            if( wait_ms > 0 ) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
             }
-            emit f->frame(img);
-            while (1)
-            {
-                msec = QDateTime::currentDateTime().toMSecsSinceEpoch() - start_ms - wait_ms;
-                if( msec > cur_dts_ms ) {
-                    break;
-                }
-                decode->current_time = msec / 1000.0;
-            }
+        }
+        else {
+            read_stream_mutex.unlock();
         }
     }
     av_packet_unref(&decode->packet);
 
+    image = QImage();
 
     return 0;
 }
 
-void VideoProcessPrivate::seek_stream(const int &sec)
+void VideoProcessPrivate::seek_stream(const int &msec)
 {
-    if( !decode ) {
+    if( !decode && status > VideoProcess::__stop ) {
         return;
     }
 
-    int64_t s = sec * av_q2d(decode->stream->time_base);
-    int res = av_seek_frame(decode->fmtCnt, decode->video_index, s, AVSEEK_FLAG_ANY);
-    qDebug() << "seek:" << res;
+    read_stream_mutex.lock();
+    int64_t usec = msec * 1000;
+    int ret = av_seek_frame(decode->fmtCnt, -1, usec, AVSEEK_FLAG_BACKWARD);
+    if( ret >= 0 ) {
+        decode->seekFlag = 1;
+        avcodec_flush_buffers(decode->codecCnt);
+    }
+    read_stream_mutex.unlock();
+}
 
-    condition.notify_all();
+void VideoProcessPrivate::jump_stream(const int &flag, const int &msec)
+{
+    if( !decode && status > VideoProcess::__stop ) {
+        return;
+    }
+
+    int jump_usec = msec * 1000;
+
+    read_stream_mutex.lock();
+    int64_t usec = decode->cur_dts_ms * 1000;
+    if( flag == 0 ) {
+        usec -= jump_usec;
+        if( usec < 0 ) {
+            usec = 0;
+        }
+    }
+    else {
+        usec += jump_usec;
+        if( usec > decode->total_time * AV_TIME_BASE ) {
+            usec = decode->total_time * AV_TIME_BASE;
+        }
+    }
+    int ret = av_seek_frame(decode->fmtCnt, -1, usec, AVSEEK_FLAG_BACKWARD);
+    if( ret >= 0 ) {
+        decode->seekFlag = 1;
+        avcodec_flush_buffers(decode->codecCnt);
+    }
+    read_stream_mutex.unlock();
 }
 
 void VideoProcessPrivate::close_video_stream()

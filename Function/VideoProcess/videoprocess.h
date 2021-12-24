@@ -58,14 +58,23 @@ public:
     /*
      *  视频播放
      */
-    void openStream(const std::string &url);
+
+    /*
+     *  @url  视频文件路径
+     *  @msec 视频播放的起始时间
+     */
+    void openStream(const std::string &url, const int &msec = 0);
     void closeStream();
     QString currentTime();
     QString totalTime();
     int64_t totalMsecTime();
     int64_t currentMescTime();
-    void pause();
-    void seek(const int &sec);
+    int pausePlay();
+    void seek(const int &msec);
+    /*
+     *  @flag = 0 快退, = 1 快进
+     */
+    void jump(const int &flag, const int &msec = 1000);
 
     /*
      *  解码h264流
@@ -82,6 +91,8 @@ public:
     int status();
     std::string lastError();
     inline AVPixelFormat pixel(const int &QImageFormat);
+
+    QImage image();
 
 private:
     friend class VideoProcessPrivate;

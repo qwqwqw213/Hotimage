@@ -54,6 +54,8 @@ public:
 
     int language;
 
+    bool isLandscape;
+
     void readSetting();
     void saveSetting();
 
@@ -121,9 +123,22 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                                      Qt::LandscapeOrientation |
                                      Qt::InvertedLandscapeOrientation |
                                      Qt::InvertedPortraitOrientation);
+    // 此信号需要在 AndroidManifest.xml 中
+    // 将android:screenOrientation
+    // 设置为"unspecified"才能触发
+    // 否则不会触发槽函数
     QObject::connect(p->screen, static_cast<void (QScreen::*)(Qt::ScreenOrientation)>(&QScreen::orientationChanged),
                      [=](Qt::ScreenOrientation orientation){
-        qDebug() << "orientationChanged screen:" << orientation << p->screen->availableGeometry();
+        QRect r = p->screen->availableGeometry();
+        if( orientation == Qt::LandscapeOrientation
+                || orientation == Qt::InvertedPortraitOrientation ) {
+            p->isLandscape = true;
+        }
+        else {
+            p->isLandscape = false;
+        }
+        qDebug() << "orientationChanged screen:" << orientation << r << p->isLandscape;
+        emit orientationChanged();
     });
 
     QRect r = p->screen->availableGeometry();
@@ -132,9 +147,15 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     p->height = r.height();
 #else
     p->width = 960;
-    p->height = 540;
+    p->height = 515;
 #endif
-    qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height;
+    if( p->width > p->height ) {
+        p->isLandscape = true;
+    }
+    else {
+        p->isLandscape = false;
+    }
+    qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height << "is landscape:" << p->isLandscape;
 
     // 安卓模块
     p->androidInterface.reset(new AndroidInterface);
@@ -234,6 +255,11 @@ void Config::setLanguage(const int &language)
         emit languageChanged();
         qApp->exit(REBOOT_CODE);
     }
+}
+
+bool Config::isLandscape()
+{
+    return p->isLandscape;
 }
 
 ConfigPrivate::ConfigPrivate(Config *parent)

@@ -21,6 +21,10 @@
 #include "QStandardPaths"
 #include "QSettings"
 #include "QMutex"
+#include "QNetworkInterface"
+
+#include "QNetworkConfigurationManager"
+#include "QNetworkConfiguration"
 
 #include "thread"
 
@@ -35,7 +39,7 @@ public:
 
 //#ifdef Q_OS_ANDROID
     VideoProcess *encode;
-//#endif
+//#endif5
 
 //    QImage image;
     ImageProvider *provider;
@@ -72,7 +76,12 @@ public:
 
     QMutex unpackMutex;
 
+    void searchDevice();
+
     bool showTemp;
+
+    QString localHotspotIP;
+    QString deviceHotspotIP;
 
 private:
     TcpCamera *f;
@@ -90,6 +99,40 @@ TcpCamera::TcpCamera(QObject *parent)
     : QObject(parent)
     , p(new TcpCameraPrivate(this))
 {
+//    QNetworkConfigurationManager ncm;
+//    QList<QNetworkConfiguration> nc;
+//    nc = ncm.allConfigurations();
+//    for(int i = 0; i < nc.size(); i ++) {
+//        if( nc.at(i).bearerType() == QNetworkConfiguration::BearerWLAN ) {
+//            qDebug() << nc.at(i).type() << nc.at(i).name() << nc.at(i).identifier();
+
+//            QHostInfo info = QHostInfo::fromName(nc.at(i).identifier());
+//            foreach (QHostAddress addr, info.addresses()) {
+//                qDebug() << nc.at(i).name() << "host ip::" << addr.toString();
+//            }
+//        }
+//    }
+
+//    QList<QNetworkInterface> interfaces = QNetworkInterface::allInterfaces();
+//    for (int i = 0; i < interfaces.count(); i++)
+//    {
+//      QList<QNetworkAddressEntry> entries = interfaces.at(i).addressEntries();
+//      for (int j = 0; j < entries.count(); j++)
+//      {
+//          if (entries.at(j).ip().protocol() == QAbstractSocket::IPv4Protocol)
+//          {
+//              qDebug() << entries.at(j).ip().toString();
+//          }
+//      }
+//    }
+
+//    QList<QHostAddress> list=QNetworkInterface::allAddresses();
+//    foreach (QHostAddress address,list)
+//    {
+//        if(address.protocol()==QAbstractSocket::IPv4Protocol)
+//            qDebug() << address.toString();
+//    }
+
 }
 
 TcpCamera::~TcpCamera()
@@ -322,12 +365,18 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             if( !exit ) {
                 qDebug() << "socket disconnect";
                 emit f->connectStatusChanged();
-
+                unpackMutex.lock();
+                socket->disconnectFromHost();
+                buf.clear();
+                unpackMutex.unlock();
                 socket->connectToHost(cfg.ip, cfg.port);
                 while (!socket->waitForConnected(3000) && !exit) {
 //                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
+                    qDebug() << "socket reconnect";
                     socket->connectToHost(cfg.ip, cfg.port);
                 }
+
+                qDebug() << "socket reconnect success";
             }
         });
         QObject::connect(this, static_cast<void (TcpCameraPrivate::*)(const QByteArray &)>(&TcpCameraPrivate::write),
@@ -368,6 +417,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         buf.clear();
 
         emit f->connectStatusChanged();
+        qDebug() << "socket release";
     });
     this->moveToThread(thread);
 
@@ -391,7 +441,46 @@ TcpCameraPrivate::~TcpCameraPrivate()
     encode->deleteLater();
 //#endif
     saveSetting();
-    qDebug() << "tcp release";
+}
+
+void TcpCameraPrivate::searchDevice()
+{
+    while (!exit)
+    {
+        localHotspotIP.clear();
+        const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
+        for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
+            if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
+                 localHotspotIP = address.toString();
+            }
+        }
+
+        qDebug() << "local hotspot ip:" << localHotspotIP;
+        if( !localHotspotIP.isNull() )
+        {
+            QString ip_front = localHotspotIP.left(localHotspotIP.lastIndexOf('.') + 1);
+            int index = 2;
+            while (true && socket)
+            {
+                QString ip = ip_front + QString::number(index);
+                if( ip == localHotspotIP ) {
+                    // 连接失败
+                    break;
+                }
+                socket->connectToHost(ip, cfg.port);
+                socket->waitForConnected(3000);
+                if( socket->state() == QAbstractSocket::ConnectedState ) {
+                    deviceHotspotIP = ip;
+                    qDebug() << "device hotspot ip:" << deviceHotspotIP;
+                    break;
+                }
+                index ++;
+                if( index > 255 ) {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void TcpCameraPrivate::onReadyRead()
@@ -425,8 +514,10 @@ void TcpCameraPrivate::onReadyRead()
 
             cfg.set.type = HandShake::__handshake;
             QByteArray byte = handshake.pack(cfg.set);
+            qDebug() << "write byte size:" << byte.size();
             int size = socket->write(byte.data(), byte.size());
-            qDebug() << "write size:" << size << byte.size();
+            socket->waitForBytesWritten();
+            qDebug() << "write success size:" << size;
 
 //            std::string str = handshake.s_pack(cfg.set);
 //            int size = socket->write(str.c_str(), str.size());

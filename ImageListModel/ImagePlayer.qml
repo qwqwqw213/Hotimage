@@ -11,6 +11,8 @@ Rectangle{
     anchors.fill: parent
     color: "black"
 
+    signal currentIndexChanged(int index)
+
     function hideTitle() {
         if( title.state !== "hide" ) {
             title.state = "hide"
@@ -46,6 +48,7 @@ Rectangle{
         cacheBuffer: 5
         clip: true
         z:1
+        interactive: VideoPlayer.playing > 0 ? false : true
 //        maximumFlickVelocity:7000  //设置滑动的最大速度
         highlightRangeMode: ListView.StrictlyEnforceRange
         orientation: ListView.Horizontal
@@ -63,7 +66,7 @@ Rectangle{
         }
 
         onMovementEnded: {
-            imageList.positionViewAtIndex(ImageModel.currentIndex,  ListView.End)
+            imagePlayer.currentIndexChanged(ImageModel.currentIndex)
         }
 
         onCurrentIndexChanged: {
@@ -91,158 +94,6 @@ Rectangle{
 
 //        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
-
-    /*
-//    ImagePaintView {
-//        id: imagePaintView
-//        x: photoScan.currentIndex * imagePlayer.width - photoScan.contentX
-//        width: photoScan.width
-//        height: photoScan.height
-//        z: 1
-//        visible: playing
-    Image {
-        x: photoScan.currentIndex * imagePlayer.width - photoScan.contentX
-//        width: photoScan.width
-        width: VideoPlayer.imageWidth
-//        height: photoScan.height
-        height: VideoPlayer.imageHeight
-        z: 1
-        visible: VideoPlayer.playing
-        source: VideoPlayer.playing ? VideoPlayer.frameUrl : ""
-
-        // 滚动条
-        Rectangle {
-            id: progressBar
-            width: parent.width * 0.85
-            height: 60
-            x: (parent.width - width) / 2.0
-            y: parent.height - height - 10
-            radius: 10
-            color: "#D0505050"
-
-//            opacity: imagePaintView.playing ? 1 : 0
-            opacity: VideoPlayer.playing ? 1 : 0
-
-            Behavior on opacity {
-                OpacityAnimator {
-                    duration: 200
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-            }
-
-            // 暂停按钮
-            Text {
-                id: btnPause
-                text: "\uf28b"
-                font.family: "FontAwesome"
-                font.pixelSize: parent.height * 0.75
-                anchors.left: parent.left
-                anchors.leftMargin: contentWidth / 2
-                anchors.verticalCenter: parent.verticalCenter
-                color: btnPauseArea.pressed ? "#a0a0a0" : "white"
-                MouseArea {
-                    id: btnPauseArea
-                    anchors.fill: parent
-                    onClicked: {
-//                        console.log("video pause")
-//                        imagePaintView.closeStream()
-                        VideoPlayer.closeStream()
-                        imagePlayer.autoTitle()
-                    }
-                }
-            }
-
-            // 进度条底条
-            Rectangle {
-                width: parent.width * 0.55
-                height: 6
-                x: parent.width - parent.width * 0.15 - width
-                anchors.verticalCenter: parent.verticalCenter
-                color: "#505050"
-                radius: 10
-
-                Text {
-                    id: currentTime
-                    anchors.right: parent.left
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-//                    text: imagePaintView.currentTime
-                    text: VideoPlayer.currentTime
-                    font.pixelSize: parent.height * 2.5
-                    color: "white"
-                }
-
-                Text {
-                    id: totalTime
-                    anchors.left: parent.right
-                    anchors.leftMargin:  10
-                    anchors.verticalCenter: parent.verticalCenter
-//                    text: imagePaintView.totalTime
-                    text: VideoPlayer.totalTime
-                    font.pixelSize: parent.height * 2.5
-                    color: "white"
-                }
-
-                //  进度条
-                Rectangle {
-                    id: bar
-//                    width: parent.width * imagePaintView.progress
-                    width: parent.width * VideoPlayer.progress
-                    height: parent.height
-                    color: "white"
-                    radius: 10
-                }
-
-                // 进度条球
-                Rectangle {
-                    width: parent.height + 4
-                    height: width
-                    x: bar.width - width / 2
-                    radius: 100
-                    color: "white"
-                    anchors.verticalCenter: parent.verticalCenter
-                    border.width: 1
-                    border.color: "#a0a0a0"
-                }
-
-                MouseArea {
-                    property real pressW
-                    property real pressX
-                    width: parent.width
-                    height: parent.height * 6
-                    enabled: false
-                    anchors.verticalCenter: parent.verticalCenter
-                    onPressed: {
-                        pressX = mouseX
-                        bar.width = pressX
-                        pressW = bar.width
-                    }
-
-                    onMouseXChanged: {
-                        var w = pressW + mouseX - pressX
-                        if( w < 0 ) {
-                            w = 0
-                        }
-                        if( w > width ) {
-                            w = width
-                        }
-                        bar.width = w
-                    }
-
-                    onReleased: {
-
-                    }
-                }
-            }
-
-            signal drag(int time)
-        }
-
-    }
-    */
 
     Connections {
         target: ImageModel
@@ -471,6 +322,8 @@ Rectangle{
 //                }
 //            }
 
+
+
             delegate: Rectangle {
                 id: itembg
                 width: miniPhtotList.cellWidth
@@ -502,8 +355,10 @@ Rectangle{
                     id: mouseArea
                     anchors.fill: parent
                     onClicked: {
+                        console.log("mini list clicked index:", index)
                         miniPhtotList.positionViewAtIndex(index, ListView.Center)
                         photoScan.positionViewAtIndex(index, ListView.Beginning)
+                        imagePlayer.currentIndexChanged(index)
                     }
                 }
             }

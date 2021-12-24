@@ -156,6 +156,9 @@ Window {
             y: 0
             source: mainView.videoPlay ?
                         (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
+            z: 2
+
+            property bool zoomState: false
 
             // 录像标志
             Text {
@@ -190,6 +193,31 @@ Window {
                 onPressed: {
 //                    Config.setRotation()
 //                    messagebox.showMsg("test message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest ")
+                }
+
+                onDoubleClicked: {
+                    if( cameraFrame.zoomState ) {
+                        cameraFrame.zoomState = false
+                        cameraFrame.width = mainView.width * 0.7
+                        cameraFrame.x = mainView.width * 0.1
+                    }
+                    else {
+                        cameraFrame.zoomState = true
+                        cameraFrame.width = mainView.width
+                        cameraFrame.x = 0
+                    }
+                }
+            }
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: 200
+                }
+            }
+
+            Behavior on x {
+                NumberAnimation {
+                    duration: 200
                 }
             }
         }

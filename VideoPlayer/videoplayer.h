@@ -21,6 +21,7 @@ public:
     void paint(QPainter *painter) override;
 
     Q_INVOKABLE void openStream(const QString &path, const int &w, const int &h, const int &index);
+    Q_INVOKABLE void seek(const qreal &f);
     Q_INVOKABLE void pause();
     Q_INVOKABLE void closeStream();
 
@@ -99,10 +100,11 @@ public:
         return QString("image://videostream/%1").arg(frame);
     }
 
-    void add(QImage img) {
+    int add(QImage img) {
         mutex.lock();
         queue.enqueue(img);
         mutex.unlock();
+        return queue.size();
     }
 
     void release() {

@@ -44,9 +44,14 @@ public:
     int language();
     Q_INVOKABLE void setLanguage(const int &language);
 
+    Q_PROPERTY(bool isLandscape READ isLandscape NOTIFY orientationChanged)
+    bool isLandscape();
+
 Q_SIGNALS:
     void rotationChanged();
     void languageChanged();
+    void orientationChanged();
+
 
 private:
     friend class ConfigPrivate;

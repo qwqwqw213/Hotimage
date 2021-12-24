@@ -85,11 +85,9 @@ Rectangle{
 
           Image {
               id: image
-//              visible: !VideoPlayer.playing
               width: flick.contentWidth - 10
               height: flick.contentHeight - 10
               cache: true
-//              source: fileType == 0 ? path : ""
               source: path
               anchors.centerIn: parent
               asynchronous: true
@@ -173,18 +171,13 @@ Rectangle{
                   wrapper.itemClicked()
                   if( fileType === 1 )
                   {
-//                      if( imagePaintView.playing ) {
-//                          imagePaintView.closeStream()
-//                          imagePlayer.autoTitle()
-//                      }
-                      if( VideoPlayer.playing ) {
-//                          VideoPlayer.closeStream()
-//                          imagePlayer.autoTitle()
-                          if( progressBarItem.opacity > 0 ) {
-                              progressBarItem.opacity = 0
+                      if( VideoPlayer.playing > 0 )
+                      {
+                          if( videoViewLoader.progressBarOpacity > 0 ) {
+                              videoViewLoader.progressBarOpacity = 0
                           }
                           else {
-                              progressBarItem.opacity = 1
+                              videoViewLoader.progressBarOpacity = 1
                           }
                       }
                       else {
@@ -200,7 +193,7 @@ Rectangle{
           Text {
               id: btnVideoPlay
               visible: fileType === 1 ?
-                           (VideoPlayer.playing ? (VideoPlayer.playIndex === index ? false : true) : true)
+                           (VideoPlayer.playing > 0 ? (VideoPlayer.playIndex === index ? false : true) : true)
                          : false
               anchors.centerIn: parent
               font.family: "FontAwesome"
@@ -214,243 +207,87 @@ Rectangle{
                   height: btnVideoPlay.contentHeight
                   anchors.centerIn: parent
                   onClicked: {
-                      if( !VideoPlayer.playing ) {
+                      if( VideoPlayer.playing < 1 ) {
                           console.log("video play index:", index)
 //                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
                           VideoPlayer.openStream(filePath, image.paintedWidth, image.paintedHeight, index)
                           imagePlayer.hideTitle()
-                          progressBarItem.opacity = 1
+                          videoViewLoader.progressBarOpacity = 1
                       }
                   }
               }
           }
 
           // VideoView
-          Image {
-              visible: VideoPlayer.playing ?
-                           ((VideoPlayer.playIndex === index) ? true : false)
-                         : false
-              width: flick.contentWidth - 10
-              height: flick.contentHeight - 10
-              source: VideoPlayer.playIndex === index ? VideoPlayer.frameUrl : ""
+          Loader {
+              id: videoViewLoader
+              property real progressBarOpacity: 1
+
+              active: VideoPlayer.playing > 0 ?
+                          ((VideoPlayer.playIndex === index) ? true : false) : false
               anchors.centerIn: parent
-              fillMode: Image.PreserveAspectFit
+              sourceComponent: videoView
 
-              // 视频顶部按钮
-              Rectangle {
-                  id: btnVideoQuit
-                  width: 50
-                  height: 50
-                  anchors.left: progressBarItem.left
-                  anchors.top: parent.top
-                  anchors.topMargin: 10
-                  radius: 10
-                  color: "#D0505050"
-                  opacity: progressBarItem.opacity
-
-                  Text {
-                      id: btnVideoQuitIcon
-                      font.family: "FontAwesome"
-                      font.pixelSize: parent.height * 0.75
-                      color: btnVideoQuitArea.pressed ? "#f0f0f0" : "white"
-                      text: "\uf00d"
+              Component {
+                  id: videoView
+                  Image {
+                      width: flick.contentWidth - 10
+                      height: flick.contentHeight - 10
+                      source: VideoPlayer.playIndex === index ? VideoPlayer.frameUrl : ""
                       anchors.centerIn: parent
-                      Behavior on scale {
-                          ScaleAnimator {
-                              duration: 200
-                          }
-                      }
-                  }
+                      fillMode: Image.PreserveAspectFit
 
-                  MouseArea {
-                      id: btnVideoQuitArea
-                      anchors.fill: parent
-                      onPressed: {
-                          btnVideoQuitIcon.scale = 0.75
-                      }
-                      onReleased: {
-                          btnVideoQuitIcon.scale = 1
-                      }
-                      onClicked: {
-                          // close video stream
-                          VideoPlayer.closeStream()
-                      }
-                  }
-              }
-
-              // 视频进度条工具栏
-              // 分成两个区域
-              // 按纽栏
-              // 进度条
-              Rectangle {
-                  id: progressBarItem
-
-                  // 判断是否横屏
-                  property bool isLandscape: parent.width > parent.height ?
-                                                 true : false
-
-                  width: parent.width * 0.85
-                  height: isLandscape ? 60 : 120
-                  x: (parent.width - width) / 2.0
-                  y: parent.height - height - 10
-                  radius: 10
-                  color: "#D0505050"
-
-                  opacity: 0
-
-                  Behavior on opacity {
-                      NumberAnimation {
-                          duration: 200
-                      }
-                  }
-
-                  MouseArea {
-                      anchors.fill: parent
-                  }
-
-                  // 按钮栏
-                  Item {
-                      id: toolbar
-                      width: parent.isLandscape ? parent.width * 0.25 : parent.width
-                      height: parent.isLandscape ? parent.height : parent.height / 2
-                      anchors.left: parent.left
-                      anchors.bottom: parent.isLandscape ? progressbar.bottom : parent.bottom
-                      // 暂停按钮
-                      Text {
-                          id: btnPause
-                          text: VideoPlayer.playing === 1 ? "\uf04c" : "\uf04b"
-                          font.family: "FontAwesome"
-                          font.pixelSize: 45
-                          anchors.centerIn: parent.isLandscape ?
-                                                parent : undefined
-                          anchors.horizontalCenter: parent.isLandscape ?
-                                                        undefined : parent.horizontalCenter
-                          color: btnPauseArea.pressed ? "#a0a0a0" : "white"
-                          MouseArea {
-                              id: btnPauseArea
-                              anchors.fill: parent
-                              onClicked: {
-                                  VideoPlayer.pause()
-                              }
-                          }
-                      }
-                  }
-
-                  // 进度条
-                  Item {
-                      id: progressbar
-                      width: parent.isLandscape ? parent.width * 0.75 : parent.width
-                      height: parent.isLandscape ? parent.height : parent.height / 2
-                      anchors.right: parent.right
-
-                      // 当前播放时间
-                      Text {
-                          id: currentTime
-                          // 横屏布局
-                          anchors.right: progressBarItem.isLandscape ?
-                                             bottombar.left : undefined
-                          anchors.rightMargin: progressBarItem.isLandscape ?
-                                                   10 : 0
-                          anchors.verticalCenter: progressBarItem.isLandscape ?
-                                                      bottombar.verticalCenter : undefined
-                          // 竖屏布局
-                          anchors.left: progressBarItem.isLandscape ?
-                                            undefined : bottombar.left
-                          anchors.top: progressBarItem.isLandscape ?
-                                           undefined : bottombar.bottom
-                          anchors.topMargin: progressBarItem.isLandscape ?
-                                           0 : 10
-                          text: VideoPlayer.currentTime
-                          font.pixelSize: 15
-                          color: "white"
-                      }
-
-                      // 视频总时间
-                      Text {
-                          id: totalTime
-                          // 竖屏布局
-                          anchors.left: progressBarItem.isLandscape ?
-                                            bottombar.right : undefined
-                          anchors.leftMargin: progressBarItem.isLandscape ?
-                                                  10 : 0
-                          anchors.verticalCenter: progressBarItem.isLandscape ?
-                                                      bottombar.verticalCenter : undefined
-
-                          // 竖屏布局
-                          anchors.right: progressBarItem.isLandscape ?
-                                             undefined : bottombar.right
-                          anchors.top: progressBarItem.isLandscape ?
-                                           undefined : bottombar.bottom
-                          anchors.topMargin: progressBarItem.isLandscape ?
-                                           0 : 10
-                          text: VideoPlayer.totalTime
-                          font.pixelSize: 15
-                          color: "white"
-                      }
-
-                      // 进度条底条
+                      // 视频顶部按钮
                       Rectangle {
-                          id: bottombar
-                          width: progressBarItem.isLandscape ?
-                                     parent.width * 0.65 : parent.width * 0.85
-                          height: 6
-                          anchors.centerIn: parent
-                          color: "#505050"
+                          id: btnVideoQuit
+                          width: 50
+                          height: 50
+                          anchors.left: progressBarItem.left
+                          anchors.top: parent.top
+                          anchors.topMargin: 10
                           radius: 10
+                          color: "#D0505050"
+                          opacity: videoViewLoader.progressBarOpacity
 
-                          //  进度条
-                          Rectangle {
-                              id: rollbar
-                              width: parent.width * VideoPlayer.progress
-                              height: parent.height
-                              color: "white"
-                              radius: 10
-                          }
-
-                          // 进度条球
-                          Rectangle {
-                              width: parent.height + 6
-                              height: width
-                              x: rollbar.width
-                              radius: 100
-                              color: "white"
-                              anchors.verticalCenter: parent.verticalCenter
-                              border.width: 1
-                              border.color: "#a0a0a0"
+                          Text {
+                              id: btnVideoQuitIcon
+                              font.family: "FontAwesome"
+                              font.pixelSize: parent.height * 0.75
+                              color: btnVideoQuitArea.pressed ? "#f0f0f0" : "white"
+                              text: "\uf00d"
+                              anchors.centerIn: parent
+                              Behavior on scale {
+                                  NumberAnimation {
+                                      duration: 200
+                                  }
+                              }
                           }
 
                           MouseArea {
-                              property real pressW
-                              property real pressX
-                              width: parent.width
-                              height: parent.height * 6
-                              enabled: false
-                              anchors.verticalCenter: parent.verticalCenter
+                              id: btnVideoQuitArea
+                              anchors.fill: parent
                               onPressed: {
-                                  pressX = mouseX
-                                  rollbar.width = pressX
-                                  pressW = rollbar.width
+                                  btnVideoQuitIcon.scale = 0.75
                               }
-
-                              onMouseXChanged: {
-                                  var w = pressW + mouseX - pressX
-                                  if( w < 0 ) {
-                                      w = 0
-                                  }
-                                  if( w > width ) {
-                                      w = width
-                                  }
-                                  rollbar.width = w
-                              }
-
                               onReleased: {
-
+                                  btnVideoQuitIcon.scale = 1
+                              }
+                              onClicked: {
+                                  // close video stream
+                                  VideoPlayer.closeStream()
                               }
                           }
                       }
-                  }
 
-                  signal drag(int time)
+                      VideoProgressbar {
+                          id: progressBarItem
+                          width: parent.width * 0.85
+                          height: Config.isLandscape ? 60 : 120
+                          x: (parent.width - width) / 2.0
+                          y: parent.height - height - 10
+                          opacity: videoViewLoader.progressBarOpacity
+                      }
+                  }
               }
           }
 

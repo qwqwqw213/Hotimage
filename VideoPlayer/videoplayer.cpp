@@ -18,8 +18,13 @@ VideoPlayer::VideoPlayer(QQuickItem *parent)
 
     QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
                      [=](QImage img){
-        videoProvider->add(img);
-        emit frameUpdate();
+        // qml image 第一次请求图片url的时候队列为空
+        // 解码的时候第一张图片不发送更新消息
+        // 否则暂停的时候无帧图片
+        int size = videoProvider->add(img);
+        if( size > 1 && decode->status() == VideoProcess::__running ) {
+            emit frameUpdate();
+        }
     });
 
     QObject::connect(decode, &VideoProcess::error, this, [=](){
@@ -65,7 +70,7 @@ void VideoPlayer::paint(QPainter *painter)
 
 void VideoPlayer::openStream(const QString &path, const int &w, const int &h, const int &index)
 {
-    if( !decode->status() ) {
+    if( decode->status() < 1 ) {
         m_w = w;
         m_h = h;
         m_x = (this->width() - m_w) / 2.0;
@@ -76,9 +81,24 @@ void VideoPlayer::openStream(const QString &path, const int &w, const int &h, co
     }
 }
 
+void VideoPlayer::seek(const qreal &f)
+{
+    if( decode->status() > 0 ) {
+        int msec = f * decode->totalMsecTime();
+        decode->seek(msec);
+    }
+}
+
 void VideoPlayer::pause()
 {
-    decode->pause();
+    int state = decode->pausePlay();
+    if( state == VideoProcess::__pause ) {
+        // 暂停后到下一次开始
+        // QML Image类会请求一次图片路径
+        // 这时候Provider无图片, 请求失败, 导致画面会闪一下
+        // 暂停的时候需要补一帧图片到Provider
+        videoProvider->add(decode->image());
+    }
 }
 
 void VideoPlayer::closeStream()

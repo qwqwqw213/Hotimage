@@ -19,5 +19,6 @@
         <file>sources/program_icon_mid.png</file>
         <file>font/SourceHanSansCN-Normal.otf</file>
         <file>translation/Cn.qm</file>
+        <file>ImageListModel/VideoProgressbar.qml</file>
     </qresource>
 </RCC>

@@ -110,7 +110,7 @@ Item {
             }
 
             onContentYChanged: {
-
+//                console.log(contentY)
             }
         }
 
@@ -311,6 +311,21 @@ Item {
     ImagePlayer {
         id: imagePlayer
         visible: false
+
+        onCurrentIndexChanged: {
+//            imageList.positionViewAtIndex(index, ListView.End)
+
+            var row = 4
+            var flag = (imageList.count % row == 0) ? 0 : 1
+            var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
+            var y = Math.floor(index / row) * imageList.cellHeight;
+            if( y > bottom ) {
+                y = bottom
+            }
+            console.log("remove:", y, bottom, flag, imageList.cellWidth, imageList.height)
+            imageList.contentY = y
+        }
+
 //        visible: true
     }
 
@@ -319,7 +334,9 @@ Item {
 //    }
 
     Component.onCompleted: {
-        imageList.positionViewAtEnd()
+//        imageList.positionViewAtEnd()
+//        console.log(imageList.count)
+        imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
     }
 
     property bool ready: false
