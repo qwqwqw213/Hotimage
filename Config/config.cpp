@@ -141,6 +141,30 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
         emit orientationChanged();
     });
 
+    QObject::connect(a, static_cast<void (QGuiApplication::*)(Qt::ApplicationState)>(&QGuiApplication::applicationStateChanged),
+                     [=](Qt::ApplicationState state){
+        qDebug() << "app state changed:" << state;
+        switch(state) {
+        case Qt::ApplicationActive: {
+            if( !p->tcpCamera.isNull() ) {
+                if( !p->tcpCamera->isOpen() ) {
+                    p->tcpCamera->open();
+                }
+            }
+        }
+            break;
+        case Qt::ApplicationInactive: {
+            if( !p->tcpCamera.isNull() ) {
+                if( p->tcpCamera->isOpen() ) {
+                    p->tcpCamera->close();
+                }
+            }
+        }
+            break;
+        default: break;
+        }
+    });
+
     QRect r = p->screen->availableGeometry();
 #ifdef Q_OS_ANDROID
     p->width = r.width();

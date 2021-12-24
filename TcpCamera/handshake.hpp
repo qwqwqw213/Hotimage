@@ -3,10 +3,12 @@
 
 #define HANDSHAKE_PAGE_SIZE             6
 #define PAGE_HEAD                       0x30
+#define PAGE_TAIL_SIZE                  5
 #define DECODE_PAGE_SIZE                1490
 
 #define CAM_OUTPUT_NUC16_MODE           0x04
 #define CAM_OUTPUT_YUYV_MODE            0x05
+
 
 #ifndef ANDROID_APP
 

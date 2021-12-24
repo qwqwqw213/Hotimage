@@ -22,6 +22,8 @@ public:
     explicit TcpCamera(QObject *parent = nullptr);
     ~TcpCamera();
 
+    TcpCamera *instance();
+
     bool isOpen();
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectStatusChanged)

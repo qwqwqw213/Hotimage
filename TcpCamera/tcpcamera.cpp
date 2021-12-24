@@ -83,6 +83,11 @@ public:
     QString localHotspotIP;
     QString deviceHotspotIP;
 
+    bool isReconnect;
+
+    int keyValue;
+    bool isValidTail(QByteArray &byte);
+
 private:
     TcpCamera *f;
 
@@ -142,6 +147,20 @@ TcpCamera::~TcpCamera()
     if( p->captureThread.joinable() ) {
         p->captureThread.join();
     }
+}
+
+TcpCamera * TcpCamera::instance()
+{
+    static QMutex m;
+    static QScopedPointer<TcpCamera> i;
+    if( Q_UNLIKELY(!i) ) {
+        m.lock();
+        if( !i ) {
+            i.reset(new TcpCamera);
+        }
+        m.unlock();
+    }
+    return i.data();
 }
 
 bool TcpCamera::isOpen()
@@ -352,12 +371,14 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
     temperatureData = NULL;
     fps = 0.0;
+    keyValue = -1;
 
     thread = new QThread;
     QObject::connect(thread, &QThread::started, [=](){
         exit = false;
         buf.clear();
         socket = new QTcpSocket;
+        isReconnect = false;
         handshake.disconnect();
         QObject::connect(socket, &QTcpSocket::readyRead, this, &TcpCameraPrivate::onReadyRead, Qt::QueuedConnection);
         QObject::connect(socket, &QTcpSocket::disconnected, [=](){
@@ -366,16 +387,16 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
                 qDebug() << "socket disconnect";
                 emit f->connectStatusChanged();
                 unpackMutex.lock();
-                socket->disconnectFromHost();
                 buf.clear();
                 unpackMutex.unlock();
                 socket->connectToHost(cfg.ip, cfg.port);
                 while (!socket->waitForConnected(3000) && !exit) {
 //                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
-                    qDebug() << "socket reconnect";
+//                    qDebug() << "socket reconnect";
                     socket->connectToHost(cfg.ip, cfg.port);
                 }
 
+                isReconnect = true;
                 qDebug() << "socket reconnect success";
             }
         });
@@ -483,6 +504,17 @@ void TcpCameraPrivate::searchDevice()
     }
 }
 
+bool TcpCameraPrivate::isValidTail(QByteArray &byte)
+{
+    if( byte[0] == 'T'
+            && byte[1] == 'c'
+            && byte[2] == 'A'
+            && byte[3] == 'm' ) {
+        return true;
+    }
+    return false;
+}
+
 void TcpCameraPrivate::onReadyRead()
 {
     unpackMutex.lock();
@@ -512,6 +544,11 @@ void TcpCameraPrivate::onReadyRead()
                      << "camera size:" << cfg.cam.w << "*" << cfg.cam.h
                      << "format:" << cfg.cam.format;
 
+            if( isReconnect ) {
+                isReconnect = false;
+                return;
+            }
+
             cfg.set.type = HandShake::__handshake;
             QByteArray byte = handshake.pack(cfg.set);
             qDebug() << "write byte size:" << byte.size();
@@ -527,15 +564,16 @@ void TcpCameraPrivate::onReadyRead()
         }
         return;
     }
-    int data_size = frameSize + 4;
+
+    int data_size = frameSize + PAGE_TAIL_SIZE;
     if( buf.size() >= data_size )
     {
-        QByteArray tail = buf.mid(data_size - 4, 4);
-        if( tail != QByteArray("TcAm") )
+        QByteArray tail = buf.mid(data_size - PAGE_TAIL_SIZE, PAGE_TAIL_SIZE);
+        if( !isValidTail(tail) )
         {
             // 包丢失
             // 重新校验包
-            qDebug() << "invalid pack" << buf.size() << data_size;
+            qDebug() << "invalid pack" << buf.size() << data_size << tail;
             int i = 0;
             int flag = 0;
 
@@ -544,12 +582,12 @@ void TcpCameraPrivate::onReadyRead()
             {
                 char first = buf.at(i);
                 if( first == 'T' ) {
-                    tail = buf.mid(i, 4);
-                    if( tail == QByteArray("TcAm") )
+                    tail = buf.mid(i, PAGE_TAIL_SIZE);
+                    if( isValidTail(tail) )
                     {
                         qDebug() << "remove invalid data, size:" << (i + 1) << data_size;
                         unpackMutex.lock();
-                        buf.remove(0, i + 4);
+                        buf.remove(0, i + PAGE_TAIL_SIZE);
                         unpackMutex.unlock();
                         flag = 1;
                         break;
@@ -579,6 +617,15 @@ void TcpCameraPrivate::onReadyRead()
         }
 
         frameCount ++;
+
+        int key = (int)(tail.back());
+        if( key != keyValue ) {
+            keyValue = key;
+            if( keyValue == 0 ) {
+                qDebug() << "key pressed";
+                capture();
+            }
+        }
 
 #ifdef Q_OS_ANDROID
         if( temperatureData == NULL ) {
