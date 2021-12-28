@@ -85,7 +85,7 @@ Window {
                 MouseArea {
                     id: btnSettingArea
                     anchors.fill: parent
-                    onReleased: {
+                    onClicked: {
                         setting.open()
                     }
                 }
@@ -111,7 +111,7 @@ Window {
                 MouseArea {
                     id: btnShutterArea
                     anchors.fill: parent
-                    onReleased: {
+                    onClicked: {
                         TcpCamera.shutter()
                     }
                 }
@@ -140,7 +140,7 @@ Window {
                 MouseArea {
                     id: btnTempSettingArea
                     anchors.fill: parent
-                    onReleased: {
+                    onClicked: {
                         TcpCamera.showTemp = !TcpCamera.showTemp
                     }
                 }
@@ -228,17 +228,13 @@ Window {
             visible: false
             color: "black"
             anchors.fill: parent
+            z: 3
 
-            NumberAnimation {
+            OpacityAnimator on opacity {
                 id: captureAnimation
-                running: false
-                target: captureAnimationView
-                property: "opacity"
-                duration: 500
                 from: 1
                 to: 0
-                easing.type: Easing.OutQuad
-
+                duration: 200
 
                 onFinished: {
                     captureAnimationView.visible = false
@@ -290,13 +286,13 @@ Window {
                     id: btnCaptureArea
                     anchors.fill: parent
                     pressAndHoldInterval: 100
+                    onPressAndHold: {
+                        btnCaptrueIcon.scale = 0.5
+                    }
                     onReleased: {
                         btnCaptrueIcon.scale = 1.0
                         TcpCamera.capture()
                         captureAnimationView.start()
-                    }
-                    onPressAndHold: {
-                        btnCaptrueIcon.scale = 0.5
                     }
                 }
             }
@@ -314,7 +310,7 @@ Window {
 
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 200
+                        duration: 100
                     }
                 }
 
@@ -381,15 +377,15 @@ Window {
                     font.family: "FontAwesome"
                     font.pixelSize: btnRecord.width * 0.75
                     text: "\uf03d"
-                    color: btnRecordArea.pressed ? "#a0a0a0" : "white"
+                    color: TcpCamera.encoding ? "red" : (btnRecordArea.pressed ? "#a0a0a0" : "white")
                     rotation: oldRotation
                 }
 
                 MouseArea {
                     id: btnRecordArea
                     anchors.fill: parent
-                    onReleased: {
-                        TcpCamera.openRecode()
+                    onClicked: {
+                        TcpCamera.openRecord()
                     }
                 }
             }

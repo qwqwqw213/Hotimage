@@ -143,6 +143,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     QObject::connect(a, static_cast<void (QGuiApplication::*)(Qt::ApplicationState)>(&QGuiApplication::applicationStateChanged),
                      [=](Qt::ApplicationState state){
+#ifndef Q_OS_WIN32
         qDebug() << "app state changed:" << state;
         switch(state) {
         case Qt::ApplicationActive: {
@@ -163,6 +164,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             break;
         default: break;
         }
+#endif
     });
 
     QRect r = p->screen->availableGeometry();

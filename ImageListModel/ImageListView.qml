@@ -8,9 +8,6 @@ Item {
 //    height: parent.height
 //    y: height
     onVisibleChanged: {
-        if( !visible ) {
-            ImageModel.selectionStatus = false
-        }
     }
 
 //    Behavior on y {
@@ -33,12 +30,16 @@ Item {
             y: 60
             width: parent.width
             height: parent.height - 60
-            cellWidth: width > height ? (width / 4) : (width / 3)
+            cellWidth: imageListView.width > imageListView.height ?
+                           (imageListView.width / 4) : (imageListView.width / 3)
             cellHeight: cellWidth
             model: ImageModel
 
 //            bottomMargin: bottom.y < imageListView.height ? bottom.height : 0
             bottomMargin: imageListView.height - bottom.y
+//            onBottomMarginChanged: {
+//                console.log(bottomMargin, imageListView.height, bottom.y)
+//            }
 
 //            Component.onCompleted: positionViewAtEnd()
 
@@ -63,7 +64,7 @@ Item {
                         font.family: "FontAwesome"
                         font.pixelSize: parent.width * 0.35
                         text: "\uf144"
-                        color: mouseArea.pressed ? "#a0a0a0" : "white"
+                        color: ImageModel.selectionStatus ? "white" : (mouseArea.pressed ? "#a0a0a0" : "white")
                     }
 
                     // 选择标识
@@ -110,7 +111,7 @@ Item {
             }
 
             onContentYChanged: {
-//                console.log(contentY)
+//                console.log(contentY, originY)
             }
         }
 
@@ -178,8 +179,8 @@ Item {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
                     font.pixelSize: parent.width * 0.65
-                    text: btnSelectArea.selectionStatus ? "\uf192" : "\uf10c"
-                    color: btnSelectArea.pressed ? "#6f9f9f" : (btnSelectArea.selectionStatus ? "#6f9f9f" : "white")
+                    text: ImageModel.selectionStatus ? "\uf192" : "\uf10c"
+                    color: btnSelectArea.pressed ? "#6f9f9f" : (ImageModel.selectionStatus ? "#6f9f9f" : "white")
                 }
                 MouseArea {
                     id: btnSelectArea
@@ -214,8 +215,13 @@ Item {
 
             onYChanged: {
                 var temp = imageList.contentHeight + (imageList.height * 2)
-                if( imageList.contentY >= temp && ready ) {
-                    imageList.contentY = temp + imageListView.height - y
+
+                var row = imageListView.width > imageListView.height ? 4 : 3
+                var flag = (imageList.count % row == 0) ? 0 : 1
+                var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
+                bottom += imageList.originY
+                if( imageList.contentY >= bottom && ready ) {
+                    imageList.contentY = bottom + y
                 }
             }
 
@@ -315,7 +321,7 @@ Item {
         onCurrentIndexChanged: {
 //            imageList.positionViewAtIndex(index, ListView.End)
 
-            var row = 4
+            var row = imageListView.width > imageListView.height ? 4 : 3
             var flag = (imageList.count % row == 0) ? 0 : 1
             var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
             var y = Math.floor(index / row) * imageList.cellHeight;

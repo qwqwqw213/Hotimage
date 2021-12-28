@@ -128,7 +128,7 @@ BUILD_LIB=armeabi-v7a
 }
 message("build lib:" $$BUILD_LIB $$ANDROID_ABIS)
 
-LIBS += -L$$PWD/libs/$$ANDROID_ABIS/ \
+LIBS += -L$$PWD/libs/android/$$ANDROID_ABIS/ \
     -lthermometry \
     -lavcodec \
     -lavfilter \
@@ -138,20 +138,20 @@ LIBS += -L$$PWD/libs/$$ANDROID_ABIS/ \
     -lswscale
 
 ANDROID_EXTRA_LIBS = \
-    $$PWD/libs/$$ANDROID_ABIS/libthermometry.so \
-    $$PWD/libs/$$ANDROID_ABIS/libavcodec.so \
-    $$PWD/libs/$$ANDROID_ABIS/libavfilter.so \
-    $$PWD/libs/$$ANDROID_ABIS/libavformat.so \
-    $$PWD/libs/$$ANDROID_ABIS/libavutil.so \
-    $$PWD/libs/$$ANDROID_ABIS/libswresample.so \
-    $$PWD/libs/$$ANDROID_ABIS/libswscale.so
+    $$PWD/libs/android/$$ANDROID_ABIS/libthermometry.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libavcodec.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libavfilter.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libavformat.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libavutil.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libswresample.so \
+    $$PWD/libs/android/$$ANDROID_ABIS/libswscale.so
 
 
-INCLUDEPATH += $$PWD/libs
-DEPENDPATH += $$PWD/libs
+INCLUDEPATH += $$PWD/libs/android
+DEPENDPATH += $$PWD/libs/android
 
-INCLUDEPATH += $$PWD/libs/ffmpeg
-DEPENDPATH += $$PWD/libs/ffmpeg
+INCLUDEPATH += $$PWD/libs/android/ffmpeg
+DEPENDPATH += $$PWD/libs/android/ffmpeg
 
 DISTFILES += \
     android/src/org/qtproject/example/function.java

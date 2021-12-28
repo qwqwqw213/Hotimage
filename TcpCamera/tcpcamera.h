@@ -69,7 +69,7 @@ public:
 
     Q_PROPERTY(bool encoding READ encoding NOTIFY encodingChanged)
     bool encoding();
-    Q_INVOKABLE void openRecode();
+    Q_INVOKABLE void openRecord();
 
     Q_PROPERTY(QString recordTime READ recordTime NOTIFY recordTimeChanged)
     QString recordTime();
