@@ -6,6 +6,10 @@
 #include "QDateTime"
 #include "QPainter"
 
+#ifdef Q_OS_IOS
+#include "VideoToolbox/VideoToolbox.h"
+#endif
+
 extern "C"{
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"

@@ -9,6 +9,9 @@
 #include "QtAndroid"
 
 #define JAVA_PATH       "org/qtproject/example/Function"
+#endif
+
+#ifndef Q_OS_WIN32
 
 #define CAMERA_LEN      130
 #define RANGE_MODE      120

@@ -119,10 +119,12 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     p->fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
 
     p->screen = QGuiApplication::primaryScreen();
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     p->screen->setOrientationUpdateMask(Qt::PortraitOrientation |
                                      Qt::LandscapeOrientation |
                                      Qt::InvertedLandscapeOrientation |
                                      Qt::InvertedPortraitOrientation);
+#endif
     // 此信号需要在 AndroidManifest.xml 中
     // 将android:screenOrientation
     // 设置为"unspecified"才能触发
@@ -168,7 +170,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     });
 
     QRect r = p->screen->availableGeometry();
-#ifdef Q_OS_ANDROID
+#if defined (Q_OS_ANDROID) || defined (Q_OS_IOS)
     p->width = r.width();
     p->height = r.height();
 #else
@@ -193,7 +195,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
     if( !path.isEmpty() ) {
         path.append("/Hotimage");
@@ -238,7 +240,7 @@ int Config::height()
 
 QString Config::albumFolder()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QString("file://%1/HotImage/")
             .arg(QStandardPaths::writableLocation(QStandardPaths::PicturesLocation));
     return path;

@@ -24,8 +24,9 @@
 #include "QNetworkInterface"
 #include "QTimer"
 
-#include "QNetworkConfigurationManager"
-#include "QNetworkConfiguration"
+#include "QtNetwork/qnetworkaccessmanager.h"
+//#include "QNetworkConfigurationManager"
+//#include "QNetworkConfiguration"
 
 #include "thread"
 
@@ -38,9 +39,7 @@ public:
     explicit TcpCameraPrivate(TcpCamera *parent = nullptr);
     ~TcpCameraPrivate();
 
-//#ifdef Q_OS_ANDROID
     VideoProcess *encode;
-//#endif5
 
 //    QImage image;
     ImageProvider *provider;
@@ -297,17 +296,13 @@ void TcpCamera::setShowTemp(const bool &show)
 
 bool TcpCamera::encoding()
 {
-//#ifdef Q_OS_ANDROID
     return p->encode->status();
-//#else
-//    return false;
-//#endif
 }
 
 void TcpCamera::openRecord()
 {
-    if( isConnected() ) {
-//#ifdef Q_OS_ANDROID
+    if( isConnected() )
+    {
         if( p->encode->status() ) {
             QString path = p->encode->filePath();
             p->encode->closeEncode();
@@ -321,7 +316,7 @@ void TcpCamera::openRecord()
             emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 #else
             QString path = QGuiApplication::applicationDirPath();
@@ -343,17 +338,12 @@ void TcpCamera::openRecord()
         }
 
         emit encodingChanged();
-//#endif
     }
 }
 
 QString TcpCamera::recordTime()
 {
-//#ifdef Q_OS_ANDROID
     return p->encode->recordTime();
-//#else
-//    return QString("00:00");
-//#endif
 }
 
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
@@ -445,7 +435,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
 //            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
-//            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
+            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
             socket->connectToHost(cfg.ip, cfg.port);
         }
 
@@ -478,7 +468,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     });
     this->moveToThread(thread);
 
-//#ifdef Q_OS_ANDROID
     encode = new VideoProcess;
     QObject::connect(encode, &VideoProcess::recordTimeChanged, f, &TcpCamera::recordTimeChanged);
     QObject::connect(encode, &VideoProcess::error, f, [=](){
@@ -488,7 +477,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         emit f->encodingChanged();
     }, Qt::QueuedConnection);
     QObject::connect(encode, &VideoProcess::statusChanged, f, &TcpCamera::encodingChanged);
-//#endif
 }
 
 TcpCameraPrivate::~TcpCameraPrivate()
@@ -876,7 +864,7 @@ void TcpCameraPrivate::onReadyRead()
 
 void TcpCameraPrivate::readSetting()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
@@ -904,7 +892,7 @@ void TcpCameraPrivate::readSetting()
 
 void TcpCameraPrivate::saveSetting()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
@@ -936,7 +924,7 @@ void TcpCameraPrivate::capture()
 //            QPixmap pix = QPixmap::fromImage(image);
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 #else
             QString path = QGuiApplication::applicationDirPath();

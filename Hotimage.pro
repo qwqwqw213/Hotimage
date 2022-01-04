@@ -1,4 +1,4 @@
-QT += gui quick quickcontrols2
+QT += gui quick quickcontrols2 network
 
 CONFIG += c++11
 
@@ -89,6 +89,51 @@ LIBS += -L$$PWD/libs/win32/$$BUILD_LIB \
 INCLUDEPATH += $$PWD/libs/win32
 DEPENDPATH += $$PWD/libs/win32
 }
+
+############################################################
+##################### IOS config ###########################
+############################################################
+ios {
+
+QMAKE_INFO_PLIST = $$PWD/IOSInterface/my.plist
+
+message("ios lib")
+
+HEADERS += \
+    libs/ios/libavcodec/avcodec.h \
+    libs/ios/libavformat/avformat.h \
+    libs/ios/libavutil/avutil.h \
+    libs/ios/libswscale/swscale.h \
+    libs/ios/libswresample/swresample.h \
+    Function/VideoProcess/videoprocess.h
+
+SOURCES += \
+    Function/VideoProcess/videoprocess.cpp
+
+LIBS += -L$$PWD/libs/ios \
+    -lavcodec \
+    -lavformat \
+    -lavutil \
+    -lswscale \
+    -lswresample
+
+LIBS += $$PWD/libs/ios/libbz2.1.0.tbd
+LIBS += $$PWD/libs/ios/libiconv.2.tbd
+LIBS += $$PWD/libs/ios/libz.1.tbd
+
+LIBS += -F/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks -framework VideoToolbox
+LIBS += -F/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks -framework CoreMedia
+LIBS += -F/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks -framework CoreVideo
+
+INCLUDEPATH += $$PWD/libs/ios
+DEPENDPATH += $$PWD/libs/ios
+
+}
+
+
+############################################################
+################## android config ##########################
+############################################################
 
 android {
 

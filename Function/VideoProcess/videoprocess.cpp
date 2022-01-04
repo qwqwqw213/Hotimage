@@ -2,7 +2,9 @@
 
 #include "thread"
 #include "iostream"
+#ifndef Q_OS_IOS
 #include "malloc.h"
+#endif
 #include "queue"
 #include "mutex"
 #include "condition_variable"
