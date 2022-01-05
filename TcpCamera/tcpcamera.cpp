@@ -435,7 +435,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
 //            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
-            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
+//            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
             socket->connectToHost(cfg.ip, cfg.port);
         }
 
@@ -869,7 +869,8 @@ void TcpCameraPrivate::readSetting()
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
 #endif
-    qDebug() << "read setting path:" << path;
+
+    qDebug() << "read setting path:" << path << "file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     cfg.ip = SERVER_IP;
@@ -924,23 +925,30 @@ void TcpCameraPrivate::capture()
 //            QPixmap pix = QPixmap::fromImage(image);
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-#ifndef Q_OS_WIN32
+#ifdef Q_OS_ANDROID
             QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+#elif defined (Q_OS_IOS)
+            QString path = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
 #else
             QString path = QGuiApplication::applicationDirPath();
 #endif
+            bool flag = false;
             if( !path.isEmpty() ) {
                 path.append("/Hotimage");
                 if( !QFileInfo::exists(path) ) {
                     QDir d;
-                    d.mkdir(path);
+                    flag = d.mkdir(path);
+                    if( !flag ) {
+                        qDebug() << "mkdir folder fail ! ->" << path;
+                    }
                 }
 
                 path.append("/IMG_" + fileName);
-                bool flag = pix.save(path, "JPG");
+                flag = pix.save(path, "JPG");
                 if( flag ) {
 //                    emit f->msg(QString("capture success %1").arg(path.right(path.length() - path.lastIndexOf('/') - 1)));
                     qDebug() << "capture success:" << path;
+                    emit f->captureFinished(path);
                 }
                 else {
                     emit f->msg(tr("Captrue fail"));
@@ -949,7 +957,6 @@ void TcpCameraPrivate::capture()
             else {
                 qDebug() << "QStandardPaths::writableLocation is empty";
             }
-            emit f->captureFinished(path);
         });
     }
 }

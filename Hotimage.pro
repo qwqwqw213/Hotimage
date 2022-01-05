@@ -40,7 +40,6 @@ HEADERS += \
     AndroidInterface/androidinterface.h \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
-    Function/MadgwickAHRS.hpp \
     ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
     TcpCamera/tcpdef.h \
@@ -96,6 +95,9 @@ DEPENDPATH += $$PWD/libs/win32
 ios {
 
 QMAKE_INFO_PLIST = $$PWD/IOSInterface/my.plist
+
+QT += \
+    sensors
 
 message("ios lib")
 

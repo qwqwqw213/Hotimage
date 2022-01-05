@@ -30,6 +30,10 @@
 	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
+	<key>Privacy - Photo Library Usage Description</key>
+	<string>需要权限读取在app里保存的图片或视频</string>
+	<key>Privacy - Photo Library Additions Usage Description</key>
+	<string>需要权限将app中生成的图片或视频保存到本地</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationLandscapeRight</string>

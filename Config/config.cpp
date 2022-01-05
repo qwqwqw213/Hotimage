@@ -15,8 +15,7 @@
 #include "QThread"
 #include "QTranslator"
 
-#ifdef Q_OS_ANDROID
-#include "MadgwickAHRS.hpp"
+#ifndef Q_OS_WIN32
 #include "QAccelerometer"
 #include "QGyroscope"
 #include "thread"
@@ -32,9 +31,7 @@ public:
     int height;
 
     int oldRotation;
-#ifdef Q_OS_ANDROID
-    MadgwickAHRS *madgwick;
-
+#ifndef Q_OS_WIN32
     QAccelerometer *accelerometer;
     QGyroscope *gyroscope;
 
@@ -187,7 +184,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 安卓模块
     p->androidInterface.reset(new AndroidInterface);
-    e->rootContext()->setContextProperty("AndroidApi", p->androidInterface.data());
+    e->rootContext()->setContextProperty("PhoneApi", p->androidInterface.data());
     p->androidInterface->requestPhotoWritePermission();
 
     // 配置模块
@@ -298,11 +295,10 @@ ConfigPrivate::ConfigPrivate(Config *parent)
 
 
     oldRotation = 0;
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     accelerometer_x = 0.0;
     accelerometer_y = 0.0;
     accelerometer_z = 0.98;
-    madgwick = new MadgwickAHRS(0.2, 50);
     accelerometer = new QAccelerometer;
     QObject::connect(accelerometer, &QAccelerometer::readingChanged, [=](){
         QAccelerometerReading *r = accelerometer->reading();
@@ -357,14 +353,10 @@ ConfigPrivate::ConfigPrivate(Config *parent)
         qint64 ts = QDateTime::currentDateTime().toMSecsSinceEpoch();
         qreal interval = ts - old_ts;
         old_ts = ts;
-        madgwick->MadgwickAHRSIMUApply(r->x(), r->y(), r->z(),
-                                       accelerometer_x / 10.0, accelerometer_y / 10.0, accelerometer_z / 10.0,
-                                       interval / 1000.0);
 
         float roll;
         float pitch;
         float yaw;
-        madgwick->MadgwickComputeAngles(roll, pitch, yaw);
         qDebug() << "roll:" << roll * 60 << "pitch:" << pitch * 60 << "yaw:" << yaw * 60
                  << r->x() << r->y() << r->z()
                  << accelerometer_x << accelerometer_y << accelerometer_z
@@ -374,7 +366,6 @@ ConfigPrivate::ConfigPrivate(Config *parent)
     old_ts = QDateTime::currentDateTime().toMSecsSinceEpoch();
     accelerometer->start();
 //    gyroscope->start();
-
 #endif
 }
 

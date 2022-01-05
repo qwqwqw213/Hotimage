@@ -9,11 +9,13 @@ import "./Setting"
 import "./Loading"
 import "./MessageBox"
 
-Window {
+// ios full screen
+ApplicationWindow {
     id: window
+    visibility: Window.FullScreen
     visible: true
-    width: Config.width
-    height: Config.height
+//    width: Config.width
+//    height: Config.height
     title: qsTr("Hotimage")
 
     color: "black"
@@ -53,7 +55,7 @@ Window {
             videoPlay = true
         }
         StackView.onActivated: {
-            AndroidApi.setRotationScreen(0)
+            PhoneApi.setRotationScreen(0)
         }
 
         // 顶部按钮栏

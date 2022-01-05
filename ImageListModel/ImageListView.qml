@@ -347,7 +347,7 @@ Item {
 
     property bool ready: false
     StackView.onActivated: {
-        AndroidApi.setRotationScreen(-1)
+        PhoneApi.setRotationScreen(-1)
         ready = true
     }
     StackView.onDeactivated: {
