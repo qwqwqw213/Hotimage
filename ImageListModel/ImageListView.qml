@@ -15,6 +15,7 @@ Item {
 //            duration: 300
 //        }
 //    }
+    clip: true
 
     MouseArea {
         anchors.fill: parent

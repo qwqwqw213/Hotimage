@@ -20,6 +20,7 @@
 
 #define SERVER_IP       "192.168.1.1"
 #else
+//#define SERVER_IP       "192.168.20.26"
 #define SERVER_IP       "192.168.254.213"
 #endif
 

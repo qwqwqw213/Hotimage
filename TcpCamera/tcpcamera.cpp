@@ -581,8 +581,10 @@ void TcpCameraPrivate::onReadyRead()
 //                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
             qDebug() << QThread::currentThreadId()
-                     << "handshake success"
-                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h
+                     << "handshake success" << endl
+                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h << endl
+                     << "frame size:" << frameSize << endl
+                     << "total size:" << frameSize + PAGE_TAIL_SIZE << endl
                      << "format:" << cfg.cam.format;
 
             cfg.set.type = HandShake::__handshake;
@@ -609,7 +611,10 @@ void TcpCameraPrivate::onReadyRead()
         {
             // 包丢失
             // 重新校验包
-            qDebug() << "invalid pack" << buf.size() << data_size << tail << cfg.cam.w << cfg.cam.h << cfg.cam.format;
+            qDebug() << "invalid pack" << buf.size() << data_size << tail;
+//            if( frameCount % 50 == 0 ) {
+//                qDebug() << buf;
+//            }
 
             int i = 0;
             int flag = 0;
@@ -641,9 +646,9 @@ void TcpCameraPrivate::onReadyRead()
 
             if( flag == 0 ) {
                 // 当前数据无效
-                qDebug() << "pack invalid:" << i + 1 << data_size;
+                qDebug() << "pack invalid:" << size << data_size;
                 unpackMutex.lock();
-                buf.remove(0, i + 1);
+                buf.remove(0, size);
                 unpackMutex.unlock();
             }
             return;
@@ -805,6 +810,7 @@ void TcpCameraPrivate::onReadyRead()
         if( showTemp ) {
             QPainter pr(image);
             QFontMetrics metrics(pr.font());
+
             // 最大温度
             pr.setPen(Qt::red);
             pr.drawLine(temperatureData[1] - 10, temperatureData[2],
@@ -846,6 +852,16 @@ void TcpCameraPrivate::onReadyRead()
             fontW = metrics.horizontalAdvance(str);
             fontH = metrics.height();
             pr.drawText(cx, cy - fontH,
+                        fontW, fontH,
+                        Qt::AlignCenter,
+                        str);
+
+            // 帧率
+            pr.setPen(Qt::white);
+            str = QString::number(fps, 'f', 2);
+            fontW = metrics.horizontalAdvance(str);
+            fontH = metrics.height();
+            pr.drawText(10, 10,
                         fontW, fontH,
                         Qt::AlignCenter,
                         str);

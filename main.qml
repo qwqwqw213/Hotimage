@@ -8,17 +8,22 @@ import "./ImageListModel"
 import "./Setting"
 import "./Loading"
 import "./MessageBox"
+import "./ScaleBar"
 
 // ios full screen
 ApplicationWindow {
     id: window
-    visibility: Window.FullScreen
     visible: true
-//    width: Config.width
-//    height: Config.height
+
+//    visibility: Window.FullScreen
+    width: Config.width
+    height: Config.height
+
     title: qsTr("Hotimage")
 
-    color: "black"
+    background: Rectangle {
+        color: "black"
+    }
 
     onVisibleChanged: {
         console.log("main visble status:", visible)
@@ -150,77 +155,57 @@ ApplicationWindow {
         }
 
         // 摄像头图像
-        Image {
-            id: cameraFrame
+        Rectangle {
             width: parent.width * 0.7
             height: parent.height
             x: parent.width * 0.1
             y: 0
-            source: mainView.videoPlay ?
-                        (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
-            z: 2
+            clip: true
+            color: "black"
 
-            property bool zoomState: false
+            Image {
+                id: cameraFrame
+                anchors.centerIn: parent
+                width: parent.width * scaleBar.value
+                height: parent.height * scaleBar.value
+                source: mainView.videoPlay ?
+                            (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
 
-            // 录像标志
-            Text {
-                anchors.left: parent.left
-                anchors.leftMargin: 10
-                anchors.top: parent.top
-                anchors.topMargin: 10
-                font.family: "FontAwesome"
-                font.pixelSize: 30
-                text: "\uf03d" + " " + TcpCamera.recordTime
-                color: "red"
-                visible: TcpCamera.encoding
+                // 录像标志
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
+                    font.family: "FontAwesome"
+                    font.pixelSize: 30
+                    text: "\uf03d" + " " + TcpCamera.recordTime
+                    color: "red"
+                    visible: TcpCamera.encoding
 
-                SequentialAnimation on color {
-                    loops: Animation.Infinite
-                    running: visible
-                    ColorAnimation {
-                        from: "red"
-                        to: "black"
-                        duration: 800
-                    }
-                    ColorAnimation {
-                        from: "black"
-                        to: "red"
-                        duration: 800
-                    }
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onPressed: {
-//                    Config.setRotation()
-//                    messagebox.showMsg("test message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest message boxtest ")
-                }
-
-                onDoubleClicked: {
-                    if( cameraFrame.zoomState ) {
-                        cameraFrame.zoomState = false
-                        cameraFrame.width = mainView.width * 0.7
-                        cameraFrame.x = mainView.width * 0.1
-                    }
-                    else {
-                        cameraFrame.zoomState = true
-                        cameraFrame.width = mainView.width
-                        cameraFrame.x = 0
+                    SequentialAnimation on color {
+                        loops: Animation.Infinite
+                        running: visible
+                        ColorAnimation {
+                            from: "red"
+                            to: "black"
+                            duration: 800
+                        }
+                        ColorAnimation {
+                            from: "black"
+                            to: "red"
+                            duration: 800
+                        }
                     }
                 }
             }
 
-            Behavior on width {
-                NumberAnimation {
-                    duration: 200
-                }
-            }
-
-            Behavior on x {
-                NumberAnimation {
-                    duration: 200
-                }
+            ScaleBar {
+                id: scaleBar
+                width: parent.width * 0.2
+                height: parent.height
+                anchors.right: parent.right
+                textRotation: window.oldRotation
             }
         }
 
@@ -267,7 +252,7 @@ ApplicationWindow {
                 color: "transparent"
                 border.color: btnCaptureArea.pressed ? "#A0A0A0" : "white"
                 border.width: 5
-                radius: 100
+                radius: width / 2
 
                 Rectangle {
                     id: btnCaptrueIcon

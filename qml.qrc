@@ -20,5 +20,6 @@
         <file>font/SourceHanSansCN-Normal.otf</file>
         <file>translation/Cn.qm</file>
         <file>ImageListModel/VideoProgressbar.qml</file>
+        <file>ScaleBar/ScaleBar.qml</file>
     </qresource>
 </RCC>

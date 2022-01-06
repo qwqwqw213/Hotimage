@@ -371,12 +371,11 @@ ConfigPrivate::ConfigPrivate(Config *parent)
 
 ConfigPrivate::~ConfigPrivate()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     accelerometer->stop();
     gyroscope->stop();
     accelerometer->deleteLater();
     gyroscope->deleteLater();
-    delete madgwick;
 #endif
 
     saveSetting();
@@ -384,7 +383,7 @@ ConfigPrivate::~ConfigPrivate()
 
 void ConfigPrivate::readSetting()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
@@ -400,7 +399,7 @@ void ConfigPrivate::readSetting()
 
 void ConfigPrivate::saveSetting()
 {
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
