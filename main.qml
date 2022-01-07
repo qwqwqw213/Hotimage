@@ -15,9 +15,9 @@ ApplicationWindow {
     id: window
     visible: true
 
-    visibility: Window.FullScreen
-//    width: Config.width
-//    height: Config.height
+//    visibility: Window.FullScreen
+    width: Config.width
+    height: Config.height
 
     title: qsTr("Hotimage")
 
@@ -109,7 +109,7 @@ ApplicationWindow {
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnSetting.width * 0.8
+                    font.pixelSize: btnShutter.width * 0.8
                     text: "\uf021"
                     color: btnShutterArea.pressed ? "#a0a0a0" : "white"
                     rotation: window.oldRotation
@@ -138,7 +138,7 @@ ApplicationWindow {
                     id: icon
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnSetting.width * 0.8
+                    font.pixelSize: btnShutter.width * 0.8
                     text: "\uf2cb"
                     color: TcpCamera.showTemp ? "#dc143c" : "#696969"
                     rotation: window.oldRotation
@@ -287,9 +287,10 @@ ApplicationWindow {
             // 相册按钮
             Rectangle {
                 id: btnPhoto
-                width: parent.width * 0.5
+                width: parent.width * 0.375
                 height: width
-                anchors.left: btnCapture.left
+//                anchors.left: btnCapture.left
+                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
                 anchors.topMargin: height / 2
                 color: "transparent"
@@ -302,8 +303,8 @@ ApplicationWindow {
                 }
 
                 Rectangle {
-                    width: btnPhoto.width * 0.8 * btnPhoto.scale + 2
-                    height: btnPhoto.height * 0.8 * btnPhoto.scale + 2
+                    width: btnPhoto.width * 0.9 * btnPhoto.scale + 2
+                    height: btnPhoto.height * 0.9 * btnPhoto.scale + 2
                     rotation: window.oldRotation
                     color: "transparent"
                     border.color: "white"
@@ -313,8 +314,8 @@ ApplicationWindow {
 
                 Image {
                     source: ImageModel.lastImagePath
-                    width: btnPhoto.width * 0.8 * btnPhoto.scale
-                    height: btnPhoto.height * 0.8 * btnPhoto.scale
+                    width: btnPhoto.width * 0.9 * btnPhoto.scale
+                    height: btnPhoto.height * 0.9 * btnPhoto.scale
                     anchors.centerIn: parent
                     rotation: window.oldRotation
                     Text {
@@ -353,16 +354,17 @@ ApplicationWindow {
             // 录像按钮
             Rectangle {
                 id: btnRecord
-                width: parent.width * 0.5
+                width: parent.width * 0.375 // parent.width * 0.5 * 0.75
                 height: width
-                anchors.left: btnCapture.left
+//                anchors.left: btnCapture.left
+                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: height / 2
                 color: "transparent"
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnRecord.width * 0.75
+                    font.pixelSize: btnRecord.width * 0.9
                     text: "\uf03d"
                     color: TcpCamera.encoding ? "red" : (btnRecordArea.pressed ? "#a0a0a0" : "white")
                     rotation: oldRotation
