@@ -364,7 +364,6 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
         int ret = 0;
         std::string str = config.filePath.toStdString();
         const char *filePath = str.c_str();
-        std::string error("");
         AVRational fps;
         error = "";
         encode = (_encode *)malloc(sizeof (*encode));
@@ -376,6 +375,7 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
 
         fps = {config.fps, 1};
 
+        qDebug() << "encode path:" << filePath;
         ret = avformat_alloc_output_context2(&encode->fmtCnt, NULL, NULL, filePath);
         if( ret < 0 ) {
             error = std::string("avformat_alloc_output_context2 fail, file path: ") + config.filePath.toStdString();
@@ -385,7 +385,7 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
 
         ret = avio_open2(&encode->fmtCnt->pb, filePath, AVIO_FLAG_WRITE, NULL, NULL);
         if( ret < 0 ) {
-            error = "avio_open2 fail" + str;
+            error = "avio_open2 fail, " + str;
             goto FFMPEG_FAIL;
         }
 

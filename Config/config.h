@@ -6,13 +6,6 @@
 //#include <QApplication>
 #include "QGuiApplication"
 
-class Config;
-
-#ifdef g_Config
-#undef g_Config
-#endif
-#define g_Config                (static_cast<Config *>(Config::interface()))
-
 #define REBOOT_CODE             (-1)
 
 class ConfigPrivate;
@@ -29,13 +22,7 @@ public:
     explicit Config(QObject *parent = nullptr);
     ~Config();
 
-    static Config * interface() {
-        return configSelf;
-    }
-
     int init(QGuiApplication *a, QQmlApplicationEngine *e);
-    QString settingsPath();
-    QString filePath();
 
     // 添加CONSTANT关键字
     // 屏蔽QML depends on non-NOTIFYable properties 警告
@@ -69,8 +56,6 @@ Q_SIGNALS:
 private:
     friend class ConfigPrivate;
     QScopedPointer<ConfigPrivate> p;
-
-    static Config *configSelf;
 };
 
 #endif // CONFIG_H

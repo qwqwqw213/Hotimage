@@ -15,9 +15,9 @@ ApplicationWindow {
     id: window
     visible: true
 
-//    visibility: Window.FullScreen
-    width: Config.width
-    height: Config.height
+    visibility: Window.FullScreen
+//    width: Config.width
+//    height: Config.height
 
     title: qsTr("Hotimage")
 

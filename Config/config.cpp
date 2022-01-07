@@ -61,9 +61,6 @@ public:
     QTranslator *ts;
     QFontDatabase fd;
 
-    QString settingsPath;
-    QString filePath;
-
 private:
     Config *f;
 };
@@ -82,7 +79,6 @@ Config::~Config()
 
 int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 {
-    configSelf = this;
     // 读配置文件
     p->readSetting();
 
@@ -160,7 +156,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
         }
             break;
-        case Qt::ApplicationInactive: {
+        default: {
             if( !p->tcpCamera.isNull() ) {
                 if( p->tcpCamera->isOpen() ) {
                     p->tcpCamera->close();
@@ -168,7 +164,6 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
         }
             break;
-        default: break;
         }
 #endif
     });
@@ -200,11 +195,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
 #ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-    if( !path.isEmpty() ) {
-        path.append("/Hotimage");
-        p->imageModel->search(path);
-    }
+    p->imageModel->search(QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/"));
 #else
     p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
 #endif
@@ -230,16 +221,6 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
     return 1;
-}
-
-QString Config::settingsPath()
-{
-    return p->settingsPath;
-}
-
-QString Config::filePath()
-{
-    return p->filePath;
 }
 
 int Config::width()
@@ -293,6 +274,7 @@ int Config::language()
 void Config::setLanguage(const int &language)
 {
     if( p->language != language ) {
+        qDebug() << "set language:" << language;
         p->language = language;
         emit languageChanged();
         qApp->exit(REBOOT_CODE);
@@ -310,23 +292,8 @@ ConfigPrivate::ConfigPrivate(Config *parent)
 
     ts = new QTranslator(f);
 
-#ifndef Q_OS_WIN32
-    settingsPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
-    filePath = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/");
-    qDebug() << "settings path:" << settingsPath << endl
-             << "file path:" << filePath;
-#else
-    settingsPath = QGuiApplication::applicationDirPath() + QString("/");
-    filePath = QGuiApplication::applicationDirPath() + QString("/Hotimage");
-    if( !QFileInfo::exists(path) ) {
-        QDir d;
-        d.mkdir(path);
-    }
-#endif
-
-
     oldRotation = 0;
-#ifdef Q_OS_ANDROID
+#ifndef Q_OS_WIN32
     accelerometer_x = 0.0;
     accelerometer_y = 0.0;
     accelerometer_z = 0.98;
@@ -415,7 +382,11 @@ ConfigPrivate::~ConfigPrivate()
 
 void ConfigPrivate::readSetting()
 {
-    QString path = settingsPath + QString("setting.ini");
+#ifndef Q_OS_WIN32
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
+#else
+    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
+#endif
     qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
@@ -427,7 +398,11 @@ void ConfigPrivate::readSetting()
 
 void ConfigPrivate::saveSetting()
 {
-    QString path = settingsPath + QString("setting.ini");
+#ifndef Q_OS_WIN32
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
+#else
+    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
+#endif
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     s->setValue("Language/Value", language);
@@ -438,5 +413,3 @@ void ConfigPrivate::saveSetting()
 
     qDebug() << "save setting path:" << path;
 }
-
-Config * Config::configSelf = NULL;

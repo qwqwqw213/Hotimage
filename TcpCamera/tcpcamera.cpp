@@ -12,6 +12,7 @@
 
 #include "QGuiApplication"
 
+#include "QStandardPaths"
 #include "QFileInfo"
 #include "QDebug"
 #include "QThread"
@@ -302,6 +303,7 @@ void TcpCamera::openRecord()
 {
     if( isConnected() )
     {
+        qDebug() << "encode status:" << p->encode->status();
         if( p->encode->status() ) {
             QString path = p->encode->filePath();
             p->encode->closeEncode();
@@ -315,7 +317,7 @@ void TcpCamera::openRecord()
             emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
-            QString path = g_Config->filePath();
+            QString path = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/");
             path.append("REC_" + fileName);
 
             cfg.filePath = path;
@@ -570,10 +572,10 @@ void TcpCameraPrivate::onReadyRead()
 //                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
             qDebug() << QThread::currentThreadId()
-                     << "handshake success" << endl
-                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h << endl
-                     << "frame size:" << frameSize << endl
-                     << "total size:" << frameSize + PAGE_TAIL_SIZE << endl
+                     << "handshake success" << Qt::endl
+                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h << Qt::endl
+                     << "frame size:" << frameSize << Qt::endl
+                     << "total size:" << frameSize + PAGE_TAIL_SIZE << Qt::endl
                      << "format:" << cfg.cam.format;
 
             cfg.set.type = HandShake::__handshake;
@@ -869,9 +871,13 @@ void TcpCameraPrivate::onReadyRead()
 
 void TcpCameraPrivate::readSetting()
 {
-    QString path = g_Config->settingsPath() + QString("cameraparam.ini");
+#ifndef Q_OS_WIN32
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
+#else
+    QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
+#endif
 
-    qDebug() << "read setting path:" << path << "file exists:" << QFileInfo::exists(path);
+    qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     cfg.ip = SERVER_IP;
@@ -894,7 +900,12 @@ void TcpCameraPrivate::readSetting()
 
 void TcpCameraPrivate::saveSetting()
 {
-    QString path = g_Config->settingsPath() + QString("cameraparam.ini");
+#ifndef Q_OS_WIN32
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
+#else
+    QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
+#endif
+    qDebug() << "save setting path:" << path;
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     s->setValue("Normal/palette", cfg.set.palette);
@@ -911,8 +922,6 @@ void TcpCameraPrivate::saveSetting()
     s->sync();
     delete s;
     s = NULL;
-
-    qDebug() << "save setting path:" << path;
 }
 
 void TcpCameraPrivate::capture()
@@ -922,7 +931,7 @@ void TcpCameraPrivate::capture()
 //            QPixmap pix = QPixmap::fromImage(image);
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-            QString path = g_Config->filePath();
+            QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)+ QString("/");
             path.append("IMG_" + fileName);
             if( pix.save(path, "JPG") )
             {
@@ -930,6 +939,7 @@ void TcpCameraPrivate::capture()
                 emit f->captureFinished(path);
             }
             else {
+                qDebug() << "capture fail:" << path;
                 emit f->msg(tr("Captrue fail"));
             }
         });
