@@ -260,7 +260,7 @@ ApplicationWindow {
                     width: parent.width * 0.75
                     height: width
                     color: btnCaptureArea.pressed ? "#F01010" : "white"
-                    radius: 100
+                    radius: width / 2
 
                     Behavior on scale {
                         NumberAnimation {

@@ -3,6 +3,8 @@
 #ifdef Q_OS_ANDROID
 #include "xtherm/thermometry.h"
 #endif
+
+#include "Config/config.h"
 #include "VideoProcess/videoprocess.h"
 
 
@@ -10,15 +12,12 @@
 
 #include "QGuiApplication"
 
+#include "QFileInfo"
 #include "QDebug"
 #include "QThread"
 #include "QDateTime"
 #include "QGuiApplication"
 #include "QPainter"
-#include "QFileInfo"
-#include "QStandardPaths"
-#include "QDir"
-#include "QStandardPaths"
 #include "QSettings"
 #include "QMutex"
 #include "QNetworkInterface"
@@ -316,18 +315,8 @@ void TcpCamera::openRecord()
             emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
-#ifndef Q_OS_WIN32
-            QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-#else
-            QString path = QGuiApplication::applicationDirPath();
-#endif
-            path.append("/Hotimage");
-            if( !QFileInfo::exists(path) ) {
-                QDir d;
-                d.mkdir(path);
-            }
-
-            path.append("/REC_" + fileName);
+            QString path = g_Config->filePath();
+            path.append("REC_" + fileName);
 
             cfg.filePath = path;
             cfg.width = p->cfg.cam.w;
@@ -880,11 +869,7 @@ void TcpCameraPrivate::onReadyRead()
 
 void TcpCameraPrivate::readSetting()
 {
-#ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
-#else
-    QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
-#endif
+    QString path = g_Config->settingsPath() + QString("cameraparam.ini");
 
     qDebug() << "read setting path:" << path << "file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
@@ -909,11 +894,7 @@ void TcpCameraPrivate::readSetting()
 
 void TcpCameraPrivate::saveSetting()
 {
-#ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
-#else
-    QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
-#endif
+    QString path = g_Config->settingsPath() + QString("cameraparam.ini");
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     s->setValue("Normal/palette", cfg.set.palette);
@@ -941,37 +922,15 @@ void TcpCameraPrivate::capture()
 //            QPixmap pix = QPixmap::fromImage(image);
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-#ifdef Q_OS_ANDROID
-            QString path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-#elif defined (Q_OS_IOS)
-            QString path = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
-#else
-            QString path = QGuiApplication::applicationDirPath();
-#endif
-            bool flag = false;
-            if( !path.isEmpty() ) {
-                path.append("/Hotimage");
-                if( !QFileInfo::exists(path) ) {
-                    QDir d;
-                    flag = d.mkdir(path);
-                    if( !flag ) {
-                        qDebug() << "mkdir folder fail ! ->" << path;
-                    }
-                }
-
-                path.append("/IMG_" + fileName);
-                flag = pix.save(path, "JPG");
-                if( flag ) {
-//                    emit f->msg(QString("capture success %1").arg(path.right(path.length() - path.lastIndexOf('/') - 1)));
-                    qDebug() << "capture success:" << path;
-                    emit f->captureFinished(path);
-                }
-                else {
-                    emit f->msg(tr("Captrue fail"));
-                }
+            QString path = g_Config->filePath();
+            path.append("IMG_" + fileName);
+            if( pix.save(path, "JPG") )
+            {
+                qDebug() << "capture success:" << path;
+                emit f->captureFinished(path);
             }
             else {
-                qDebug() << "QStandardPaths::writableLocation is empty";
+                emit f->msg(tr("Captrue fail"));
             }
         });
     }

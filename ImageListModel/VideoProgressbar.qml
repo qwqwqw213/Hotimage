@@ -116,7 +116,7 @@ Item {
                             width: parent.height + 6
                             height: width
                             x: rollbar.width - width / 2
-                            radius: 100
+                            radius: width / 2
                             color: "white"
                             anchors.verticalCenter: parent.verticalCenter
                             border.width: 1
@@ -211,7 +211,7 @@ Item {
                             width: parent.height + 6
                             height: width
                             x: rollbar.width - width / 2
-                            radius: 100
+                            radius: width / 2
                             color: "white"
                             anchors.verticalCenter: parent.verticalCenter
                             border.width: 1

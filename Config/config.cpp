@@ -14,6 +14,8 @@
 #include "QFontDatabase"
 #include "QThread"
 #include "QTranslator"
+#include "QFileInfo"
+#include "QDir"
 
 #ifndef Q_OS_WIN32
 #include "QAccelerometer"
@@ -59,6 +61,9 @@ public:
     QTranslator *ts;
     QFontDatabase fd;
 
+    QString settingsPath;
+    QString filePath;
+
 private:
     Config *f;
 };
@@ -77,6 +82,7 @@ Config::~Config()
 
 int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 {
+    configSelf = this;
     // 读配置文件
     p->readSetting();
 
@@ -122,6 +128,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                                      Qt::InvertedLandscapeOrientation |
                                      Qt::InvertedPortraitOrientation);
 #endif
+    // 在安卓端
     // 此信号需要在 AndroidManifest.xml 中
     // 将android:screenOrientation
     // 设置为"unspecified"才能触发
@@ -167,7 +174,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     });
 
     QRect r = p->screen->availableGeometry();
-#if defined (Q_OS_ANDROID) || defined (Q_OS_IOS)
+#ifndef Q_OS_WIN32
     p->width = r.width();
     p->height = r.height();
 #else
@@ -223,6 +230,16 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
     return 1;
+}
+
+QString Config::settingsPath()
+{
+    return p->settingsPath;
+}
+
+QString Config::filePath()
+{
+    return p->filePath;
 }
 
 int Config::width()
@@ -293,9 +310,23 @@ ConfigPrivate::ConfigPrivate(Config *parent)
 
     ts = new QTranslator(f);
 
+#ifndef Q_OS_WIN32
+    settingsPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/");
+    filePath = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/");
+    qDebug() << "settings path:" << settingsPath << endl
+             << "file path:" << filePath;
+#else
+    settingsPath = QGuiApplication::applicationDirPath() + QString("/");
+    filePath = QGuiApplication::applicationDirPath() + QString("/Hotimage");
+    if( !QFileInfo::exists(path) ) {
+        QDir d;
+        d.mkdir(path);
+    }
+#endif
+
 
     oldRotation = 0;
-#ifndef Q_OS_WIN32
+#ifdef Q_OS_ANDROID
     accelerometer_x = 0.0;
     accelerometer_y = 0.0;
     accelerometer_z = 0.98;
@@ -366,6 +397,7 @@ ConfigPrivate::ConfigPrivate(Config *parent)
     old_ts = QDateTime::currentDateTime().toMSecsSinceEpoch();
     accelerometer->start();
 //    gyroscope->start();
+
 #endif
 }
 
@@ -383,12 +415,8 @@ ConfigPrivate::~ConfigPrivate()
 
 void ConfigPrivate::readSetting()
 {
-#ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
-#else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
-#endif
-    qDebug() << "read setting path:" << path;
+    QString path = settingsPath + QString("setting.ini");
+    qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     language = s->value("Language/Value", 0).toInt();
@@ -399,11 +427,7 @@ void ConfigPrivate::readSetting()
 
 void ConfigPrivate::saveSetting()
 {
-#ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
-#else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
-#endif
+    QString path = settingsPath + QString("setting.ini");
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     s->setValue("Language/Value", language);
@@ -414,3 +438,5 @@ void ConfigPrivate::saveSetting()
 
     qDebug() << "save setting path:" << path;
 }
+
+Config * Config::configSelf = NULL;
