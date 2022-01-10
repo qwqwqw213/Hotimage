@@ -174,10 +174,7 @@ bool TcpCamera::isOpen()
 
 bool TcpCamera::isConnected()
 {
-    if( isOpen() ) {
-        return (p->socket->state() == QAbstractSocket::ConnectedState);
-    }
-    return false;
+    return isOpen() ? (p->socket->state() == QAbstractSocket::ConnectedState) : false;
 }
 
 void TcpCamera::open()

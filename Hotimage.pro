@@ -96,6 +96,12 @@ ios {
 
 QMAKE_INFO_PLIST = $$PWD/IOSInterface/my.plist
 
+app_launch_screen.files = $$files($$PWD/IOSInterface/iLaunchScreen.storyboard)
+QMAKE_BUNDLE_DATA += app_launch_screen
+
+OTHER_FILES += \
+    $$PWD/IOSInterface/*.storyboard
+
 QT += \
     sensors
 
@@ -132,7 +138,6 @@ LIBS += -F/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform
 
 INCLUDEPATH += $$PWD/libs/ios
 DEPENDPATH += $$PWD/libs/ios
-
 }
 
 
