@@ -60,8 +60,11 @@ public:
     double fps;
 
     uint32_t frameCount;
+
+#ifdef TEMPERATURE_SDK
     float temperatureTable[16384];
     float *temperatureData;
+#endif
 
     std::thread captureThread;
 
@@ -317,7 +320,7 @@ void TcpCamera::openRecord()
             emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
-            QString path = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/");
+            QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/");
             path.append("REC_" + fileName);
 
             cfg.filePath = path;
@@ -351,8 +354,9 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
 //    image = QImage();
     provider = new ImageProvider("tcpcamera");
-
+#ifdef TEMPERATURE_SDK
     temperatureData = NULL;
+#endif
     fps = 0.0;
 
     keyValue = 1;
@@ -447,10 +451,12 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         emit f->videoFrameChanged();
 //        emit f->videoFrame(QImage());
 
+#ifdef TEMPERATURE_SDK
         if( temperatureData ) {
             free(temperatureData);
             temperatureData = NULL;
         }
+#endif
 
         buf.clear();
 
@@ -674,7 +680,7 @@ void TcpCameraPrivate::onReadyRead()
         }
 
 
-#ifdef Q_OS_ANDROID
+#ifdef TEMPERATURE_SDK
         if( temperatureData == NULL ) {
             temperatureData = (float*)calloc(cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET) + 10, sizeof(float));
         }
@@ -796,7 +802,7 @@ void TcpCameraPrivate::onReadyRead()
         buf.remove(0, data_size);
         unpackMutex.unlock();
 
-#ifdef Q_OS_ANDROID
+#ifdef TEMPERATURE_SDK
         // 画温度信息
         if( showTemp ) {
             QPainter pr(image);
@@ -876,8 +882,6 @@ void TcpCameraPrivate::readSetting()
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
 #endif
-
-    qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
     cfg.ip = SERVER_IP;
@@ -892,6 +896,8 @@ void TcpCameraPrivate::readSetting()
     cfg.set.distance = s->value("Normal/distance", 0).toUInt();
 
     showTemp = s->value("normal/showtemp", false).toBool();
+
+    qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
 //    emit f->paletteChanged();
 
     delete s;

@@ -329,7 +329,6 @@ Item {
             if( y > bottom ) {
                 y = bottom
             }
-            console.log("remove:", y, bottom, flag, imageList.cellWidth, imageList.height)
             imageList.contentY = y
         }
 

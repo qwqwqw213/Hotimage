@@ -23,6 +23,10 @@
 #include "thread"
 #endif
 
+#ifdef Q_OS_IOS
+#include "IOSInterface/iosinterface.h"
+#endif
+
 class ConfigPrivate
 {
 public:
@@ -48,6 +52,9 @@ public:
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
     QScopedPointer<VideoPlayer> videoPlayer;
+#ifdef Q_OS_IOS
+    QScopedPointer<IOSInterface> iosInterface;
+#endif
 
     QScreen *screen;
 
@@ -195,7 +202,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
 #ifndef Q_OS_WIN32
-    p->imageModel->search(QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0) + QString("/"));
+    p->imageModel->search(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/"));
 #else
     p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
 #endif
@@ -217,6 +224,11 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
+
+#ifdef Q_OS_IOS
+    p->iosInterface.reset(new IOSInterface);
+    p->iosInterface->keepScreenOn();
+#endif
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 

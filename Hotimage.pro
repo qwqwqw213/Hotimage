@@ -107,9 +107,12 @@ HEADERS += \
     libs/ios/libavutil/avutil.h \
     libs/ios/libswscale/swscale.h \
     libs/ios/libswresample/swresample.h \
+    IOSInterface/iosinterface.h \
     Function/VideoProcess/videoprocess.h
 
 SOURCES += \
+    IOSInterface/homeindicator.mm \
+    IOSInterface/iosinterface.mm \
     Function/VideoProcess/videoprocess.cpp
 
 LIBS += -L$$PWD/libs/ios \
@@ -139,6 +142,8 @@ DEPENDPATH += $$PWD/libs/ios
 
 android {
 
+DEFINES  += \
+    TEMPERATURE_SDK
 
 QT += \
     androidextras \

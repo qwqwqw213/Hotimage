@@ -15,9 +15,9 @@ ApplicationWindow {
     id: window
     visible: true
 
-//    visibility: Window.FullScreen
-    width: Config.width
-    height: Config.height
+    visibility: Window.FullScreen
+//    width: Config.width
+//    height: Config.height
 
     title: qsTr("Hotimage")
 
@@ -302,22 +302,22 @@ ApplicationWindow {
                     }
                 }
 
-                Rectangle {
-                    width: btnPhoto.width * 0.9 * btnPhoto.scale + 2
-                    height: btnPhoto.height * 0.9 * btnPhoto.scale + 2
-                    rotation: window.oldRotation
-                    color: "transparent"
-                    border.color: "white"
-                    border.width: 1
-                    anchors.centerIn: parent
-                }
-
                 Image {
                     source: ImageModel.lastImagePath
                     width: btnPhoto.width * 0.9 * btnPhoto.scale
                     height: btnPhoto.height * 0.9 * btnPhoto.scale
                     anchors.centerIn: parent
                     rotation: window.oldRotation
+
+                    Rectangle {
+                        width: parent.width + 2
+                        height: parent.width + 2
+                        color: "transparent"
+                        border.color: "white"
+                        border.width: 1
+                        anchors.centerIn: parent
+                    }
+
                     Text {
                         visible: ImageModel.lastType === 1
                         anchors.centerIn: parent
@@ -325,7 +325,6 @@ ApplicationWindow {
                         font.pixelSize: parent.width * 0.5
                         text: "\uf144"
                         color: "white"
-                        rotation: oldRotation
                     }
                 }
 
@@ -361,6 +360,7 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: height / 2
                 color: "transparent"
+
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
@@ -413,8 +413,8 @@ ApplicationWindow {
         initialItem: mainView
 
         pushEnter: Transition {
-            XAnimator {
-                from: width
+            YAnimator {
+                from: height
                 to: 0
                 duration: 200
                 easing.type: Easing.OutCurve
@@ -449,9 +449,9 @@ ApplicationWindow {
             }
         }
         popExit: Transition {
-            XAnimator {
+            YAnimator {
                 from: 0
-                to: width
+                to: height
                 duration: 200
                 easing.type: Easing.OutCurve
             }
