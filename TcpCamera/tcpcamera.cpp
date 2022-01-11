@@ -94,6 +94,8 @@ public:
     bool isValidTail(QByteArray &byte);
     void keyPressed(const int &key);
 
+    QString cameraSN;
+
 private:
     TcpCamera *f;
 
@@ -339,6 +341,11 @@ void TcpCamera::openRecord()
 QString TcpCamera::recordTime()
 {
     return p->encode->recordTime();
+}
+
+QString TcpCamera::cameraSN()
+{
+    return p->cameraSN;
 }
 
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
@@ -598,6 +605,7 @@ void TcpCameraPrivate::onReadyRead()
 //            qDebug() << "write size:" << size << str.size();
 
 //            openUnpack();
+            cameraSN = QString("");
         }
         return;
     }
@@ -781,6 +789,16 @@ void TcpCameraPrivate::onReadyRead()
 //                    floatShutTemper, floatCoreTemper);
         }
 
+        cameraSN = QString(sn);
+        if( !QString(sn).isEmpty() && cameraSN.isEmpty() ) {
+            cameraSN = QString(sn);
+            emit f->cameraSNChanged();
+        }
+#else
+        if( cameraSN.isEmpty() ) {
+            cameraSN = QString("unknow sn");
+            emit f->cameraSNChanged();
+        }
 #endif
         timer0 = timer1;
         timer1 = clock();

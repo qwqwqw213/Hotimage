@@ -26,18 +26,18 @@
         jdoubleArray	[D
     Primitive Types
         Type            Signature
-        jboolean            Z
-        jbyte               B
-        jchar               C
-        jshort              S
-        jint                I
-        jlong               J
-        jfloat              F
-        jdouble             D
+        jboolean        Z
+        jbyte           B
+        jchar           C
+        jshort          S
+        jint            I
+        jlong           J
+        jfloat          F
+        jdouble         D
     Other
-        Type        Signature
-        void        V
-        Custom type	L<fully-qualified-name>;
+        Type            Signature
+        void            V
+        Custom type     L<fully-qualified-name>;
  */
 
 #ifdef Q_OS_ANDROID

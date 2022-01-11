@@ -10,14 +10,20 @@ import "./Loading"
 import "./MessageBox"
 import "./ScaleBar"
 
-// ios full screen
+/*
+ *  mobile app full screen
+ *  set visibility: Window.FullScreen
+ *  win32
+ *  set visibility: window.Minimized debugging
+ */
 ApplicationWindow {
     id: window
     visible: true
 
+    minimumWidth: Config.width
+    minimumHeight: Config.height
     visibility: Window.FullScreen
-//    width: Config.width
-//    height: Config.height
+//    visibility: Window.Minimized
 
     title: qsTr("Hotimage")
 

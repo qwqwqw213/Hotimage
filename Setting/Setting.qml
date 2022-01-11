@@ -264,6 +264,22 @@ Drawer {
                     item.index = 0
                 }
             }
+
+            Loader {
+                sourceComponent: section
+                onLoaded: {
+                    item.text = qsTr("Product")
+                }
+            }
+
+            Loader {
+                id: cameraSN
+                sourceComponent: infoItem
+                onLoaded: {
+                    item.text = qsTr("SN")
+                    item.value = TcpCamera.cameraSN
+                }
+            }
         }
         ScrollIndicator.vertical: ScrollIndicator {
 
@@ -287,6 +303,14 @@ Drawer {
             humidnessSlider.item.value = TcpCamera.humidness
             correctionSlider.item.value = TcpCamera.correction
             distanceSlider.item.value = TcpCamera.distance
+            cameraSN.item.value = TcpCamera.cameraSN
+        }
+
+        Connections {
+            target: TcpCamera
+            onCameraSNChanged: {
+                cameraSN.item.value = TcpCamera.cameraSN
+            }
         }
     }
 
@@ -529,6 +553,32 @@ Drawer {
                         }
                     }
                 ]
+            }
+        }
+    }
+
+    Component {
+        id: infoItem
+        Rectangle {
+            property alias text: text.text
+            property alias value: value.text
+            width: flick.itemWidth
+            height: flick.itemHeight
+            color: "transparent"
+            Text {
+                id: text
+                color: "white"
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                id: value
+                color: "white"
+                anchors.right: parent.right
+                anchors.rightMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
             }
         }
     }

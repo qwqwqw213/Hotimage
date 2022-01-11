@@ -75,6 +75,9 @@ public:
     Q_PROPERTY(QString recordTime READ recordTime NOTIFY recordTimeChanged)
     QString recordTime();
 
+    Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
+    QString cameraSN();
+
 private:
     friend class TcpCameraPrivate;
     QScopedPointer<TcpCameraPrivate> p;
@@ -89,6 +92,7 @@ Q_SIGNALS:
     void encodingChanged();
     void recordTimeChanged();
     void videoFrame(QImage);
+    void cameraSNChanged();
 };
 
 #endif // RECV_H
