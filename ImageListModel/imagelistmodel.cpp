@@ -49,6 +49,7 @@ ImageListModel::~ImageListModel()
 
 void ImageListModel::search(const QString &path)
 {
+    qDebug() << "search path:" << path;
     p->searchThread = std::thread([=](){
         QDir d;
         d.setPath(path);

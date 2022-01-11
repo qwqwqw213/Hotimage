@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
         QQmlApplicationEngine engine;
         Config *config = new Config(&engine);
         config->init(&app, &engine);
+//        g_Config->init(&app, &engine);
 
         const QUrl url(QStringLiteral("qrc:/main.qml"));
         QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,

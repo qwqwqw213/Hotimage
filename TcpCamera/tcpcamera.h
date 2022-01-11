@@ -22,7 +22,7 @@ public:
     explicit TcpCamera(QObject *parent = nullptr);
     ~TcpCamera();
 
-    TcpCamera *instance();
+    static TcpCamera *instance();
 
     bool isOpen();
 
@@ -32,6 +32,7 @@ public:
     void open();
 //    void open(tcp_config *s);
     void close();
+    void exit();
 
     double fps();
 

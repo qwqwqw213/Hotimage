@@ -12,6 +12,7 @@
 
 #include "QGuiApplication"
 
+#include "QDir"
 #include "QStandardPaths"
 #include "QFileInfo"
 #include "QDebug"
@@ -146,11 +147,7 @@ TcpCamera::TcpCamera(QObject *parent)
 
 TcpCamera::~TcpCamera()
 {
-    close();
-
-    if( p->captureThread.joinable() ) {
-        p->captureThread.join();
-    }
+//    close();
 }
 
 TcpCamera * TcpCamera::instance()
@@ -174,7 +171,7 @@ bool TcpCamera::isOpen()
 
 bool TcpCamera::isConnected()
 {
-    return isOpen() ? (p->socket->state() == QAbstractSocket::ConnectedState) : false;
+    return isOpen() ? p->handshake.isConnected() : false;
 }
 
 void TcpCamera::open()
@@ -205,6 +202,13 @@ void TcpCamera::close()
         p->thread->quit();
         p->thread->wait();
     }
+}
+
+void TcpCamera::exit()
+{
+    p->encode->closeEncode();
+    p->encode->deleteLater();
+    p->saveSetting();
 }
 
 double TcpCamera::fps()
@@ -317,7 +321,7 @@ void TcpCamera::openRecord()
             emit recordTimeChanged();
             EncodeConfig cfg;
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".avi");
-            QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/");
+            QString path = g_Config->imageGalleryPath();
             path.append("REC_" + fileName);
 
             cfg.filePath = path;
@@ -432,6 +436,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         }
 
         if( !exit ) {
+            qDebug() << "socket connect successed";
             emit f->connectStatusChanged();
         }
     });
@@ -476,10 +481,10 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 TcpCameraPrivate::~TcpCameraPrivate()
 {
 //#ifdef Q_OS_ANDROID
-    encode->closeEncode();
-    encode->deleteLater();
+//    encode->closeEncode();
+//    encode->deleteLater();
 //#endif
-    saveSetting();
+//    saveSetting();
 }
 
 void TcpCameraPrivate::searchDevice()
@@ -875,7 +880,7 @@ void TcpCameraPrivate::onReadyRead()
 void TcpCameraPrivate::readSetting()
 {
 #ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
+    QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/cameraparam.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
 #endif
@@ -904,7 +909,7 @@ void TcpCameraPrivate::readSetting()
 void TcpCameraPrivate::saveSetting()
 {
 #ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/cameraparam.ini");
+    QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/cameraparam.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
 #endif
@@ -931,10 +936,10 @@ void TcpCameraPrivate::capture()
 {
     if( !captureThread.joinable() ) {
         captureThread = std::thread([=](){
-//            QPixmap pix = QPixmap::fromImage(image);
             QPixmap pix = QPixmap::fromImage(provider->image());
             QString fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".jpg");
-            QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)+ QString("/");
+            QString path = g_Config->imageGalleryPath();
+
             path.append("IMG_" + fileName);
             if( pix.save(path, "JPG") )
             {

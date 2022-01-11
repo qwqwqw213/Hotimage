@@ -59,6 +59,8 @@ public:
     QScreen *screen;
 
     int language;
+    QString documentsPath;
+    QString imageGalleryPath;
 
     bool isLandscape;
 
@@ -81,11 +83,26 @@ Config::Config(QObject *parent)
 
 Config::~Config()
 {
+    qDebug() << "~Config";
+}
 
+Config * Config::instance()
+{
+    static QMutex m;
+    static QScopedPointer<Config> i;
+    if( Q_UNLIKELY(!i) ) {
+        m.lock();
+        if( !i ) {
+            i.reset(new Config);
+        }
+        m.unlock();
+    }
+    return i.data();
 }
 
 int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 {
+    configSelf = this;
     // 读配置文件
     p->readSetting();
 
@@ -201,11 +218,12 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
-#ifndef Q_OS_WIN32
-    p->imageModel->search(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/"));
-#else
-    p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
-#endif
+    p->imageModel->search(p->imageGalleryPath);
+//#ifndef Q_OS_WIN32
+//    p->imageModel->search(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/"));
+//#else
+//    p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
+//#endif
     VideoScanImage *scanProvider = p->imageModel->provider();
     e->addImageProvider(scanProvider->url(), scanProvider);
     e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
@@ -235,6 +253,16 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     return 1;
 }
 
+QString Config::documentsPath()
+{
+    return p->documentsPath;
+}
+
+QString Config::imageGalleryPath()
+{
+    return p->imageGalleryPath;
+}
+
 int Config::width()
 {
     return p->width;
@@ -260,6 +288,7 @@ void Config::release()
 {
 //    p->tcpCamera.reset();
 //    p->imageModel.reset();
+    p->tcpCamera->exit();
 }
 
 qreal Config::rotation()
@@ -395,14 +424,24 @@ ConfigPrivate::~ConfigPrivate()
 void ConfigPrivate::readSetting()
 {
 #ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
+    documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/");
 #else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
+    documentsPath = QGuiApplication::applicationDirPath() + QString("/");
 #endif
+    QString path = documentsPath + QString("setting.ini");
+
     qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
-    language = s->value("Language/Value", 0).toInt();
+    language = s->value("Normal/Language", 0).toInt();
+    imageGalleryPath = documentsPath + QString("Hotimage/");
+    if( !QFileInfo::exists(imageGalleryPath) ) {
+        QDir dir;
+        dir.mkdir(imageGalleryPath);
+
+        qDebug() << "image gallery path exists:" << QFileInfo::exists(imageGalleryPath)
+                 << ", image gallery path:" << imageGalleryPath;
+    }
 
     delete s;
     s = NULL;
@@ -410,14 +449,10 @@ void ConfigPrivate::readSetting()
 
 void ConfigPrivate::saveSetting()
 {
-#ifndef Q_OS_WIN32
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QString("/setting.ini");
-#else
-    QString path = QGuiApplication::applicationDirPath() + QString("/setting.ini");
-#endif
+    QString path = documentsPath + QString("setting.ini");
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
-    s->setValue("Language/Value", language);
+    s->setValue("Normal/Language", language);
 
     s->sync();
     delete s;
@@ -425,3 +460,5 @@ void ConfigPrivate::saveSetting()
 
     qDebug() << "save setting path:" << path;
 }
+
+Config * Config::configSelf = nullptr;
