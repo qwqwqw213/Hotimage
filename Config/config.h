@@ -60,6 +60,11 @@ public:
     Q_PROPERTY(bool isLandscape READ isLandscape NOTIFY orientationChanged)
     bool isLandscape();
 
+    Q_PROPERTY(int leftMargin READ leftMargin CONSTANT)
+    int leftMargin();
+    Q_PROPERTY(int rightMargin READ rightMargin CONSTANT)
+    int rightMargin();
+
 Q_SIGNALS:
     void rotationChanged();
     void languageChanged();

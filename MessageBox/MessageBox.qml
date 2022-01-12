@@ -35,21 +35,21 @@ Popup {
         font.pixelSize: 20
 
         onContentWidthChanged: {
-            if( contentWidth + 20 > popup._w ) {
+            if( text.contentWidth + 20 > popup._w ) {
                 popup.width = popup._w - 20
             }
             else {
-                popup.width = contentWidth + 20
+                popup.width = text.contentWidth + 20
             }
 
-            if( contentHeight + 20 > popup._h ) {
+            if( text.contentHeight + 20 > popup._h ) {
                 popup.height = popup._h - 20
             }
             else {
-                popup.height = contentHeight + 20
+                popup.height = text.contentHeight + 20
             }
-            width = popup.width - 20
-            height = popup.height - 20
+            text.width = popup.width - 20
+            text.height = popup.height - 20
 
             popup.x = (_w - width) / 2.0
             popup.y = 0 - height

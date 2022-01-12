@@ -149,7 +149,7 @@ TcpCamera::TcpCamera(QObject *parent)
 
 TcpCamera::~TcpCamera()
 {
-//    close();
+    close();
 }
 
 TcpCamera * TcpCamera::instance()
@@ -435,6 +435,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             qDebug() << "socket write:" << size;
         }, Qt::QueuedConnection);
 
+        qDebug() << "socket start connect";
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
 //            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
@@ -444,7 +445,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
         if( !exit ) {
             qDebug() << "socket connect successed";
-            emit f->connectStatusChanged();
         }
     });
     QObject::connect(thread, &QThread::finished, [=](){
@@ -488,10 +488,10 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 TcpCameraPrivate::~TcpCameraPrivate()
 {
 //#ifdef Q_OS_ANDROID
-//    encode->closeEncode();
-//    encode->deleteLater();
+    encode->closeEncode();
+    encode->deleteLater();
 //#endif
-//    saveSetting();
+    saveSetting();
 }
 
 void TcpCameraPrivate::searchDevice()
@@ -567,6 +567,7 @@ void TcpCameraPrivate::onReadyRead()
     unpackMutex.lock();
     buf.push_back(socket->readAll());
     unpackMutex.unlock();
+
     if( !handshake.isConnected() ) {
         int res = handshake.recvHandShake(buf.data(), buf.size(), &cfg.cam);
         if( res == (-1) ) {
@@ -606,6 +607,12 @@ void TcpCameraPrivate::onReadyRead()
 
 //            openUnpack();
             cameraSN = QString("");
+#ifdef TEMPERATURE_SDK
+            if( temperatureData == NULL ) {
+                temperatureData = (float*)calloc(cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET) + 10, sizeof(float));
+            }
+#endif
+            emit f->connectStatusChanged();
         }
         return;
     }
@@ -689,14 +696,8 @@ void TcpCameraPrivate::onReadyRead()
             }
         }
 
-
-#ifdef TEMPERATURE_SDK
-        if( temperatureData == NULL ) {
-            temperatureData = (float*)calloc(cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET) + 10, sizeof(float));
-        }
         uint16_t *data = reinterpret_cast<uint16_t *>(buf.data());
         uint16_t *temp = data + (cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET));
-
         float floatFpaTmp;
         float correction;
         float Refltmp;
@@ -748,6 +749,7 @@ void TcpCameraPrivate::onReadyRead()
         userArea=userArea+2;
         memcpy(&distance,temp+userArea,sizeof(unsigned short));//距离
 
+#ifdef TEMPERATURE_SDK
         if( (frameCount % 4500) == 25 ) {
             thermometryT4Line(cfg.cam.w,
                               cfg.cam.h,
@@ -788,18 +790,12 @@ void TcpCameraPrivate::onReadyRead()
 //                    emiss, Refltmp, Airtmp, humi, distance, correction,
 //                    floatShutTemper, floatCoreTemper);
         }
-
-        cameraSN = QString(sn);
+#endif
         if( !QString(sn).isEmpty() && cameraSN.isEmpty() ) {
             cameraSN = QString(sn);
             emit f->cameraSNChanged();
         }
-#else
-        if( cameraSN.isEmpty() ) {
-            cameraSN = QString("unknow sn");
-            emit f->cameraSNChanged();
-        }
-#endif
+
         timer0 = timer1;
         timer1 = clock();
 //        uint8_t *bit = provider->data();

@@ -70,6 +70,9 @@ public:
     QTranslator *ts;
     QFontDatabase fd;
 
+    int leftMargin;
+    int rightMargin;
+
 private:
     Config *f;
 };
@@ -169,8 +172,8 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     QObject::connect(a, static_cast<void (QGuiApplication::*)(Qt::ApplicationState)>(&QGuiApplication::applicationStateChanged),
                      [=](Qt::ApplicationState state){
-#ifndef Q_OS_WIN32
         qDebug() << "app state changed:" << state;
+#ifndef Q_OS_WIN32
         switch(state) {
         case Qt::ApplicationActive: {
             if( !p->tcpCamera.isNull() ) {
@@ -180,7 +183,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
         }
             break;
-        default: {
+        case Qt::ApplicationSuspended: {
             if( !p->tcpCamera.isNull() ) {
                 if( p->tcpCamera->isOpen() ) {
                     p->tcpCamera->close();
@@ -188,6 +191,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
         }
             break;
+        default: break;
         }
 #endif
     });
@@ -208,36 +212,33 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     }
     qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height << "is landscape:" << p->isLandscape;
 
+    QQmlContext *cnt = e->rootContext();
+
     // 安卓模块
     p->androidInterface.reset(new AndroidInterface);
-    e->rootContext()->setContextProperty("PhoneApi", p->androidInterface.data());
+    cnt->setContextProperty("PhoneApi", p->androidInterface.data());
     p->androidInterface->requestPhotoWritePermission();
 
     // 配置模块
-    e->rootContext()->setContextProperty("Config", this);
+    cnt->setContextProperty("Config", this);
 
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
     p->imageModel->search(p->imageGalleryPath);
-//#ifndef Q_OS_WIN32
-//    p->imageModel->search(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/"));
-//#else
-//    p->imageModel->search("C:\\Users\\DELL\\Desktop\\train");
-//#endif
     VideoScanImage *scanProvider = p->imageModel->provider();
     e->addImageProvider(scanProvider->url(), scanProvider);
-    e->rootContext()->setContextProperty("ImageModel", p->imageModel.data());
+    cnt->setContextProperty("ImageModel", p->imageModel.data());
 
     // 视频播放器模块
     p->videoPlayer.reset(new VideoPlayer);
     e->addImageProvider(p->videoPlayer->providerUrl(), p->videoPlayer->provider());
-    e->rootContext()->setContextProperty("VideoPlayer", p->videoPlayer.data());
+    cnt->setContextProperty("VideoPlayer", p->videoPlayer.data());
 
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
     ImageProvider *provider = p->tcpCamera->provider();
     e->addImageProvider(provider->url(), provider);
-    e->rootContext()->setContextProperty("TcpCamera", p->tcpCamera.data());
+    cnt->setContextProperty("TcpCamera", p->tcpCamera.data());
 
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
@@ -246,6 +247,14 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 #ifdef Q_OS_IOS
     p->iosInterface.reset(new IOSInterface);
     p->iosInterface->keepScreenOn();
+    SafeArea s;
+    p->iosInterface->safeArea(&s);
+    qDebug() << "Safe area:" << s.top << s.left << s.bottom << s.right;
+    p->leftMargin = s.left;
+    p->rightMargin = s.right;
+#else
+    p->leftMargin = 0;
+    p->rightMargin = 0;
 #endif
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
@@ -288,7 +297,6 @@ void Config::release()
 {
 //    p->tcpCamera.reset();
 //    p->imageModel.reset();
-    p->tcpCamera->exit();
 }
 
 qreal Config::rotation()
@@ -325,6 +333,16 @@ void Config::setLanguage(const int &language)
 bool Config::isLandscape()
 {
     return p->isLandscape;
+}
+
+int Config::leftMargin()
+{
+    return p->leftMargin;
+}
+
+int Config::rightMargin()
+{
+    return p->rightMargin;
 }
 
 ConfigPrivate::ConfigPrivate(Config *parent)

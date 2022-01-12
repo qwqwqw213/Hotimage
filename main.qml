@@ -10,18 +10,19 @@ import "./Loading"
 import "./MessageBox"
 import "./ScaleBar"
 
-/*
- *  mobile app full screen
- *  set visibility: Window.FullScreen
- *  win32
- *  set visibility: window.Minimized debugging
- */
 ApplicationWindow {
     id: window
     visible: true
 
     minimumWidth: Config.width
     minimumHeight: Config.height
+
+    /*
+     *  mobile app full screen
+     *  set visibility: Window.FullScreen
+     *  win32
+     *  set visibility: window.Minimized debugging
+     */
     visibility: Window.FullScreen
 //    visibility: Window.Minimized
 
@@ -71,14 +72,18 @@ ApplicationWindow {
 
         // 顶部按钮栏
         Rectangle {
+            id: topTool
             width: parent.width * 0.1
             height: parent.height
-            color: "black"
+            color: "#90000000"
+            z: 2
+
+            property real safeWidth: width - Config.leftMargin
 
             // 设置按钮
             Rectangle {
                 id: btnSetting
-                width: parent.width * 0.75
+                width: parent.safeWidth * 0.75
                 height: width
                 anchors.top: parent.top
                 anchors.topMargin: height / 2
@@ -107,9 +112,12 @@ ApplicationWindow {
             // 快门刷新按钮
             Rectangle {
                 id: btnShutter
-                width: parent.width * 0.75
+                width: parent.safeWidth * 0.75
                 height: width
-                anchors.centerIn: parent
+//                anchors.centerIn: parent
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenterOffset: Config.leftMargin / 2
+                anchors.verticalCenter: parent.verticalCenter
                 color: "transparent"
 
                 Text {
@@ -133,7 +141,7 @@ ApplicationWindow {
             // 温度按钮
             Rectangle {
                 id: btnTempSetting
-                width: parent.width * 0.75
+                width: parent.safeWidth * 0.75
                 height: width
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: height / 2
@@ -164,8 +172,12 @@ ApplicationWindow {
         Rectangle {
             width: parent.width * 0.7
             height: parent.height
-            x: parent.width * 0.1
-            y: 0
+//            x: parent.width * 0.1
+//            y: 0
+            anchors.left: topTool.right
+
+//            anchors.fill: parent
+
             clip: true
             color: "black"
 
@@ -209,8 +221,10 @@ ApplicationWindow {
             ScaleBar {
                 id: scaleBar
                 width: parent.width * 0.2
+//                width: (parent.width - bottomTool.width - topTool.width) * 0.2
                 height: parent.height
                 anchors.right: parent.right
+//                anchors.rightMargin: bottomTool.width
                 textRotation: window.oldRotation
             }
         }
@@ -246,15 +260,22 @@ ApplicationWindow {
             id: bottomTool
             width: parent.width * 0.2
             height: parent.height
-            color: "black"
+            color: "#90000000"
             anchors.right: parent.right
+            z: 2
+
+            property real safeWidth: width - Config.rightMargin
 
             // 截图按钮
             Rectangle {
                 id: btnCapture
-                width: parent.width * 0.5
+                width: parent.safeWidth * 0.6
                 height: width
-                anchors.centerIn: parent
+//                anchors.centerIn: parent
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenterOffset: 0 - Config.rightMargin / 2
+                anchors.verticalCenter: parent.verticalCenter
+
                 color: "transparent"
                 border.color: btnCaptureArea.pressed ? "#A0A0A0" : "white"
                 border.width: 5
@@ -293,14 +314,13 @@ ApplicationWindow {
             // 相册按钮
             Rectangle {
                 id: btnPhoto
-                width: parent.width * 0.375
+                width: parent.safeWidth * 0.375
                 height: width
 //                anchors.left: btnCapture.left
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenter: btnCapture.horizontalCenter
                 anchors.top: parent.top
                 anchors.topMargin: height / 2
                 color: "transparent"
-
 
                 Behavior on scale {
                     NumberAnimation {
@@ -359,10 +379,10 @@ ApplicationWindow {
             // 录像按钮
             Rectangle {
                 id: btnRecord
-                width: parent.width * 0.375 // parent.width * 0.5 * 0.75
+                width: parent.safeWidth * 0.375 // parent.width * 0.5 * 0.75
                 height: width
 //                anchors.left: btnCapture.left
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenter: btnCapture.horizontalCenter
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: height / 2
                 color: "transparent"
@@ -402,7 +422,7 @@ ApplicationWindow {
 
         Setting {
             id: setting
-            width: parent.width * 0.5
+            width: parent.width * 0.5 + Config.leftMargin
             height: parent.height
         }
     }

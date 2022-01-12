@@ -326,7 +326,7 @@ Drawer {
                 id: label
                 color: "white"
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -350,7 +350,7 @@ Drawer {
                 width: parent.width > parent.height ? parent.height * 0.75 : parent.width * 0.75
                 height: width
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
@@ -368,7 +368,9 @@ Drawer {
             }
 
             Rectangle {
-                width: parent.width - icon.width * 2 - 20 - 1
+                width: parent.width
+                       - icon.width - icon.anchors.leftMargin
+                       - label.anchors.leftMargin - selectIcon.anchors.rightMargin
                 height: 1
                 anchors.left: label.left
                 anchors.bottom: parent.bottom
@@ -379,13 +381,13 @@ Drawer {
             // icon
             Text {
                 id: selectIcon
-                property real iwidth: parent.width > parent.height ?
-                                          parent.height * 0.5 : parent.width * 0.5
+                property real iconWidth: parent.width > parent.height ?
+                                             parent.height * 0.5 : parent.width * 0.5
                 anchors.right: parent.right
-                anchors.rightMargin: iwidth
+                anchors.rightMargin: iconWidth
                 anchors.verticalCenter: parent.verticalCenter
                 font.family: "FontAwesome"
-                font.pixelSize: iwidth
+                font.pixelSize: iconWidth
                 text: "\uf192"
 //                color: TcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
 
@@ -450,9 +452,11 @@ Drawer {
 
             Slider {
                 id: slider
-                width: parent.width - parent.height * 1.5 - 40
+                width: parent.width - label.anchors.leftMargin - 20
+                       - anchors.rightMargin - parent.height * 1.5
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: parent.width > parent.height ?
+                                         parent.height * 0.5 : parent.width * 0.5
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -461,7 +465,7 @@ Drawer {
                 text: parent.text + "\n" + slider.value.toFixed(floatLength)
                 color: "white"
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -482,7 +486,7 @@ Drawer {
                 id: label
                 color: "white"
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.verticalCenter: parent.verticalCenter
             }
             MouseArea {
@@ -492,10 +496,10 @@ Drawer {
                 }
             }
             Rectangle {
-                width: parent.width - 40
+                width: parent.width - label.anchors.leftMargin - selectIcon.anchors.rightMargin
                 height: 1
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.bottom: parent.bottom
                 color: "white"
                 visible: !parent.isBottom
@@ -504,13 +508,13 @@ Drawer {
             // icon
             Text {
                 id: selectIcon
-                property real iwidth: parent.width > parent.height ?
-                                          parent.height * 0.5 : parent.width * 0.5
+                property real iconWidth: parent.width > parent.height ?
+                                             parent.height * 0.5 : parent.width * 0.5
                 anchors.right: parent.right
-                anchors.rightMargin: iwidth
+                anchors.rightMargin: iconWidth
                 anchors.verticalCenter: parent.verticalCenter
                 font.family: "FontAwesome"
-                font.pixelSize: iwidth
+                font.pixelSize: iconWidth
                 text: "\uf192"
 //                color: TcpCamera.palette === parent.paletteIndex ? "#ffffff" : "#505050"
 
@@ -569,7 +573,7 @@ Drawer {
                 id: text
                 color: "white"
                 anchors.left: parent.left
-                anchors.leftMargin: 20
+                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
                 anchors.verticalCenter: parent.verticalCenter
             }
 
