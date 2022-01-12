@@ -99,6 +99,9 @@ QMAKE_INFO_PLIST = $$PWD/IOSInterface/my.plist
 app_launch_screen.files = $$files($$PWD/IOSInterface/iLaunchScreen.storyboard)
 QMAKE_BUNDLE_DATA += app_launch_screen
 
+QMAKE_ASSET_CATALOGS = $$PWD/sources/Images.xcassets
+QMAKE_ASSET_CATALOGS_APP_ICON = "AppIcon"
+
 OTHER_FILES += \
     $$PWD/IOSInterface/*.storyboard
 
