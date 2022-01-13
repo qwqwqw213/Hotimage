@@ -23,8 +23,8 @@ ApplicationWindow {
      *  win32
      *  set visibility: window.Minimized debugging
      */
-    visibility: Window.FullScreen
-//    visibility: Window.Minimized
+//    visibility: Window.FullScreen
+    visibility: Window.Minimized
 
     title: qsTr("Hotimage")
 
@@ -78,7 +78,8 @@ ApplicationWindow {
             color: "#90000000"
             z: 2
 
-            property real safeWidth: width - Config.leftMargin
+            property real safeWidth: Config.leftMargin > 0 ?
+                                         width - Config.leftMargin : width * 0.8
 
             // 设置按钮
             Rectangle {
@@ -264,12 +265,13 @@ ApplicationWindow {
             anchors.right: parent.right
             z: 2
 
-            property real safeWidth: width - Config.rightMargin
+            property real safeWidth: Config.rightMargin > 0 ?
+                                         width - Config.rightMargin : width * 0.8
 
             // 截图按钮
             Rectangle {
                 id: btnCapture
-                width: parent.safeWidth * 0.6
+                width: parent.safeWidth * 0.65
                 height: width
 //                anchors.centerIn: parent
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -277,14 +279,24 @@ ApplicationWindow {
                 anchors.verticalCenter: parent.verticalCenter
 
                 color: "transparent"
+
                 border.color: btnCaptureArea.pressed ? "#A0A0A0" : "white"
-                border.width: 5
+                border.width: 4
                 radius: width / 2
 
                 Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.width: 1
+                    border.color: "red"
+                }
+
+                Rectangle {
                     id: btnCaptrueIcon
-                    anchors.centerIn: parent
-                    width: parent.width * 0.75
+//                    anchors.centerIn: parent
+                    x: (parent.width - width) / 2
+                    y: (parent.height - height) / 2
+                    width: parent.width * 0.85
                     height: width
                     color: btnCaptureArea.pressed ? "#F01010" : "white"
                     radius: width / 2

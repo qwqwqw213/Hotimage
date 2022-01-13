@@ -117,7 +117,7 @@ Item {
         anchors.rightMargin:  (parent.width * 0.6 - width) / 2
         anchors.right: parent.right
 
-        width: parent.width * 0.5
+        width: text.font.pixelSize * 2
         height: width
         radius: width / 2
         opacity: zoomScaleBackground.opacity < 0.5 ? 1 : 0
@@ -133,7 +133,7 @@ Item {
         id: text
         color: "white"
         anchors.centerIn: textBackground
-        font.pixelSize: parent.width * 0.2
+        font.pixelSize: parent.width * 0.2 * (0.7 + 0.3 * zoomScaleBackground.opacity)
         text: scaleBar.value.toFixed(1)
         rotation: scaleBar.textRotation
         opacity: zoomScaleBackground.opacity > 0.6 ?
