@@ -6,6 +6,8 @@ import java.lang.Object;
 import android.view.OrientationEventListener;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowInsets;
+import android.view.DisplayCutout;
 
 import android.content.Context;
 
@@ -21,27 +23,70 @@ public class function extends QtActivity {
     private static function m_self;
 
     private Context context;
-    private SensorManager mSensorManager;
-    private Sensor mSensorMagnetic, mAccelerometer;
+//    private SensorManager mSensorManager;
+//    private Sensor mSensorMagnetic, mAccelerometer;
 
     public function() {
         m_self = this;
-        System.out.println("java init");
+        System.out.println("java -> init");
     }
 
-    private static OrientationEventListener m_OrientationListener;
+//    private static OrientationEventListener m_OrientationListener;
 
-    public native static void orientationChanged(int orientation);
+//    public native static void orientationChanged(int orientation);
+
+    public native static void safeArea(int top, int left, int bottom, int right);
+
+    @Override
+    public void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        System.out.println("java -> on attached to window");
+        if( android.os.Build.VERSION.SDK_INT >= 28 )
+        {
+//            // 获取屏幕安全边界
+            WindowInsets windowInsets = getWindow().getDecorView().getRootWindowInsets();
+            if( windowInsets != null )
+            {
+                DisplayCutout displayCutout = windowInsets.getDisplayCutout();
+                if( displayCutout != null ) {
+                    int left = displayCutout.getSafeInsetLeft();
+                    int top = displayCutout.getSafeInsetTop();
+                    int right = displayCutout.getSafeInsetRight();
+                    int bottom = displayCutout.getSafeInsetBottom();
+                    safeArea(top, left, bottom, right);
+                }
+                else
+                {
+                    System.out.println("java -> displayCutout is null");
+                }
+            }
+            else
+            {
+                System.out.println("java -> windowInsets is null");
+            }
+        }
+   }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        System.out.println("java on craete");
+        System.out.println("java -> on craete");
         this.context = this;
 
         // 屏幕常亮
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // 刘海屏处理
+        System.out.println("java -> android version: " + android.os.Build.VERSION.SDK_INT);
+        if( android.os.Build.VERSION.SDK_INT >= 28 )
+        {
+            System.out.println("java -> display cutouts, set full screen");
+            WindowManager.LayoutParams params = getWindow().getAttributes();
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(params);
+        }
+
+        /*
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         //获取Sensor
         mSensorMagnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
@@ -52,7 +97,7 @@ public class function extends QtActivity {
 
             @Override
             public void onOrientationChanged(int orientation) {
-                System.out.printf("onOrientationChanged: %d", orientation);
+                System.out.println("java -> onOrientationChanged: " + orientation);
                 if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
                     return;  //手机平放时，检测不到有效的角度
                 }
@@ -79,8 +124,10 @@ public class function extends QtActivity {
                 orientationChanged(orientation);
             }
        };
+       */
     }
 
+    /*
     float[] geomagnetic = new float[3];
     private final SensorEventListener mSensorListener = new SensorEventListener() {
 
@@ -116,27 +163,28 @@ public class function extends QtActivity {
         } else {
             return;
         }
-        System.out.printf("java rotation changed: %d", oldRotation);
+        System.out.println("java -> rotation changed: " + oldRotation);
     }
+    */
 
     @Override
     protected void onDestroy() {
         System.out.println("java destroy");
         super.onDestroy();
-        m_OrientationListener.disable();
+//        m_OrientationListener.disable();
     }
 
     @Override
     protected void onResume() {
-        mSensorManager.registerListener(mSensorListener, mSensorMagnetic, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(mSensorListener, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+//        mSensorManager.registerListener(mSensorListener, mSensorMagnetic, SensorManager.SENSOR_DELAY_NORMAL);
+//        mSensorManager.registerListener(mSensorListener, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         super.onResume();
     }
 
     @Override
     protected void onStop() {
-        mSensorManager.unregisterListener(mSensorListener, mSensorMagnetic);
-        mSensorManager.unregisterListener(mSensorListener, mAccelerometer);
+//        mSensorManager.unregisterListener(mSensorListener, mSensorMagnetic);
+//        mSensorManager.unregisterListener(mSensorListener, mAccelerometer);
         super.onStop();
     }
 }

@@ -29,8 +29,8 @@ Item {
             id: imageList
             x: 0
             y: 60
-            width: parent.width
-            height: parent.height - 60
+            width: imageListView.width
+            height: imageListView.height - 60
             cellWidth: imageListView.width > imageListView.height ?
                            (imageListView.width / 4) : (imageListView.width / 3)
             cellHeight: cellWidth

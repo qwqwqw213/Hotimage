@@ -439,7 +439,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         socket->connectToHost(cfg.ip, cfg.port);
         while (!socket->waitForConnected(3000) && !exit) {
 //            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
-//            qDebug() << "reconnect, ip:" << cfg.ip << "port:" << cfg.port;
+//            qDebug() << "reconnect, ip:" << cfg.ip `<< "port:" << cfg.port;
             socket->connectToHost(cfg.ip, cfg.port);
         }
 

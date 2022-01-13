@@ -40,17 +40,32 @@
         Custom type     L<fully-qualified-name>;
  */
 
+static int cutOutTop = 0;
+static int cutOutLeft = 0;
+static int cutOutBottom = 0;
+static int cutOutRight = 0;
+
 #ifdef Q_OS_ANDROID
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL
-Java_org_qtproject_example_function_orientationChanged(JNIEnv */*env*/,
-                                                       jobject /*obj*/,
-                                                       int value)
+//JNIEXPORT void JNICALL
+//Java_org_qtproject_example_function_orientationChanged(JNIEnv */*env*/,
+//                                                       jobject /*obj*/,
+//                                                       int value)
+//{
+//    qDebug() << "orientationChanged:" << value;
+//}
+
+JNIEXPORT void JNICALL Java_org_qtproject_example_function_safeArea(JNIEnv */*env*/,
+                                                                    jobject /*obj*/,
+                                                                    int top, int left, int bottom, int right)
 {
-    qDebug() << "orientationChanged:" << value;
+    cutOutTop = top;
+    cutOutLeft = left;
+    cutOutBottom = bottom;
+    cutOutRight = right;
 }
 
 #ifdef __cplusplus
@@ -132,11 +147,32 @@ void AndroidInterface::requestPhotoWritePermission()
 #endif
 }
 
+int AndroidInterface::safeAeraLeft()
+{
+    return cutOutLeft;
+}
+
+int AndroidInterface::safeAeraRight()
+{
+    return cutOutRight;
+}
+
+int AndroidInterface::safeAreaTop()
+{
+    return cutOutTop;
+}
+
+int AndroidInterface::safeAeraBottom()
+{
+    return cutOutBottom;
+}
+
 AndroidInterfacePrivate::AndroidInterfacePrivate(AndroidInterface *parent)
 {
     f = parent;
 
 #ifdef Q_OS_ANDROID
+//    qDebug() << "android sdk version:" << QtAndroid::androidSdkVersion();
 
 #endif
 }

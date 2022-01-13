@@ -36,6 +36,11 @@ public:
     // 申请sd card读写权限
     Q_INVOKABLE void requestPhotoWritePermission();
 
+    int safeAeraLeft();
+    int safeAeraRight();
+    int safeAreaTop();
+    int safeAeraBottom();
+
 private:
     friend class AndroidInterfacePrivate;
     QScopedPointer<AndroidInterfacePrivate> p;

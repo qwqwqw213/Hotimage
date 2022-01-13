@@ -72,6 +72,8 @@ public:
 
     int leftMargin;
     int rightMargin;
+    int topMargin;
+    int bottomMargin;
 
 private:
     Config *f;
@@ -210,7 +212,8 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     else {
         p->isLandscape = false;
     }
-    qDebug() << QThread::currentThreadId() << "windows size:" << p->width << p->height << "is landscape:" << p->isLandscape;
+    qDebug() << QThread::currentThreadId() << "windows geometry:" << r << Qt::endl
+             <<  "is landscape:" << p->isLandscape;
 
     QQmlContext *cnt = e->rootContext();
 
@@ -244,7 +247,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
 
-#ifdef Q_OS_IOS
+#if defined(Q_OS_IOS)
     p->iosInterface.reset(new IOSInterface);
     p->iosInterface->keepScreenOn();
     SafeArea s;
@@ -252,6 +255,18 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     qDebug() << "Safe area:" << s.top << s.left << s.bottom << s.right;
     p->leftMargin = s.left;
     p->rightMargin = s.right;
+#elif defined (Q_OS_ANDROID)
+    qreal ratio = p->screen->devicePixelRatio();
+    p->leftMargin = p->androidInterface->safeAeraLeft() / ratio;
+    p->rightMargin = p->androidInterface->safeAeraRight() / ratio;
+    p->topMargin = p->androidInterface->safeAreaTop() / ratio;
+    p->bottomMargin = p->androidInterface->safeAeraBottom() / ratio;
+
+    qDebug() << QString("android safe area(ratio: %1):").arg(ratio) << Qt::endl
+             << "   top:" << p->topMargin << Qt::endl
+             << "   left:" << p->leftMargin << Qt::endl
+             << "   bottom:" << p->bottomMargin << Qt::endl
+             << "   right:" << p->rightMargin << Qt::endl;
 #else
     p->leftMargin = 0;
     p->rightMargin = 0;
