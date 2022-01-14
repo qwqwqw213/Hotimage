@@ -27,22 +27,18 @@ Item {
 
         GridView {
             id: imageList
+            property int row: imageListView.width > imageListView.height ?
+                                  5 : 3
             x: 0
             y: 60
             width: imageListView.width
             height: imageListView.height - 60
             cellWidth: imageListView.width > imageListView.height ?
-                           (imageListView.width / 4) : (imageListView.width / 3)
+                           (imageListView.width / row) : (imageListView.width / row)
             cellHeight: cellWidth
             model: ImageModel
 
-//            bottomMargin: bottom.y < imageListView.height ? bottom.height : 0
-            bottomMargin: imageListView.height - bottom.y
-//            onBottomMarginChanged: {
-//                console.log(bottomMargin, imageListView.height, bottom.y)
-//            }
-
-//            Component.onCompleted: positionViewAtEnd()
+            bottomMargin: contentHeight >= height ? imageListView.height - bottom.y : 0
 
             delegate: Rectangle {
                 id: delegate
@@ -108,11 +104,35 @@ Item {
             }
 
             ScrollBar.vertical: ScrollBar {
-
+                contentItem: Rectangle {
+                    implicitWidth: 5
+                    color: "#b0505050"
+                    radius: implicitWidth / 2
+                }
             }
 
             onContentYChanged: {
-//                console.log(contentY, originY)
+                console.log("content y:", imageList.contentY, "origin y:", imageList.originY)
+            }
+
+            Connections {
+                target: ImageModel
+                onCurrentIndexChanged: {
+                    console.log(ImageModel.currentIndex)
+                    if( imageList.contentHeight > imageList.height ) {
+                        var index = ImageModel.currentIndex
+                        var row = imageList.row
+                        var flag = (imageList.count % row == 0) ? 0 : 1
+                        var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
+                        bottom += imageList.originY;
+                        var y = Math.floor(index / row) * imageList.cellHeight;
+                        y += imageList.originY;
+                        if( y > bottom ) {
+                            y = bottom
+                        }
+                        imageList.contentY = y
+                    }
+                }
             }
         }
 
@@ -215,14 +235,15 @@ Item {
 //            y: imageListView.height
 
             onYChanged: {
-                var temp = imageList.contentHeight + (imageList.height * 2)
-
-                var row = imageListView.width > imageListView.height ? 4 : 3
-                var flag = (imageList.count % row == 0) ? 0 : 1
-                var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
-                bottom += imageList.originY
-                if( imageList.contentY >= bottom && ready ) {
-                    imageList.contentY = bottom + y
+                if( imageList.contentHeight >= imageList.height ) {
+                    var temp = imageList.contentHeight + (imageList.height * 2)
+                    var row = imageList.row
+                    var flag = (imageList.count % row == 0) ? 0 : 1
+                    var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
+                    bottom += imageList.originY
+                    if( imageList.contentY >= bottom && ready ) {
+                        imageList.contentY = bottom + y
+                    }
                 }
             }
 
@@ -308,40 +329,15 @@ Item {
 
     }
 
-    Connections {
-        target: ImageModel
-        onCurrentIndexChanged: {
-
-        }
-    }
-
     ImagePlayer {
         id: imagePlayer
         visible: false
-
-        onCurrentIndexChanged: {
-//            imageList.positionViewAtIndex(index, ListView.End)
-
-            var row = imageListView.width > imageListView.height ? 4 : 3
-            var flag = (imageList.count % row == 0) ? 0 : 1
-            var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
-            var y = Math.floor(index / row) * imageList.cellHeight;
-            if( y > bottom ) {
-                y = bottom
-            }
-            imageList.contentY = y
-        }
-
-//        visible: true
     }
-
-//    StackView.onActivating: {
-//        imageList.positionViewAtEnd()
-//    }
 
     Component.onCompleted: {
 //        imageList.positionViewAtEnd()
 //        console.log(imageList.count)
+        console.log("completed:", imageList.contentWidth, imageList.contentHeight)
         imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
     }
 
@@ -353,6 +349,4 @@ Item {
     StackView.onDeactivated: {
         ready = false
     }
-
-    signal currentIndexChanged(var index, var source)
 }

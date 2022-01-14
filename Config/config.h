@@ -65,6 +65,9 @@ public:
     Q_PROPERTY(int rightMargin READ rightMargin CONSTANT)
     int rightMargin();
 
+    Q_PROPERTY(bool canReadTemperature READ canReadTemperature CONSTANT)
+    bool canReadTemperature();
+
 Q_SIGNALS:
     void rotationChanged();
     void languageChanged();

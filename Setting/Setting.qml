@@ -281,8 +281,13 @@ Drawer {
                 }
             }
         }
-        ScrollIndicator.vertical: ScrollIndicator {
 
+        ScrollBar.vertical: ScrollBar {
+            contentItem: Rectangle {
+                implicitWidth: 5
+                color: "#b0505050"
+                radius: implicitWidth / 2
+            }
         }
 
 //        onVisibleChanged: {

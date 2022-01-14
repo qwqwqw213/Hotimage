@@ -360,6 +360,15 @@ int Config::rightMargin()
     return p->rightMargin;
 }
 
+bool Config::canReadTemperature()
+{
+#ifdef TEMPERATURE_SDK
+    return true;
+#else
+    return false;
+#endif
+}
+
 ConfigPrivate::ConfigPrivate(Config *parent)
 {
     f = parent;

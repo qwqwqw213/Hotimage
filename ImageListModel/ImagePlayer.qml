@@ -11,7 +11,7 @@ Rectangle{
     anchors.fill: parent
     color: "black"
 
-    signal currentIndexChanged(int index)
+//    signal currentIndexChanged(int index)
 
     function hideTitle() {
         if( title.state !== "hide" ) {
@@ -66,11 +66,11 @@ Rectangle{
         }
 
         onMovementEnded: {
-            imagePlayer.currentIndexChanged(ImageModel.currentIndex)
+//            imagePlayer.currentIndexChanged(ImageModel.currentIndex)
         }
 
         onCurrentIndexChanged: {
-            console.log("index changed", currentIndex)
+//            console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
 //            imagePaintView.closeStream()
             VideoPlayer.closeStream()
@@ -358,7 +358,6 @@ Rectangle{
                         console.log("mini list clicked index:", index)
                         miniPhtotList.positionViewAtIndex(index, ListView.Center)
                         photoScan.positionViewAtIndex(index, ListView.Beginning)
-                        imagePlayer.currentIndexChanged(index)
                     }
                 }
             }

@@ -178,8 +178,10 @@ int ImageListModel::currentIndex()
 
 void ImageListModel::setCurrentIndex(const int &index)
 {
-    p->currentIndex = index;
-    emit currentIndexChanged();
+    if( p->currentIndex != index ) {
+        p->currentIndex = index;
+        emit currentIndexChanged();
+    }
 }
 
 QString ImageListModel::name()
@@ -248,13 +250,30 @@ void ImageListModel::removeSelection()
                 break;
             }
             auto d = p->list.at(i);
-            if( std::get<2>(d) ) {
-                beginRemoveRows(QModelIndex(), i, i);
-                QString path = std::get<1>(d);
-                QFile::remove(path.right(path.length() - QString("file:///").length()));
-                p->list.takeAt(i);
+            if( std::get<2>(d) )
+            {
+                bool flag = false;
+                int type = std::get<3>(d);
+                QString path = QString("");
+                if( type == __video ) {
+                    path = std::get<4>(d);
+                }
+                else {
+                    QString qmlPath = std::get<1>(d);
+                    path = qmlPath.right(qmlPath.length() - QString("file:///").length());
+                }
+
+                flag = QFile::remove(path);
+                if( !flag ) {
+                    qDebug() << "remove fail, type:" << type << ", path:" << path;
+                }
+                else {
+                    beginRemoveRows(QModelIndex(), i, i);
+                    p->list.takeAt(i);
+                    endRemoveRows();
+                }
+
                 removeCount ++;
-                endRemoveRows();
             }
             else {
                 i ++;

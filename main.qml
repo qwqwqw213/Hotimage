@@ -23,8 +23,8 @@ ApplicationWindow {
      *  win32
      *  set visibility: window.Minimized debugging
      */
-//    visibility: Window.FullScreen
-    visibility: Window.Minimized
+    visibility: Window.FullScreen
+//    visibility: Window.Minimized
 
     title: qsTr("Hotimage")
 
@@ -88,7 +88,7 @@ ApplicationWindow {
                 height: width
                 anchors.top: parent.top
                 anchors.topMargin: height / 2
-                anchors.left: btnShutter.left
+                anchors.left: btnTempSetting.left
                 color: "transparent"
 //                color: "red"
 
@@ -110,15 +110,44 @@ ApplicationWindow {
                 }
             }
 
+            // 温度开关
+            Rectangle {
+                id: btnTempSetting
+                width: parent.safeWidth * 0.75
+                height: width
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenterOffset: Config.leftMargin / 2
+                anchors.verticalCenter: parent.verticalCenter
+                color: "transparent"
+                visible: Config.canReadTemperature
+
+                Text {
+                    id: icon
+                    anchors.centerIn: parent
+                    font.family: "FontAwesome"
+                    font.pixelSize: btnTempSetting.width * 0.8
+                    text: "\uf2cb"
+                    color: TcpCamera.showTemp ? "#dc143c" : "#696969"
+                    rotation: window.oldRotation
+                }
+
+                MouseArea {
+                    id: btnTempSettingArea
+                    anchors.fill: parent
+                    onClicked: {
+                        TcpCamera.showTemp = !TcpCamera.showTemp
+                    }
+                }
+            }
+
             // 快门刷新按钮
             Rectangle {
                 id: btnShutter
                 width: parent.safeWidth * 0.75
                 height: width
-//                anchors.centerIn: parent
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.horizontalCenterOffset: Config.leftMargin / 2
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: height / 2
+                anchors.left: btnTempSetting.left
                 color: "transparent"
 
                 Text {
@@ -135,35 +164,6 @@ ApplicationWindow {
                     anchors.fill: parent
                     onClicked: {
                         TcpCamera.shutter()
-                    }
-                }
-            }
-
-            // 温度按钮
-            Rectangle {
-                id: btnTempSetting
-                width: parent.safeWidth * 0.75
-                height: width
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: height / 2
-                anchors.left: btnShutter.left
-                color: "transparent"
-
-                Text {
-                    id: icon
-                    anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: btnShutter.width * 0.8
-                    text: "\uf2cb"
-                    color: TcpCamera.showTemp ? "#dc143c" : "#696969"
-                    rotation: window.oldRotation
-                }
-
-                MouseArea {
-                    id: btnTempSettingArea
-                    anchors.fill: parent
-                    onClicked: {
-                        TcpCamera.showTemp = !TcpCamera.showTemp
                     }
                 }
             }
@@ -271,7 +271,7 @@ ApplicationWindow {
             // 截图按钮
             Rectangle {
                 id: btnCapture
-                width: parent.safeWidth * 0.65
+                width: parent.safeWidth * 0.55
                 height: width
 //                anchors.centerIn: parent
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -283,13 +283,6 @@ ApplicationWindow {
                 border.color: btnCaptureArea.pressed ? "#A0A0A0" : "white"
                 border.width: 4
                 radius: width / 2
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: "transparent"
-                    border.width: 1
-                    border.color: "red"
-                }
 
                 Rectangle {
                     id: btnCaptrueIcon
