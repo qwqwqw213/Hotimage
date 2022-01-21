@@ -9,13 +9,36 @@ Item {
 
     function itemRect(index) {
         var item = imageList.itemAtIndex(index)
+        var x = item.x
+        var y = (item.y - imageList.originY)
+                - (imageList.contentY - imageList.originY)
+                + imageList.y
+        var w = item.width
+        var h = item.height
+
+        /*
+         *  当从ImagePlayer返回的时候
+         *  当前图片在GridView中的坐标超出了屏幕
+         *  重新定位GridView的Content Y
+         */
+        if( y < imageList.y || (y + item.height) > imageList.height ) {
+            y = imageList.y + imageList.height / 2 - item.height / 2
+            imageList.contentY = imageList.y + (item.y - imageList.originY) - y + imageList.originY
+            if( imageList.contentY + imageList.topMargin < 0 ) {
+                imageList.contentY = 0 - imageList.topMargin
+            }
+
+            var bottom = item.y + item.height - imageList.height
+            if( imageList.contentY + imageList.topMargin > bottom ) {
+                imageList.contentY = bottom
+            }
+        }
+
         return {
-            x: item.x,
-            y: (item.y - imageList.originY)
-               - (imageList.contentY - imageList.originY)
-               + imageList.y,
-            w: item.width,
-            h: item.height
+            x: x,
+            y: y,
+            w: w,
+            h: h
         }
     }
 
@@ -28,8 +51,6 @@ Item {
             property int row: imageListView.width > imageListView.height ?
                                   5 : 3
             anchors.fill: parent
-//            width: imageListView.width
-//            height: imageListView.height - 60
             cellWidth: imageListView.width > imageListView.height ?
                            (imageListView.width / row) : (imageListView.width / row)
             cellHeight: cellWidth
@@ -112,26 +133,6 @@ Item {
 //            onContentYChanged: {
 //                console.log("content y:", imageList.contentY, "origin y:", imageList.originY)
 //            }
-
-            Connections {
-                target: ImageModel
-                onCurrentIndexChanged: {
-                    if( imageList.contentHeight > imageList.height ) {
-                        var index = ImageModel.currentIndex
-                        var row = imageList.row
-                        var flag = (imageList.count % row == 0) ? 0 : 1
-                        var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
-                        bottom += imageList.originY;
-                        var y = Math.floor(index / row) * imageList.cellHeight;
-                        y += imageList.originY - imageList.topMargin;
-                        if( y > bottom ) {
-                            y = bottom
-                        }
-//                        console.log("content Y changed:", y, bottom, imageList.originY)
-                        imageList.contentY = y
-                    }
-                }
-            }
         }
 
         // 选择区域
@@ -234,7 +235,6 @@ Item {
             width: parent.width
             height: 60
             color: "#2f4f4f"
-//            y: imageListView.height
 
             property real posY: 0 - height
             Behavior on posY {
@@ -258,15 +258,13 @@ Item {
                 }
             }
 
-            /*
             // 删除按钮
-            Rectangle {
+            Item {
                 id: btnDelete
                 width: 60
                 height: 60
                 anchors.right: parent.right
                 anchors.rightMargin: 5
-                color: "transparent"
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
@@ -287,57 +285,6 @@ Item {
                     text: qsTr("Delete")
                 }
             }
-
-            state: "hide"
-            states: [
-                State {
-                    name: "hide"
-                    PropertyChanges {
-                        target: bottom
-                        y: imageListView.height
-                    }
-                },
-                State {
-                    name: "show"
-                    PropertyChanges {
-                        target: bottom
-                        y: imageListView.height - bottom.height
-                    }
-                }
-            ]
-            transitions: [
-                Transition {
-                    from: "hide"
-                    to: "show"
-                    PropertyAnimation {
-                        target: bottom
-                        property: "y"
-                        duration: 160
-                        easing.type: Easing.OutCurve
-                    }
-                },
-                Transition {
-                    from: "show"
-                    to: "hide"
-                    PropertyAnimation {
-                        target: bottom
-                        property: "y"
-                        duration: 160
-                        easing.type: Easing.OutCurve
-                    }
-                }
-            ]
-            */
-
-            // Behavior的效果不好
-            // 在 StackView 切换界面时, 会先从顶部移动到底部
-            /*
-            Behavior on y {
-                NumberAnimation {
-                    duration: 200
-                }
-            }
-            */
         }
 
     }

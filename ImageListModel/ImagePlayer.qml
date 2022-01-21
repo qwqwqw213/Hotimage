@@ -8,42 +8,22 @@ Item {
     id: imagePlayer
 
     onVisibleChanged: {
-        console.log("player visible:", visible)
+        if( visible === false ) {
+            toolbar.barY = 0
+        }
     }
 
-//    Rectangle {
-//        anchors.fill: parent
-//        color: "black"
-//        opacity: imageZoomItem.fromW / parent.width
-//    }
-
-//    signal currentIndexChanged(int index)
-
     function hideTitle() {
-        if( title.state !== "hide" ) {
-            title.state = "hide"
-            bottom.state = "hide"
-        }
+        toolbar.barY = 60
     }
 
     function autoTitle(state) {
-        if( title.state === "show" ) {
-            title.state = "hide"
-            bottom.state = "hide"
+        if( toolbar.barY > 0 ) {
+            toolbar.barY = 0
         }
         else {
-            title.state = "show"
-            bottom.state = "show"
+            toolbar.barY = 60
         }
-    }
-
-    function show(index, x, y, w, h, path) {
-        photoScan.currentIndex = index
-        photoScan.positionViewAtIndex(index, ListView.Beginning)
-        miniPhtotList.positionViewAtIndex(index, ListView.Center)
-        visible = true
-//        zoomInRect.show(x, y, w, h, path)
-        state = "show"
     }
 
     property bool isShow: false
@@ -70,8 +50,8 @@ Item {
         imageZoomItem.toY = imagePlayer.y
         imageZoomItem.toW = imagePlayer.width
         imageZoomItem.toH = imagePlayer.height
+        imageZoomItem.isZoom = true
 
-        imageZoomItemSource.isZoom = true
         imageZoomItemSource.fromW = pw
         imageZoomItemSource.fromH = ph
         imageZoomItemSource.source = path
@@ -83,7 +63,7 @@ Item {
 
     function quit() {
         photoScan.interactive = false
-        imageZoomItemSource.isZoom = false
+        imageZoomItem.isZoom = false
 
         var scanItem = photoScan.currentItem
         imageZoomItem.fromX = 0 - scanItem.contentX
@@ -97,9 +77,6 @@ Item {
         imageZoomItem.toW = listItemRect.w
         imageZoomItem.toH = listItemRect.h
 
-        console.log(imageZoomItem.fromX, imageZoomItem.fromY,
-                    imageZoomItem.toX, imageZoomItem.toY)
-
         imageZoomItemSource.fromW = scanItem.paintW
         imageZoomItemSource.fromH = scanItem.paintH
         imageZoomItemSource.source = scanItem.source
@@ -108,8 +85,7 @@ Item {
     Item {
         id: imageZoomItem
 
-        property var itemObject
-
+        property bool isZoom
         property real fromX
         property real fromY
         property real fromW
@@ -118,13 +94,6 @@ Item {
         property real toY
         property real toW
         property real toH
-
-//        Rectangle {
-//            anchors.fill: parent
-//            color: "transparent"
-//            border.color: "white"
-//            border.width: 1
-//        }
 
         z: 2
         visible: false
@@ -135,7 +104,7 @@ Item {
             asynchronous: true
             anchors.centerIn: parent
 
-            property bool isZoom
+
             property real fromW
             property real fromH
             property real toW
@@ -144,12 +113,11 @@ Item {
             onStatusChanged: {
                 if( imageZoomItemSource.status == Image.Ready )
                 {
-                    console.log("image ready")
                     imageZoomItem.visible = true
                     var screenRatio = imageZoomItem.toW / imageZoomItem.toH
                     var imageRatio = imageZoomItemSource.implicitWidth / imageZoomItemSource.implicitHeight
 
-                    if( imageZoomItemSource.isZoom )
+                    if( imageZoomItem.isZoom )
                     {
                         var toScale
                         if( Config.isLandscape )
@@ -239,7 +207,7 @@ Item {
                 easing.type: Easing.InQuad
             }
             onStarted: {
-                if( imageZoomItemSource.isZoom )
+                if( imageZoomItem.isZoom )
                 {
                     imageListView.interactive = false
                     imagePlayer.visible = true
@@ -252,14 +220,7 @@ Item {
             }
 
             onFinished: {
-                console.log("finished:",
-                            imageZoomItem.fromX, imageZoomItem.fromY,
-                            imageZoomItem.fromW, imageZoomItem.fromH,
-                            imageZoomItem.toX, imageZoomItem.toY,
-                            imageZoomItem.toW, imageZoomItem.toH,
-                            imageZoomItemSource.fromW, imageZoomItemSource.fromH,
-                            imageZoomItemSource.toW, imageZoomItemSource.toH)
-                if( imageZoomItemSource.isZoom )
+                if( imageZoomItem.isZoom )
                 {
                     photoScan.interactive = true
                     photoScan.visible = true
@@ -280,6 +241,16 @@ Item {
         }
     }
 
+    property real childOpacity: imageZoomItem.isZoom ?
+                                    imageZoomItem.width / imageZoomItem.toW
+                                  : imageZoomItem.width / imageZoomItem.fromW
+
+    Rectangle {
+        anchors.fill: parent
+        color: "black"
+        opacity: childOpacity
+    }
+
     ListView {
         id: photoScan
         anchors.fill: parent
@@ -287,7 +258,7 @@ Item {
         model: ImageModel
         cacheBuffer: 5
         clip: true
-        z:1
+        z: 1
         interactive: VideoPlayer.playing > 0 ? false : true
         spacing: 20
 //        maximumFlickVelocity:7000  //设置滑动的最大速度
@@ -328,7 +299,6 @@ Item {
         onCurrentIndexChanged: {
 //            console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
-//            imagePaintView.closeStream()
             VideoPlayer.closeStream()
             if( !miniPhtotList.moving ) {
                 miniPhtotList.positionViewAtIndex(ImageModel.currentIndex,  ListView.Center)
@@ -351,274 +321,132 @@ Item {
 //        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
 
-    Connections {
-        target: ImageModel
-        onCurrentIndexChanged: {
-            title.text = ImageModel.name
-        }
-    }
-
-    // title
-    Rectangle {
-        id: title
-        property alias text: titleText.text
+    Item {
+        id: toolbar
+        anchors.fill: parent
         z: 5
+        opacity: childOpacity
 
-        width: parent.width
-        height: 60
-        color: "#2f4f4f"
+        property real barY: 0
+        Behavior on barY {
+            NumberAnimation { duration: 200 }
+        }
+
+        // top bar
         Rectangle {
-            id: btnReturn
-            width: 60
+            width: parent.width
             height: 60
             anchors.left: parent.left
-            anchors.leftMargin: 5
-            color: "transparent"
-            Text {
-                anchors.centerIn: parent
-                font.family: "FontAwesome"
-                font.pixelSize: parent.width * 0.65
-                text: "\uf053"
-                color: btnReturnArea.pressed ? "#6f9f9f" : "white"
-            }
-            MouseArea {
-                id: btnReturnArea
-                anchors.fill: parent
-                /*
-                 *  返回点击
-                 */
-                onClicked: {
-//                    imagePaintView.closeStream()
-                    imagePlayer.quit()
-
-
-                    VideoPlayer.closeStream()
-                }
-            }
-
-            Text {
-                id: titleText
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.right
-                font.pixelSize: 20
-                color: "white"
-//                text: qsTr("Photo")
-            }
-        }
-
-        state: "show"
-        states: [
-            State {
-                name: "hide"
-                PropertyChanges {
-                    target: title
-                    y: 0 - height
-                }
-            },
-            State {
-                name: "show"
-                PropertyChanges {
-                    target: title
-                    y: 0
-                }
-            }
-        ]
-        transitions: [
-            Transition {
-                from: "hide"
-                to: "show"
-                YAnimator {
-                    target: title
-                    duration: 160
-                    easing.type: Easing.OutCurve
-                }
-            },
-            Transition {
-                from: "show"
-                to: "hide"
-                YAnimator {
-                    target: title
-                    duration: 160
-                    easing.type: Easing.OutCurve
-                }
-            }
-        ]
-    }
-
-    /*
-    state: "hide"
-    states: [
-        State {
-            name: "hide"
-            PropertyChanges {
-                target: imagePlayer
-                opacity: 0
-            }
-        },
-        State {
-            name: "show"
-            PropertyChanges {
-                target: imagePlayer
-                opacity: 1
-            }
-        }
-    ]
-    transitions: [
-        Transition {
-            from: "hide"
-            to: "show"
-            OpacityAnimator {
-                target: imagePlayer
-                duration: 200
-            }
-        },
-        Transition {
-            from: "show"
-            to: "hide"
-            OpacityAnimator {
-                target: imagePlayer
-                duration: 200
-            }
-        }
-    ]
-
-    onOpacityChanged: {
-        if( opacity < 0.1 ) {
-            if( visible === true ) {
-                visible = false;
-            }
-        }
-        if( opacity > 0.1 ) {
-            if( visible === false ) {
-                visible = true;
-            }
-        }
-    }
-    */
-
-//    FolderListModel {
-//        id:scanModel
-//        showDirs: false
-//        nameFilters: ["*.png", "*.jpg", "*.jpeg", "*.gif","*.JPG","*.PNG", "*.bmp","*.BMP","*.GIF","*.gif"]
-//        folder: Config.albumFolder
-//    }
-
-//    Component.onCompleted: {
-//        console.log("floder = ", Config.albumFolder, width, height, photoScan.width)
-//    }
-
-
-    Rectangle {
-        id: bottom
-
-        // behavio 在屏幕旋转的时候 不会更新坐标
-        // 需要替换为 states
-//        Behavior on y {
-//            YAnimator {
-//                duration: 160
-//                easing.type: Easing.OutCurve
-//            }
-//        }
-
-        state: "show"
-        states: [
-            State {
-                name: "hide"
-                PropertyChanges {
-                    target: bottom
-                    y: imagePlayer.height
-                }
-            },
-            State {
-                name: "show"
-                PropertyChanges {
-                    target: bottom
-                    y: imagePlayer.height - height
-                }
-            }
-        ]
-        transitions: [
-            Transition {
-                from: "hide"
-                to: "show"
-                YAnimator {
-                    target: bottom
-                    duration: 160
-                    easing.type: Easing.OutCurve
-                }
-            },
-            Transition {
-                from: "show"
-                to: "hide"
-                YAnimator {
-                    target: bottom
-                    duration: 160
-                    easing.type: Easing.OutCurve
-                }
-            }
-        ]
-
-//        x: 0
-//        y: parent.height - height
-        width: parent.width
-        height: 60
-        color: "#2f4f4f"
-        z: 5
-        GridView {
-            id: miniPhtotList
-            width: parent.width
-            height: parent.height
-            anchors.bottom: parent.bottom
-            model: ImageModel
-            cellWidth: width > height ? height : width
-            cellHeight: cellWidth
-            flow: GridView.FlowTopToBottom
-            layoutDirection: GridView.LeftToRight
-            leftMargin: width / 2 - cellWidth / 2
-            rightMargin: width / 2 - cellWidth / 2
-
-            // 底部滑动, 更改当前播放的图片
-//            onContentXChanged: {
-//                var index = Number((contentX + leftMargin) / cellWidth)
-//                if( index > 0 && photoScan.currentIndex !== index ) {
-//                    photoScan.positionViewAtIndex(index, ListView.Beginning)
-//                }
-//            }
-
-            delegate: Rectangle {
-                id: itembg
-                width: miniPhtotList.cellWidth
-                height: miniPhtotList.cellHeight
+            anchors.top: parent.top
+            anchors.topMargin: 0 - toolbar.barY
+            color: "#2f4f4f"
+            Rectangle {
+                id: btnReturn
+                width: 60
+                height: 60
+                anchors.left: parent.left
+                anchors.leftMargin: 5
                 color: "transparent"
-                Image {
-                    asynchronous: true
-                    id: photo
-                    cache: true
-                    sourceSize: Qt.size(parent.width, parent.height)
-//                    source: fileType == 0 ? path : ""
-                    source: path
+                Text {
                     anchors.centerIn: parent
-                    width: parent.width - 2
-                    height: parent.height - 2
-                    smooth: true
-                    fillMode: Image.PreserveAspectCrop
-                    Text {
-                        visible: fileType === 1
-                        anchors.centerIn: parent
-                        font.family: "FontAwesome"
-                        font.pixelSize: parent.width * 0.35
-                        text: "\uf144"
-                        color: mouseArea.pressed ? "#a0a0a0" : "white"
+                    font.family: "FontAwesome"
+                    font.pixelSize: parent.width * 0.65
+                    text: "\uf053"
+                    color: btnReturnArea.pressed ? "#6f9f9f" : "white"
+                }
+                MouseArea {
+                    id: btnReturnArea
+                    anchors.fill: parent
+                    /*
+                     *  返回点击
+                     */
+                    onClicked: {
+    //                    imagePaintView.closeStream()
+                        imagePlayer.quit()
+
+
+                        VideoPlayer.closeStream()
                     }
                 }
 
-                MouseArea{
-                    id: mouseArea
-                    anchors.fill: parent
-                    onClicked: {
-                        console.log("mini list clicked index:", index)
-                        miniPhtotList.positionViewAtIndex(index, ListView.Center)
-                        photoScan.positionViewAtIndex(index, ListView.Beginning)
+                Text {
+                    id: titleText
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.right
+                    font.pixelSize: 20
+                    color: "white"
+    //                text: qsTr("Photo")
+                }
+                // 当前Item切换, 更新标题文本
+                Connections {
+                    target: ImageModel
+                    onCurrentIndexChanged: {
+                        titleText.text = ImageModel.name
+                    }
+                }
+            }
+        }
+
+        // bottom bar
+        Rectangle {
+            width: parent.width
+            height: 60
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 0 - toolbar.barY
+            color: "#2f4f4f"
+
+            /*
+             *  底部 图片列表 缩略图
+             */
+            GridView {
+                id: miniPhtotList
+                width: parent.width
+                height: parent.height
+                anchors.bottom: parent.bottom
+                model: ImageModel
+                cellWidth: width > height ? height : width
+                cellHeight: cellWidth
+                flow: GridView.FlowTopToBottom
+                layoutDirection: GridView.LeftToRight
+                leftMargin: width / 2 - cellWidth / 2
+                rightMargin: width / 2 - cellWidth / 2
+
+                delegate: Rectangle {
+                    id: itembg
+                    width: miniPhtotList.cellWidth
+                    height: miniPhtotList.cellHeight
+                    color: "transparent"
+                    Image {
+                        asynchronous: true
+                        id: photo
+                        cache: true
+                        sourceSize: Qt.size(parent.width, parent.height)
+    //                    source: fileType == 0 ? path : ""
+                        source: path
+                        anchors.centerIn: parent
+                        width: parent.width - 2
+                        height: parent.height - 2
+                        smooth: true
+                        fillMode: Image.PreserveAspectCrop
+                        Text {
+                            visible: fileType === 1
+                            anchors.centerIn: parent
+                            font.family: "FontAwesome"
+                            font.pixelSize: parent.width * 0.35
+                            text: "\uf144"
+                            color: mouseArea.pressed ? "#a0a0a0" : "white"
+                        }
+                    }
+
+                    MouseArea{
+                        id: mouseArea
+                        anchors.fill: parent
+                        onClicked: {
+                            console.log("mini list clicked index:", index)
+                            miniPhtotList.positionViewAtIndex(index, ListView.Center)
+                            photoScan.positionViewAtIndex(index, ListView.Beginning)
+                        }
                     }
                 }
             }
