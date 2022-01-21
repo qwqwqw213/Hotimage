@@ -1,9 +1,9 @@
 import QtQuick 2.11
 
-Rectangle{
+Item {
     id: wrapper
     property bool pinchAreaBool: true
-    color: "transparent"
+//    color: "transparent"
 
 //    property real initWidth : Math.min(width,height)
 //    property real initHeight: Math.max(width,height)
@@ -25,14 +25,20 @@ Rectangle{
         flick.contentHeight = inith
     }
 
+    property alias contentX: flick.contentX
+    property alias contentY: flick.contentY
+    property alias contentW: flick.contentWidth
+    property alias contentH: flick.contentHeight
+    property alias paintW: image.paintedWidth
+    property alias paintH: image.paintedHeight
+    property alias source: image.source
 
     Flickable {
       id: flick
       anchors.fill: parent
       contentWidth: initw
       contentHeight: inith
-      z:1
-
+      z: 1
 
       onContentXChanged: {
           imagePlayer.hideTitle()
@@ -85,9 +91,8 @@ Rectangle{
 
           Image {
               id: image
-              width: flick.contentWidth - 10
-              height: flick.contentHeight - 10
-              cache: true
+              width: flick.contentWidth
+              height: flick.contentHeight
               source: path
               anchors.centerIn: parent
               asynchronous: true

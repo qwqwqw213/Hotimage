@@ -67,6 +67,8 @@ public:
 
     Q_PROPERTY(bool canReadTemperature READ canReadTemperature CONSTANT)
     bool canReadTemperature();
+    Q_PROPERTY(bool isMobile READ isMobile CONSTANT)
+    bool isMobile();
 
 Q_SIGNALS:
     void rotationChanged();

@@ -205,6 +205,8 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 #else
     p->width = 960;
     p->height = 515;
+//    p->width = 515;
+//    p->height = 960;
 #endif
     if( p->width > p->height ) {
         p->isLandscape = true;
@@ -363,6 +365,15 @@ int Config::rightMargin()
 bool Config::canReadTemperature()
 {
 #ifdef TEMPERATURE_SDK
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool Config::isMobile()
+{
+#ifndef Q_OS_WINDOWS
     return true;
 #else
     return false;

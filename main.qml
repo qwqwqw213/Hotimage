@@ -23,8 +23,7 @@ ApplicationWindow {
      *  win32
      *  set visibility: window.Minimized debugging
      */
-    visibility: Window.FullScreen
-//    visibility: Window.Minimized
+    visibility: Config.isMobile ? Window.FullScreen : Window.Minimized
 
     title: qsTr("Hotimage")
 
@@ -492,7 +491,7 @@ ApplicationWindow {
     }
 
     Loading {
-        visible: !TcpCamera.isConnected
+        visible: TcpCamera.isConnected
         anchors.fill: parent
         text: qsTr("Camera connecting...")
     }

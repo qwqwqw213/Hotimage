@@ -1,15 +1,21 @@
-import QtQuick 2.0
+import QtQuick 2.14
 import QtQuick.Controls 2.12
-import QtQuick 2.4
 import Qt.labs.folderlistmodel 2.14
 
 //import Custom.ImagePaintView 1.1
 
-Rectangle{
+Item {
     id: imagePlayer
-//    property alias photoScanModel: photoScan.model
-    anchors.fill: parent
-    color: "black"
+
+    onVisibleChanged: {
+        console.log("player visible:", visible)
+    }
+
+//    Rectangle {
+//        anchors.fill: parent
+//        color: "black"
+//        opacity: imageZoomItem.fromW / parent.width
+//    }
 
 //    signal currentIndexChanged(int index)
 
@@ -40,6 +46,240 @@ Rectangle{
         state = "show"
     }
 
+    property bool isShow: false
+
+    /*
+     *  缩放动画需要缩放 图像外框 和 图像
+     *  图像外框 需要 8 个参数
+     *  起始坐标 x, y (进入时, GridView的item坐标, 退出时: 屏幕左上角坐标)
+     *  起始宽高 w, h (进入时: GridView的item宽高, 退出时: 屏幕宽高)
+     *  终点坐标 x, y (进入时: 屏幕左上角坐标, 退出时: GridView的item坐标)
+     *  终点宽高 w, h (进入时: 屏幕宽高, 退出时: GridView的Item 宽高)
+     *  图像 需要 4 个参数
+     *  图像起始宽高(进入时: GridView的item图形paintedWidth, Height, 退出时: 当前paintedWidth, Height)
+     *  图像终点宽高(进入时: 当前paintedWidth, Height, 退出时: GridView的item图形paintedWidth, Height)
+     */
+    function zoom(index, path, x, y, w, h, pw, ph) {
+        photoScan.interactive = false
+        imageZoomItem.visible = false
+        imageZoomItem.fromX = x
+        imageZoomItem.fromY = y
+        imageZoomItem.fromW = w
+        imageZoomItem.fromH = h
+        imageZoomItem.toX = imagePlayer.x
+        imageZoomItem.toY = imagePlayer.y
+        imageZoomItem.toW = imagePlayer.width
+        imageZoomItem.toH = imagePlayer.height
+
+        imageZoomItemSource.isZoom = true
+        imageZoomItemSource.fromW = pw
+        imageZoomItemSource.fromH = ph
+        imageZoomItemSource.source = path
+
+        photoScan.currentIndex = index
+        photoScan.positionViewAtIndex(index, ListView.Beginning)
+        miniPhtotList.positionViewAtIndex(index, ListView.Center)
+    }
+
+    function quit() {
+        photoScan.interactive = false
+        imageZoomItemSource.isZoom = false
+
+        var scanItem = photoScan.currentItem
+        imageZoomItem.fromX = 0 - scanItem.contentX
+        imageZoomItem.fromY = 0 - scanItem.contentY
+        imageZoomItem.fromW = scanItem.contentW
+        imageZoomItem.fromH = scanItem.contentH
+
+        var listItemRect = imageListView.itemRect(photoScan.currentIndex)
+        imageZoomItem.toX = listItemRect.x
+        imageZoomItem.toY = listItemRect.y
+        imageZoomItem.toW = listItemRect.w
+        imageZoomItem.toH = listItemRect.h
+
+        console.log(imageZoomItem.fromX, imageZoomItem.fromY,
+                    imageZoomItem.toX, imageZoomItem.toY)
+
+        imageZoomItemSource.fromW = scanItem.paintW
+        imageZoomItemSource.fromH = scanItem.paintH
+        imageZoomItemSource.source = scanItem.source
+    }
+
+    Item {
+        id: imageZoomItem
+
+        property var itemObject
+
+        property real fromX
+        property real fromY
+        property real fromW
+        property real fromH
+        property real toX
+        property real toY
+        property real toW
+        property real toH
+
+//        Rectangle {
+//            anchors.fill: parent
+//            color: "transparent"
+//            border.color: "white"
+//            border.width: 1
+//        }
+
+        z: 2
+        visible: false
+        clip: true
+
+        Image {
+            id: imageZoomItemSource
+            asynchronous: true
+            anchors.centerIn: parent
+
+            property bool isZoom
+            property real fromW
+            property real fromH
+            property real toW
+            property real toH
+
+            onStatusChanged: {
+                if( imageZoomItemSource.status == Image.Ready )
+                {
+                    console.log("image ready")
+                    imageZoomItem.visible = true
+                    var screenRatio = imageZoomItem.toW / imageZoomItem.toH
+                    var imageRatio = imageZoomItemSource.implicitWidth / imageZoomItemSource.implicitHeight
+
+                    if( imageZoomItemSource.isZoom )
+                    {
+                        var toScale
+                        if( Config.isLandscape )
+                        {
+                            toScale = imageRatio > 1 ?
+                                        (screenRatio > imageRatio ?
+                                             imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                                           : imageZoomItem.toW / imageZoomItemSource.implicitWidth)
+                                      : imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                            toW = imageZoomItemSource.implicitWidth * toScale
+                            toH = imageZoomItemSource.implicitHeight * toScale
+                        }
+                        else
+                        {
+                            toScale = imageRatio > 1 ?
+                                        imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                                      : (imageRatio > screenRatio ?
+                                             imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                                           : imageZoomItem.toH / imageZoomItemSource.implicitHeight)
+                            toW = imageZoomItemSource.implicitWidth * toScale
+                            toH = imageZoomItemSource.implicitHeight * toScale
+                        }
+                    }
+                    else
+                    {
+                        var fromScale = imageRatio > 1 ?
+                                    imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                                  : imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                        toW = imageZoomItemSource.implicitWidth * fromScale
+                        toH = imageZoomItemSource.implicitHeight * fromScale
+                    }
+
+                    imageZoomItemAnimation.running = true
+                }
+            }
+        }
+
+        ParallelAnimation {
+            id: imageZoomItemAnimation
+            property int duration: 200
+            PropertyAnimation {
+                target: imageZoomItem
+                properties: "x"
+                from: imageZoomItem.fromX
+                to: imageZoomItem.toX
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            PropertyAnimation {
+                target: imageZoomItem
+                properties: "y"
+                from: imageZoomItem.fromY
+                to: imageZoomItem.toY
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            PropertyAnimation {
+                target: imageZoomItem
+                properties: "width"
+                from: imageZoomItem.fromW
+                to: imageZoomItem.toW
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            PropertyAnimation {
+                target: imageZoomItem
+                properties: "height"
+                from: imageZoomItem.fromH
+                to: imageZoomItem.toH
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            PropertyAnimation {
+                target: imageZoomItemSource
+                properties: "width"
+                from: imageZoomItemSource.fromW
+                to: imageZoomItemSource.toW
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            PropertyAnimation {
+                target: imageZoomItemSource
+                properties: "height"
+                from: imageZoomItemSource.fromH
+                to: imageZoomItemSource.toH
+                duration: imageZoomItemAnimation.duration
+                easing.type: Easing.InQuad
+            }
+            onStarted: {
+                if( imageZoomItemSource.isZoom )
+                {
+                    imageListView.interactive = false
+                    imagePlayer.visible = true
+                    imagePlayer.isShow = true
+                }
+                else
+                {
+                    photoScan.visible = false
+                }
+            }
+
+            onFinished: {
+                console.log("finished:",
+                            imageZoomItem.fromX, imageZoomItem.fromY,
+                            imageZoomItem.fromW, imageZoomItem.fromH,
+                            imageZoomItem.toX, imageZoomItem.toY,
+                            imageZoomItem.toW, imageZoomItem.toH,
+                            imageZoomItemSource.fromW, imageZoomItemSource.fromH,
+                            imageZoomItemSource.toW, imageZoomItemSource.toH)
+                if( imageZoomItemSource.isZoom )
+                {
+                    photoScan.interactive = true
+                    photoScan.visible = true
+                }
+                else
+                {
+                    imagePlayer.isShow = false
+                    imageListView.interactive = true
+                    imageZoomItemSource.source = ""
+                    imagePlayer.visible = false
+                    var scanItem = photoScan.currentItem
+                    scanItem.contentX = 0
+                    scanItem.contentY = 0
+                    scanItem.contentW = photoScan.width
+                    scanItem.contentH = photoScan.height
+                }
+            }
+        }
+    }
+
     ListView {
         id: photoScan
         anchors.fill: parent
@@ -49,11 +289,27 @@ Rectangle{
         clip: true
         z:1
         interactive: VideoPlayer.playing > 0 ? false : true
+        spacing: 20
 //        maximumFlickVelocity:7000  //设置滑动的最大速度
         highlightRangeMode: ListView.StrictlyEnforceRange
         orientation: ListView.Horizontal
         snapMode: ListView.SnapOneItem
-        visible: imagePlayer.state == "show"
+//        visible: imagePlayer.state == "show"
+        visible: false
+        onVisibleChanged: {
+            if( visible ) {
+                timer.start()
+            }
+        }
+
+        Timer {
+            id: timer
+            interval: 60
+            onTriggered: {
+                imageZoomItem.visible = false
+                imageZoomItemSource.source = ""
+            }
+        }
 
         delegate: AlbumScanDelegate {
             width: photoScan.width
@@ -106,7 +362,7 @@ Rectangle{
     Rectangle {
         id: title
         property alias text: titleText.text
-        z: 2
+        z: 5
 
         width: parent.width
         height: 60
@@ -128,10 +384,15 @@ Rectangle{
             MouseArea {
                 id: btnReturnArea
                 anchors.fill: parent
+                /*
+                 *  返回点击
+                 */
                 onClicked: {
 //                    imagePaintView.closeStream()
+                    imagePlayer.quit()
+
+
                     VideoPlayer.closeStream()
-                    imagePlayer.state = "hide"
                 }
             }
 
@@ -184,6 +445,7 @@ Rectangle{
         ]
     }
 
+    /*
     state: "hide"
     states: [
         State {
@@ -232,6 +494,7 @@ Rectangle{
             }
         }
     }
+    */
 
 //    FolderListModel {
 //        id:scanModel
@@ -300,7 +563,7 @@ Rectangle{
         width: parent.width
         height: 60
         color: "#2f4f4f"
-        z: 2
+        z: 5
         GridView {
             id: miniPhtotList
             width: parent.width
@@ -321,8 +584,6 @@ Rectangle{
 //                    photoScan.positionViewAtIndex(index, ListView.Beginning)
 //                }
 //            }
-
-
 
             delegate: Rectangle {
                 id: itembg

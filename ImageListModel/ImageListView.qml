@@ -1,24 +1,22 @@
-import QtQuick 2.12
+import QtQuick 2.14
 import QtQuick.Controls 2.12
 
 Item {
     id: imageListView
-//    anchors.fill: parent
-//    width: parent.width
-//    height: parent.height
-//    y: height
-    onVisibleChanged: {
-    }
-
-//    Behavior on y {
-//        NumberAnimation {
-//            duration: 300
-//        }
-//    }
     clip: true
 
-    MouseArea {
-        anchors.fill: parent
+    property alias interactive: imageList.interactive
+
+    function itemRect(index) {
+        var item = imageList.itemAtIndex(index)
+        return {
+            x: item.x,
+            y: (item.y - imageList.originY)
+               - (imageList.contentY - imageList.originY)
+               + imageList.y,
+            w: item.width,
+            h: item.height
+        }
     }
 
     Rectangle {
@@ -29,26 +27,29 @@ Item {
             id: imageList
             property int row: imageListView.width > imageListView.height ?
                                   5 : 3
-            x: 0
-            y: 60
-            width: imageListView.width
-            height: imageListView.height - 60
+            anchors.fill: parent
+//            width: imageListView.width
+//            height: imageListView.height - 60
             cellWidth: imageListView.width > imageListView.height ?
                            (imageListView.width / row) : (imageListView.width / row)
             cellHeight: cellWidth
             model: ImageModel
 
-            bottomMargin: contentHeight >= height ? imageListView.height - bottom.y : 0
+            topMargin: title.height
+            bottomMargin: bottom.height + bottom.posY
 
             delegate: Rectangle {
                 id: delegate
                 width: imageList.cellWidth
                 height: imageList.cellHeight
                 color: "transparent"
+                clip: true
+                visible: ImageModel.currentIndex === index ?
+                             (imagePlayer.isShow ? false : true) : true
 
                 Image {
+                    id: delegateSource
                     asynchronous: true
-//                    source: fileType == 0 ? path : ""
                     source: path
                     width: imageList.cellWidth - 2
                     height: imageList.cellHeight - 2
@@ -87,20 +88,17 @@ Item {
                         }
                         else {
                             ImageModel.currentIndex = index
-                            imagePlayer.show(index,
-                                             delegate.x + imageList.x + 1,
-                                             delegate.y - imageList.contentY + imageList.y + 1,
-                                             imageList.cellWidth - 2,
-                                             imageList.cellHeight - 2,
-                                             fileType === 0 ? path : "")
-                        }
-                    }
-                    onPositionChanged: {
-                        if( ImageModel.selectionStatus ) {
+                            var x = delegate.x
+                            var y = (delegate.y - imageList.originY)
+                                    - (imageList.contentY - imageList.originY)
+                                    + imageList.y
+                            var w = delegate.width
+                            var h = delegate.height
+                            imagePlayer.zoom(index, path, x, y, w, h,
+                                             delegateSource.paintedWidth, delegateSource.paintedHeight)
                         }
                     }
                 }
-
             }
 
             ScrollBar.vertical: ScrollBar {
@@ -111,14 +109,13 @@ Item {
                 }
             }
 
-            onContentYChanged: {
-                console.log("content y:", imageList.contentY, "origin y:", imageList.originY)
-            }
+//            onContentYChanged: {
+//                console.log("content y:", imageList.contentY, "origin y:", imageList.originY)
+//            }
 
             Connections {
                 target: ImageModel
                 onCurrentIndexChanged: {
-                    console.log(ImageModel.currentIndex)
                     if( imageList.contentHeight > imageList.height ) {
                         var index = ImageModel.currentIndex
                         var row = imageList.row
@@ -126,10 +123,11 @@ Item {
                         var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
                         bottom += imageList.originY;
                         var y = Math.floor(index / row) * imageList.cellHeight;
-                        y += imageList.originY;
+                        y += imageList.originY - imageList.topMargin;
                         if( y > bottom ) {
                             y = bottom
                         }
+//                        console.log("content Y changed:", y, bottom, imageList.originY)
                         imageList.contentY = y
                     }
                 }
@@ -147,8 +145,11 @@ Item {
 
         // title
         Rectangle {
+            id: title
             width: parent.width
             height: 60
+            anchors.left: parent.left
+            anchors.top: parent.top
             color: "#2f4f4f"
 
             MouseArea {
@@ -212,7 +213,8 @@ Item {
                         ImageModel.selectionStatus = selectionStatus
 
 //                        bottom.y = ImageModel.selectionStatus ? imageListView.height - bottom.height : imageListView.height
-                        bottom.state = ImageModel.selectionStatus ? "show" : "hide"
+//                        bottom.state = ImageModel.selectionStatus ? "show" : "hide"
+                        bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
                     }
                 }
 
@@ -234,6 +236,15 @@ Item {
             color: "#2f4f4f"
 //            y: imageListView.height
 
+            property real posY: 0 - height
+            Behavior on posY {
+                NumberAnimation { duration: 160 }
+            }
+
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: posY
+
             onYChanged: {
                 if( imageList.contentHeight >= imageList.height ) {
                     var temp = imageList.contentHeight + (imageList.height * 2)
@@ -247,6 +258,7 @@ Item {
                 }
             }
 
+            /*
             // 删除按钮
             Rectangle {
                 id: btnDelete
@@ -315,6 +327,7 @@ Item {
                     }
                 }
             ]
+            */
 
             // Behavior的效果不好
             // 在 StackView 切换界面时, 会先从顶部移动到底部
@@ -331,14 +344,14 @@ Item {
 
     ImagePlayer {
         id: imagePlayer
+        anchors.fill: parent
         visible: false
     }
 
     Component.onCompleted: {
 //        imageList.positionViewAtEnd()
 //        console.log(imageList.count)
-        console.log("completed:", imageList.contentWidth, imageList.contentHeight)
-        imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
+//        imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
     }
 
     property bool ready: false
@@ -346,6 +359,14 @@ Item {
         PhoneApi.setRotationScreen(-1)
         ready = true
     }
+    property bool init: false
+    StackView.onActivating: {
+        if( !init ) {
+            init = true
+            imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
+        }
+    }
+
     StackView.onDeactivated: {
         ready = false
     }
