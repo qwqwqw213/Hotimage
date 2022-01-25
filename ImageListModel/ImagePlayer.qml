@@ -14,10 +14,12 @@ Item {
     }
 
     function hideTitle() {
-        toolbar.barY = 60
+        if( imagePlayer.visible ) {
+            toolbar.barY = 60
+        }
     }
 
-    function autoTitle(state) {
+    function autoTitle() {
         if( toolbar.barY > 0 ) {
             toolbar.barY = 0
         }
@@ -212,10 +214,12 @@ Item {
                     imageListView.interactive = false
                     imagePlayer.visible = true
                     imagePlayer.isShow = true
+                    childOpacity = 1
                 }
                 else
                 {
                     photoScan.visible = false
+                    childOpacity = 0
                 }
             }
 
@@ -241,9 +245,10 @@ Item {
         }
     }
 
-    property real childOpacity: imageZoomItem.isZoom ?
-                                    imageZoomItem.width / imageZoomItem.toW
-                                  : imageZoomItem.width / imageZoomItem.fromW
+    property real childOpacity: 0
+    Behavior on childOpacity {
+        NumberAnimation { duration: 200 }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -261,7 +266,6 @@ Item {
         z: 1
         interactive: VideoPlayer.playing > 0 ? false : true
         spacing: 20
-//        maximumFlickVelocity:7000  //设置滑动的最大速度
         highlightRangeMode: ListView.StrictlyEnforceRange
         orientation: ListView.Horizontal
         snapMode: ListView.SnapOneItem
@@ -300,25 +304,26 @@ Item {
 //            console.log("index changed", currentIndex)
             ImageModel.currentIndex = currentIndex
             VideoPlayer.closeStream()
-            if( !miniPhtotList.moving ) {
-                miniPhtotList.positionViewAtIndex(ImageModel.currentIndex,  ListView.Center)
-            }
+//            if( !miniPhtotList.moving ) {
+//                miniPhtotList.positionViewAtIndex(ImageModel.currentIndex,  ListView.Center)
+//            }
         }
 
         onContentXChanged: {
-
-            if( atXBeginning < 0 ) {
-//                photoList.contentX = contentX
-            }
-            else if( atXEnd ) {
-//                photoList.contentX = photoList.maxContentX + contentX - maxContentX
-            }
-            else {
-
-            }
+            /*
+             *  photoScan 滑动时
+             *  miniPhtotList 跟着滑动
+             *  当miniPhtotList 发生点击事件时
+             *  miniPhtotList.Behavior会被设置为true
+             *  因为点击事件会改变photoScan的contentX
+             *  所以miniPhtotList会做出移动动画
+             */
+            miniPhtotList.contentX = (contentX - currentIndex * spacing)
+                    / photoScan.width
+                    * miniPhtotList.cellWidth
+                    + miniPhtotList.originX
+                    - miniPhtotList.leftMargin
         }
-
-//        Component.onCompleted: positionViewAtIndex(0, ListView.Beginning)
     }
 
     Item {
@@ -340,6 +345,11 @@ Item {
             anchors.top: parent.top
             anchors.topMargin: 0 - toolbar.barY
             color: "#2f4f4f"
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
             Rectangle {
                 id: btnReturn
                 width: 60
@@ -396,6 +406,10 @@ Item {
             anchors.bottomMargin: 0 - toolbar.barY
             color: "#2f4f4f"
 
+            MouseArea {
+                anchors.fill: parent
+            }
+
             /*
              *  底部 图片列表 缩略图
              */
@@ -407,10 +421,30 @@ Item {
                 model: ImageModel
                 cellWidth: width > height ? height : width
                 cellHeight: cellWidth
+
                 flow: GridView.FlowTopToBottom
                 layoutDirection: GridView.LeftToRight
+
                 leftMargin: width / 2 - cellWidth / 2
                 rightMargin: width / 2 - cellWidth / 2
+
+                Behavior on contentX {
+                    id: moveBehavior
+                    enabled: false
+                    NumberAnimation {
+                        duration: 200
+                        onRunningChanged: {
+                            if( !running ) {
+                                moveBehavior.enabled = false
+                            }
+                        }
+                    }
+                }
+
+                onMovementEnded: {
+                    var temp = contentX % (cellWidth / 2)
+                    console.log("temp:", temp, contentX, leftMargin)
+                }
 
                 delegate: Rectangle {
                     id: itembg
@@ -420,7 +454,7 @@ Item {
                     Image {
                         asynchronous: true
                         id: photo
-                        cache: true
+                        cache: false
                         sourceSize: Qt.size(parent.width, parent.height)
     //                    source: fileType == 0 ? path : ""
                         source: path
@@ -435,7 +469,7 @@ Item {
                             font.family: "FontAwesome"
                             font.pixelSize: parent.width * 0.35
                             text: "\uf144"
-                            color: mouseArea.pressed ? "#a0a0a0" : "white"
+                            color: "white"
                         }
                     }
 
@@ -444,7 +478,9 @@ Item {
                         anchors.fill: parent
                         onClicked: {
                             console.log("mini list clicked index:", index)
-                            miniPhtotList.positionViewAtIndex(index, ListView.Center)
+                            moveBehavior.enabled = true
+//                            miniPhtotList.positionViewAtIndex(index, ListView.Center)
+//                            miniPhtotList.contentX = 0
                             photoScan.positionViewAtIndex(index, ListView.Beginning)
                         }
                     }

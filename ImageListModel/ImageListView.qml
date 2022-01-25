@@ -8,7 +8,14 @@ Item {
     property alias interactive: imageList.interactive
 
     function itemRect(index) {
+//        imageList.positionViewAtIndex(index, ListView.Center)
+
         var item = imageList.itemAtIndex(index)
+        if( item === null ) {
+            imageList.positionViewAtIndex(index, ListView.Center)
+            return itemRect(index)
+        }
+
         var x = item.x
         var y = (item.y - imageList.originY)
                 - (imageList.contentY - imageList.originY)
@@ -21,17 +28,20 @@ Item {
          *  当前图片在GridView中的坐标超出了屏幕
          *  重新定位GridView的Content Y
          */
-        if( y < imageList.y || (y + item.height) > imageList.height ) {
-            y = imageList.y + imageList.height / 2 - item.height / 2
-            imageList.contentY = imageList.y + (item.y - imageList.originY) - y + imageList.originY
-            if( imageList.contentY + imageList.topMargin < 0 ) {
-                imageList.contentY = 0 - imageList.topMargin
-            }
+        if( y < imageList.y || (y + h) > imageList.height ) {
+            imageList.positionViewAtIndex(index, ListView.Center)
+            return itemRect(index)
+//            y = imageList.height / 2 - item.height / 2 - imageList.y
+//            imageList.contentY = Math.abs(y - imageList.y - (item.y - imageList.originY) - imageList.originY)
 
-            var bottom = item.y + item.height - imageList.height
-            if( imageList.contentY + imageList.topMargin > bottom ) {
-                imageList.contentY = bottom
-            }
+//            if( imageList.contentY + imageList.topMargin < 0 ) {
+//                imageList.contentY = 0 - imageList.topMargin
+//            }
+
+//            var bottom = imageList.contentHeight - imageList.height + imageList.originY
+//            if( imageList.contentY + imageList.topMargin > bottom ) {
+//                imageList.contentY = bottom
+//            }
         }
 
         return {
@@ -58,6 +68,8 @@ Item {
 
             topMargin: title.height
             bottomMargin: bottom.height + bottom.posY
+//            cacheBuffer: (row * (height / cellWidth)) * 2
+//            onWidthChanged: console.log("cache buffer:", cacheBuffer)
 
             delegate: Rectangle {
                 id: delegate
@@ -77,6 +89,7 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     anchors.centerIn: parent
                     smooth: true
+                    cache: false
                     Text {
                         visible: fileType === 1
                         anchors.centerIn: parent
@@ -247,11 +260,7 @@ Item {
 
             onYChanged: {
                 if( imageList.contentHeight >= imageList.height ) {
-                    var temp = imageList.contentHeight + (imageList.height * 2)
-                    var row = imageList.row
-                    var flag = (imageList.count % row == 0) ? 0 : 1
-                    var bottom = (Math.floor(imageList.count / row) + flag) * imageList.cellWidth - imageList.height
-                    bottom += imageList.originY
+                    var bottom = imageList.contentHeight - imageList.height + imageList.originY
                     if( imageList.contentY >= bottom && ready ) {
                         imageList.contentY = bottom + y
                     }
