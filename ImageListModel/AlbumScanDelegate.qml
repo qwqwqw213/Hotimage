@@ -404,60 +404,60 @@ Item {
 
 
 
-        PropertyAnimation {
-            target: flick
-            properties: "x"
-            from: imageZoomItem.fromX
-            to: imageZoomItem.toX
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        PropertyAnimation {
-            target: flick
-            properties: "y"
-            from: imageZoomItem.fromY
-            to: imageZoomItem.toY
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        PropertyAnimation {
-            target: flick
-            properties: "width"
-            from: imageZoomItem.fromW
-            to: imageZoomItem.toW
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        PropertyAnimation {
-            target: flick
-            properties: "height"
-            from: imageZoomItem.fromH
-            to: imageZoomItem.toH
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        PropertyAnimation {
-            target: image
-            properties: "width"
-            from: imageZoomItemSource.fromW
-            to: imageZoomItemSource.toW
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        PropertyAnimation {
-            target: image
-            properties: "height"
-            from: imageZoomItemSource.fromH
-            to: imageZoomItemSource.toH
-            duration: imageZoomItemAnimation.duration
-            easing.type: Easing.InQuad
-        }
-        onStarted: {
+//        PropertyAnimation {
+//            target: flick
+//            properties: "x"
+//            from: imageZoomItem.fromX
+//            to: imageZoomItem.toX
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        PropertyAnimation {
+//            target: flick
+//            properties: "y"
+//            from: imageZoomItem.fromY
+//            to: imageZoomItem.toY
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        PropertyAnimation {
+//            target: flick
+//            properties: "width"
+//            from: imageZoomItem.fromW
+//            to: imageZoomItem.toW
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        PropertyAnimation {
+//            target: flick
+//            properties: "height"
+//            from: imageZoomItem.fromH
+//            to: imageZoomItem.toH
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        PropertyAnimation {
+//            target: image
+//            properties: "width"
+//            from: imageZoomItemSource.fromW
+//            to: imageZoomItemSource.toW
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        PropertyAnimation {
+//            target: image
+//            properties: "height"
+//            from: imageZoomItemSource.fromH
+//            to: imageZoomItemSource.toH
+//            duration: imageZoomItemAnimation.duration
+//            easing.type: Easing.InQuad
+//        }
+//        onStarted: {
 
-        }
+//        }
 
-        onFinished: {
+//        onFinished: {
 
-        }
+//        }
     }
 }
