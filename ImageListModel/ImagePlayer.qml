@@ -454,15 +454,17 @@ Item {
                     Image {
                         asynchronous: true
                         id: photo
-                        cache: false
-                        sourceSize: Qt.size(parent.width, parent.height)
     //                    source: fileType == 0 ? path : ""
                         source: path
                         anchors.centerIn: parent
                         width: parent.width - 2
                         height: parent.height - 2
-                        smooth: true
+
+                        sourceSize: Qt.size(parent.width, parent.height)
+                        smooth: false
                         fillMode: Image.PreserveAspectCrop
+                        cache: false
+
                         Text {
                             visible: fileType === 1
                             anchors.centerIn: parent

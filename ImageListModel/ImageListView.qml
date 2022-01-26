@@ -31,24 +31,15 @@ Item {
         if( y < imageList.y || (y + h) > imageList.height ) {
             imageList.positionViewAtIndex(index, ListView.Center)
             return itemRect(index)
-//            y = imageList.height / 2 - item.height / 2 - imageList.y
-//            imageList.contentY = Math.abs(y - imageList.y - (item.y - imageList.originY) - imageList.originY)
-
-//            if( imageList.contentY + imageList.topMargin < 0 ) {
-//                imageList.contentY = 0 - imageList.topMargin
-//            }
-
-//            var bottom = imageList.contentHeight - imageList.height + imageList.originY
-//            if( imageList.contentY + imageList.topMargin > bottom ) {
-//                imageList.contentY = bottom
-//            }
         }
 
         return {
             x: x,
             y: y,
             w: w,
-            h: h
+            h: h,
+            pw: item.pw,
+            ph: item.ph
         }
     }
 
@@ -80,16 +71,25 @@ Item {
                 visible: ImageModel.currentIndex === index ?
                              (imagePlayer.isShow ? false : true) : true
 
+                property alias pw: delegateSource.paintedWidth
+                property alias ph: delegateSource.paintedHeight
+
                 Image {
                     id: delegateSource
                     asynchronous: true
                     source: path
                     width: imageList.cellWidth - 2
                     height: imageList.cellHeight - 2
-                    fillMode: Image.PreserveAspectCrop
                     anchors.centerIn: parent
-                    smooth: true
+
+                    /*
+                     *  指定源大小可以减少缓存
+                     */
+                    sourceSize: Qt.size(width, height)
+                    smooth: false
+                    fillMode: Image.PreserveAspectCrop
                     cache: false
+
                     Text {
                         visible: fileType === 1
                         anchors.centerIn: parent
