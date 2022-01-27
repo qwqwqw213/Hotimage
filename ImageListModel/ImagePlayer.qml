@@ -289,6 +289,10 @@ Item {
         delegate: AlbumScanDelegate {
             width: photoScan.width
             height: photoScan.height
+            onDragOut: {
+//                console.log(p)
+                toolbar.barY = p * 60
+            }
         }
 
         property real maxContentX: width * (ImageModel.rowCount() - 1)
