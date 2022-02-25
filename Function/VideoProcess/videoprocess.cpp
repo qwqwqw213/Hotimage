@@ -663,7 +663,7 @@ int VideoProcessPrivate::find_stream(const char *url)
             decode->fps_count = stream->nb_frames;
             decode->total_time = decode->fmtCnt->duration / 1000000.0;
             qDebug() << "- stream info - \n"
-                     << "   fps:" << stream->nb_frames << "\n"
+                     << "   frame count:" << stream->nb_frames << "\n"
                      << "   total time:" << decode->total_time << "\n";
             break;
         }

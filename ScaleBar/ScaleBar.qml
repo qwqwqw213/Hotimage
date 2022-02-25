@@ -16,11 +16,11 @@ Item {
         height: parent.height
         color: "#a0000000"
 
-        x: width
+        y: height
         opacity: 0.0
 
-        Behavior on x {
-            XAnimator {
+        Behavior on y {
+            YAnimator {
                 duration: 200
             }
         }
@@ -35,22 +35,20 @@ Item {
             width: parent.width
             height: parent.height
 
-            property real minY: 0 - height / 2
-            property real maxY: height / 2
+            property real maxX: width / 2
+            property real minX: 0 - width / 2
 
-            y: 0 - height / 2
-//            color: "#ff0000"
+            x: maxX
             color: "transparent"
 
             Text {
                 text: "3.0"
                 color: "yellow"
-                font.pixelSize: parent.width * 0.2
-                anchors.rightMargin:  (parent.width * 0.6 - contentWidth) / 2
-                anchors.right: parent.right
-                y: 0 - contentHeight / 2
-                opacity: zoomScale.y > zoomScale.maxY - (contentHeight * 2) ?
-                             (1 - (zoomScale.y - (zoomScale.maxY - (contentHeight * 2))) / (contentHeight * 2)) : 1
+                font.pixelSize: parent.height * 0.2
+                y: 8 + parent.height * 0.4
+                x: parent.width - contentWidth / 2
+                opacity: zoomScale.x < zoomScale.minX + (contentWidth * 2) ?
+                             (1 - ((zoomScale.minX + (contentWidth * 2)) - zoomScale.x) / (contentWidth * 2)) : 1
                 scale: opacity
                 rotation: scaleBar.textRotation
             }
@@ -58,12 +56,11 @@ Item {
             Text {
                 text: "2.0"
                 color: "yellow"
-                font.pixelSize: parent.width * 0.2
-                anchors.rightMargin:  (parent.width * 0.6 - contentWidth) / 2
-                anchors.right: parent.right
-                y: parent.height / 2 - contentHeight / 2
-                opacity: Math.abs(zoomScale.y) / (contentHeight * 2) <= 1 ?
-                             Math.abs(zoomScale.y) / (contentHeight * 2) : 1
+                font.pixelSize: parent.height * 0.2
+                y: 8 + parent.height * 0.4
+                x: parent.width / 2 - contentWidth / 2
+                opacity: Math.abs(zoomScale.x) / (contentWidth * 2) <= 1 ?
+                             Math.abs(zoomScale.x) / (contentWidth * 2) : 1
                 scale: opacity
                 rotation: scaleBar.textRotation
             }
@@ -71,24 +68,20 @@ Item {
             Text {
                 text: "1.0"
                 color: "yellow"
-                font.pixelSize: parent.width * 0.2
-                anchors.rightMargin:  (parent.width * 0.6 - contentWidth) / 2
-                anchors.right: parent.right
-                y: parent.height - contentHeight / 2
-                opacity: zoomScale.y < zoomScale.minY + (contentHeight * 2) ?
-                             (1 - ((zoomScale.minY + (contentHeight * 2)) - zoomScale.y) / (contentHeight * 2)) : 1
+                font.pixelSize: parent.height * 0.2
+                y: 8 + parent.height * 0.4
+                x: 0 - contentWidth / 2
+                opacity: zoomScale.x > zoomScale.maxX - (contentWidth * 2) ?
+                             (1 - (zoomScale.x - (zoomScale.maxX - (contentWidth * 2))) / (contentWidth * 2)) : 1
                 scale: opacity
                 rotation: scaleBar.textRotation
             }
 
             Canvas {
                 anchors.fill: parent
-//                smooth: true
-//                antialiasing: true
                 onPaint: {
                     var ctx = getContext("2d")
                     ctx.lineWidth = 1
-
 
                     for(var i = 0; i <= 20; i ++)
                     {
@@ -100,9 +93,9 @@ Item {
                             ctx.strokeStyle = "#a0a0a0"
                         }
 
-                        var y = height / 20 * (20 - i)
-                        ctx.moveTo(8, y)
-                        ctx.lineTo(width * 0.4, y)
+                        var x = width / 20 * (20 - i)
+                        ctx.moveTo(x, 8)
+                        ctx.lineTo(x, height * 0.4)
                         ctx.stroke()
                     }
                 }
@@ -113,9 +106,8 @@ Item {
     Rectangle {
         id: textBackground
         color: "#50000000"
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.rightMargin:  (parent.width * 0.6 - width) / 2
-        anchors.right: parent.right
+        anchors.centerIn: parent
+        anchors.verticalCenterOffset: (parent.height * 0.6 - width) / 2
 
         width: text.font.pixelSize * 2
         height: width
@@ -133,7 +125,7 @@ Item {
         id: text
         color: "white"
         anchors.centerIn: textBackground
-        font.pixelSize: parent.width * 0.2 * (0.7 + 0.3 * zoomScaleBackground.opacity)
+        font.pixelSize: parent.height * 0.2 * (0.7 + 0.3 * zoomScaleBackground.opacity)
         text: scaleBar.value.toFixed(1)
         rotation: scaleBar.textRotation
         opacity: zoomScaleBackground.opacity > 0.6 ?
@@ -142,41 +134,40 @@ Item {
 
     Timer {
         id: timer
-        interval: 2000
+        interval: 1500
         onTriggered: {
             zoomScaleBackground.opacity = 0.0
-            zoomScaleBackground.x = zoomScaleBackground.width
+            zoomScaleBackground.y = zoomScaleBackground.height
         }
     }
 
     MouseArea {
         anchors.fill: parent
 
-        property real currentY
-        property real pressedY
+        property real currentX
+        property real pressedX
         onPressed: {
-            pressedY = mouseY
-            currentY = zoomScale.y
+            pressedX = mouseX
+            currentX = zoomScale.x
 
             zoomScaleBackground.opacity = 1
-            zoomScaleBackground.x = 0
+            zoomScaleBackground.y = 0
             timer.start()
         }
 
-        onMouseYChanged: {
+        onMouseXChanged: {
             timer.restart()
-            var y = mouseY - pressedY + currentY
-            if( y < zoomScale.minY ) {
-                y = zoomScale.minY
+            var x = mouseX - pressedX + currentX
+            if( x < zoomScale.minX ) {
+                x = zoomScale.minX
             }
-            if( y > zoomScale.maxY ) {
-                y = zoomScale.maxY
+            if( x > zoomScale.maxX ) {
+                x = zoomScale.maxX
             }
 
-            zoomScale.y = y
-            parent.percent = (y - zoomScale.minY) / (zoomScale.maxY - zoomScale.minY)
-//                console.log(parent.percent)
-            parent.value = 1.0 + 2.0 * parent.percent
+            zoomScale.x = x
+            parent.percent = (x - zoomScale.minX) / (zoomScale.maxX - zoomScale.minX)
+            parent.value = 3.0 - 2.0 * parent.percent
 
             parent.zoomScaleChanged()
         }

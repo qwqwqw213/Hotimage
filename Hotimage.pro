@@ -17,6 +17,7 @@ SOURCES += \
         AndroidInterface/androidinterface.cpp \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
+        Function/Wireless/wireless.cpp \
         ImageListModel/VideoScanImage/videoscanimage.cpp \
         ImageListModel/imagelistmodel.cpp \
         TcpCamera/tcpcamera.cpp \
@@ -40,6 +41,7 @@ HEADERS += \
     AndroidInterface/androidinterface.h \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
+    Function/Wireless/wireless.h \
     ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
     TcpCamera/tcpdef.h \

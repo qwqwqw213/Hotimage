@@ -81,7 +81,12 @@ Item {
 
         imageZoomItemSource.fromW = scanItem.paintW
         imageZoomItemSource.fromH = scanItem.paintH
-        imageZoomItemSource.source = scanItem.source
+        if( imageZoomItemSource.source === scanItem.source ) {
+            imageZoomItemSource.init()
+        }
+        else {
+            imageZoomItemSource.source = scanItem.source
+        }
     }
 
     Item {
@@ -112,47 +117,51 @@ Item {
             property real toW
             property real toH
 
-            onStatusChanged: {
-                if( imageZoomItemSource.status == Image.Ready )
-                {
-                    imageZoomItem.visible = true
-                    var screenRatio = imageZoomItem.toW / imageZoomItem.toH
-                    var imageRatio = imageZoomItemSource.implicitWidth / imageZoomItemSource.implicitHeight
+            function init() {
+                imageZoomItem.visible = true
+                var screenRatio = imageZoomItem.toW / imageZoomItem.toH
+                var imageRatio = imageZoomItemSource.implicitWidth / imageZoomItemSource.implicitHeight
 
-                    if( imageZoomItem.isZoom )
+                if( imageZoomItem.isZoom )
+                {
+                    var toScale
+                    if( Config.isLandscape )
                     {
-                        var toScale
-                        if( Config.isLandscape )
-                        {
-                            toScale = imageRatio > 1 ?
-                                        (screenRatio > imageRatio ?
-                                             imageZoomItem.toH / imageZoomItemSource.implicitHeight
-                                           : imageZoomItem.toW / imageZoomItemSource.implicitWidth)
-                                      : imageZoomItem.toH / imageZoomItemSource.implicitHeight
-                            toW = imageZoomItemSource.implicitWidth * toScale
-                            toH = imageZoomItemSource.implicitHeight * toScale
-                        }
-                        else
-                        {
-                            toScale = imageRatio > 1 ?
-                                        imageZoomItem.toW / imageZoomItemSource.implicitWidth
-                                      : (imageRatio > screenRatio ?
-                                             imageZoomItem.toW / imageZoomItemSource.implicitWidth
-                                           : imageZoomItem.toH / imageZoomItemSource.implicitHeight)
-                            toW = imageZoomItemSource.implicitWidth * toScale
-                            toH = imageZoomItemSource.implicitHeight * toScale
-                        }
+                        toScale = imageRatio > 1 ?
+                                    (screenRatio > imageRatio ?
+                                         imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                                       : imageZoomItem.toW / imageZoomItemSource.implicitWidth)
+                                  : imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                        toW = imageZoomItemSource.implicitWidth * toScale
+                        toH = imageZoomItemSource.implicitHeight * toScale
                     }
                     else
                     {
-                        var fromScale = imageRatio > 1 ?
-                                    imageZoomItem.toH / imageZoomItemSource.implicitHeight
-                                  : imageZoomItem.toW / imageZoomItemSource.implicitWidth
-                        toW = imageZoomItemSource.implicitWidth * fromScale
-                        toH = imageZoomItemSource.implicitHeight * fromScale
+                        toScale = imageRatio > 1 ?
+                                    imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                                  : (imageRatio > screenRatio ?
+                                         imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                                       : imageZoomItem.toH / imageZoomItemSource.implicitHeight)
+                        toW = imageZoomItemSource.implicitWidth * toScale
+                        toH = imageZoomItemSource.implicitHeight * toScale
                     }
+                }
+                else
+                {
+                    var fromScale = imageRatio > 1 ?
+                                imageZoomItem.toH / imageZoomItemSource.implicitHeight
+                              : imageZoomItem.toW / imageZoomItemSource.implicitWidth
+                    toW = imageZoomItemSource.implicitWidth * fromScale
+                    toH = imageZoomItemSource.implicitHeight * fromScale
+                }
 
-                    imageZoomItemAnimation.running = true
+                imageZoomItemAnimation.running = true
+            }
+
+            onStatusChanged: {
+                if( imageZoomItemSource.status == Image.Ready )
+                {
+                    init()
                 }
             }
         }
@@ -282,7 +291,7 @@ Item {
             interval: 60
             onTriggered: {
                 imageZoomItem.visible = false
-                imageZoomItemSource.source = ""
+//                imageZoomItemSource.source = ""
             }
         }
 

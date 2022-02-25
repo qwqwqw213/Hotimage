@@ -6,6 +6,7 @@
 
 #include "Config/config.h"
 #include "VideoProcess/videoprocess.h"
+#include "Wireless/wireless.h"
 
 
 #include "AndroidInterface/androidinterface.h"
@@ -55,6 +56,8 @@ public:
 
     int frameSize;
 
+    bool hasFrame;
+
     time_t timer0;
     time_t timer1;
     bool exit;
@@ -77,6 +80,7 @@ public:
     void setCameraParam(const qreal &emiss, const qreal &reflected,
                         const qreal &ambient, const qreal &humidness,
                         const qreal &correction, const int &distance);
+    void setHotspotInfo(const QString &ssid, const QString &password);
 
     QMutex unpackMutex;
 
@@ -84,8 +88,8 @@ public:
 
     bool showTemp;
 
-    QString localHotspotIP;
-    QString deviceHotspotIP;
+    QString localIP;
+    QString deviceIP;
 
     int keyValue;
     int oldKeyValue;
@@ -173,29 +177,17 @@ bool TcpCamera::isOpen()
 
 bool TcpCamera::isConnected()
 {
-    return isOpen() ? p->handshake.isConnected() : false;
+    return isOpen() ? p->hasFrame : false;
 }
 
 void TcpCamera::open()
 {
-    if( isOpen() || p->cfg.ip.isEmpty() ) {
-        return;
-    }
-    p->frameCount = 0;
-    p->thread->start();
-}
-
-//void TcpCamera::open(tcp_config *s)
-//{
-//    if( isOpen() || s->ip.isEmpty() ) {
+//    if( isOpen() || p->cfg.ip.isEmpty() ) {
 //        return;
 //    }
-//    p->cfg.ip = s->ip;
-//    p->cfg.port = s->port;
-//    memcpy(&p->cfg.set, &s->set, sizeof (t_setting_page));
 //    p->frameCount = 0;
 //    p->thread->start();
-//}
+}
 
 void TcpCamera::close()
 {
@@ -348,12 +340,18 @@ QString TcpCamera::cameraSN()
     return p->cameraSN;
 }
 
+void TcpCamera::setHotspotInfo(const QString &ssid, const QString &password)
+{
+
+}
+
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     : QObject(nullptr)
 {
     readSetting();
 
     f = parent;
+    hasFrame = false;
     QObject::connect(f, &TcpCamera::captureFinished, f, [=](){
         if( captureThread.joinable() ) {
             captureThread.join();
@@ -412,6 +410,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         handshake.disconnect();
         QObject::connect(socket, &QTcpSocket::readyRead, this, &TcpCameraPrivate::onReadyRead, Qt::QueuedConnection);
         QObject::connect(socket, &QTcpSocket::disconnected, [=](){
+            hasFrame = false;
             handshake.disconnect();
             if( !exit ) {
                 qDebug() << "socket disconnect";
@@ -419,14 +418,22 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
                 unpackMutex.lock();
                 buf.clear();
                 unpackMutex.unlock();
-                socket->connectToHost(cfg.ip, cfg.port);
-                while (!socket->waitForConnected(3000) && !exit) {
+
+                int time = 0;
+                socket->connectToHost(deviceIP, cfg.port);
+                while (!socket->waitForConnected(50) && !exit && (time < 10)) {
 //                    emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
 //                    qDebug() << "socket reconnect";
                     socket->connectToHost(cfg.ip, cfg.port);
+                    time ++;
                 }
 
-                qDebug() << "socket reconnect success";
+                if( socket->state() != QAbstractSocket::ConnectedState ) {
+                    searchDevice();
+                }
+                else {
+                    qDebug() << "socket reconnect success";
+                }
             }
         });
         QObject::connect(this, static_cast<void (TcpCameraPrivate::*)(const QByteArray &)>(&TcpCameraPrivate::write),
@@ -436,16 +443,27 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         }, Qt::QueuedConnection);
 
         qDebug() << "socket start connect";
-        socket->connectToHost(cfg.ip, cfg.port);
-        while (!socket->waitForConnected(3000) && !exit) {
-//            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
-//            qDebug() << "reconnect, ip:" << cfg.ip `<< "port:" << cfg.port;
-            socket->connectToHost(cfg.ip, cfg.port);
-        }
 
-        if( !exit ) {
-            qDebug() << "socket connect successed";
-        }
+//#ifdef Q_OS_WIN32
+//        socket->connectToHost(cfg.ip, cfg.port);
+//        socket->waitForConnected(50);
+//        if( socket->state() == QAbstractSocket::ConnectedState ) {
+//            qDebug() << "connect success";
+//        }
+//        else {
+//            qDebug() << "connect fail";
+
+//        }
+//#else
+        searchDevice();
+//#endif
+
+//        socket->connectToHost(cfg.ip, cfg.port);
+//        while (!socket->waitForConnected(3000) && !exit) {
+////            emit f->msg(QString("reconnect ip: %1 port: %2").arg(cfg.ip).arg(cfg.port));
+////            qDebug() << "reconnect, ip:" << cfg.ip `<< "port:" << cfg.port;
+//            socket->connectToHost(cfg.ip, cfg.port);
+//        }
     });
     QObject::connect(thread, &QThread::finished, [=](){
         socket->disconnectFromHost();
@@ -496,33 +514,35 @@ TcpCameraPrivate::~TcpCameraPrivate()
 
 void TcpCameraPrivate::searchDevice()
 {
+    hasFrame = false;
     while (!exit)
     {
-        localHotspotIP.clear();
+        localIP.clear();
+        deviceIP.clear();
         const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
         for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
             if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
-                 localHotspotIP = address.toString();
+                 localIP = address.toString();
             }
         }
 
-        qDebug() << "local hotspot ip:" << localHotspotIP;
-        if( !localHotspotIP.isNull() )
+        qDebug() << "local ip:" << localIP;
+        if( !localIP.isNull() )
         {
-            QString ip_front = localHotspotIP.left(localHotspotIP.lastIndexOf('.') + 1);
-            int index = 2;
-            while (true && socket)
+            QString ip_front = localIP.left(localIP.lastIndexOf('.') + 1);
+            int index = 1;
+            while (true && socket && !exit)
             {
                 QString ip = ip_front + QString::number(index);
-                if( ip == localHotspotIP ) {
-                    // 连接失败
-                    break;
+                if( ip == localIP ) {
+                    continue;
                 }
+
+                qDebug() << "connect ip:" << ip << "port:" << cfg.port;
                 socket->connectToHost(ip, cfg.port);
-                socket->waitForConnected(3000);
+                socket->waitForConnected(50);
                 if( socket->state() == QAbstractSocket::ConnectedState ) {
-                    deviceHotspotIP = ip;
-                    qDebug() << "device hotspot ip:" << deviceHotspotIP;
+                    deviceIP = ip;
                     break;
                 }
                 index ++;
@@ -530,6 +550,14 @@ void TcpCameraPrivate::searchDevice()
                     break;
                 }
             }
+        }
+        else {
+            QThread::msleep(1500);
+        }
+
+        if( !deviceIP.isNull() ) {
+            qDebug() << "connect success, device ip:" << deviceIP;
+            break;
         }
     }
 }
@@ -562,6 +590,7 @@ void TcpCameraPrivate::keyPressed(const int &key)
     }
 }
 
+static int debugflag = 0;
 void TcpCameraPrivate::onReadyRead()
 {
     unpackMutex.lock();
@@ -612,7 +641,6 @@ void TcpCameraPrivate::onReadyRead()
                 temperatureData = (float*)calloc(cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET) + 10, sizeof(float));
             }
 #endif
-            emit f->connectStatusChanged();
         }
         return;
     }
@@ -625,10 +653,11 @@ void TcpCameraPrivate::onReadyRead()
         {
             // 包丢失
             // 重新校验包
-            qDebug() << "invalid pack" << buf.size() << data_size << tail;
-//            if( frameCount % 50 == 0 ) {
-//                qDebug() << buf;
-//            }
+            qDebug() << "invalid pack, get buf size:" << buf.size() << "complete buf size:" << data_size << tail;
+            if( debugflag < 2 ) {
+                debugflag ++;
+                qDebug() << buf;
+            }
 
             int i = 0;
             int flag = 0;
@@ -642,7 +671,7 @@ void TcpCameraPrivate::onReadyRead()
                     tail = buf.mid(i, PAGE_TAIL_SIZE);
                     if( isValidTail(tail) )
                     {
-                        qDebug() << "remove invalid data, size:" << (i + 1) << data_size;
+                        qDebug() << "remove invalid data, size:" << (i + 1) << data_size << tail;
                         unpackMutex.lock();
                         buf.remove(0, i + PAGE_TAIL_SIZE);
                         unpackMutex.unlock();
@@ -812,6 +841,11 @@ void TcpCameraPrivate::onReadyRead()
         else if( cfg.cam.format == __yuv420 ) {
             convert().yuv420p_to_rgb(reinterpret_cast<uint8_t *>(buf.data()), bit,
                                      cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
+        }
+
+        if( !hasFrame ) {
+            hasFrame = true;
+            emit f->connectStatusChanged();
         }
 
         unpackMutex.lock();
@@ -998,6 +1032,15 @@ void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected
     cfg.set.humidness = humidness;
     cfg.set.correction = correction;
     cfg.set.distance = distance;
+    QByteArray byte = handshake.pack(cfg.set);
+    emit write(byte);
+}
+
+void TcpCameraPrivate::setHotspotInfo(const QString &ssid, const QString &password)
+{
+    cfg.set.type = HandShake::__hotspot_info;
+    cfg.set.hotspot_ssid = ssid.toStdString();
+    cfg.set.hotspot_password = password.toStdString();
     QByteArray byte = handshake.pack(cfg.set);
     emit write(byte);
 }

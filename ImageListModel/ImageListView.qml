@@ -1,5 +1,5 @@
 import QtQuick 2.14
-import QtQuick.Controls 2.12
+import QtQuick.Controls 2.14
 
 Item {
     id: imageListView
@@ -160,8 +160,11 @@ Item {
         // title
         Rectangle {
             id: title
+
+            property real leftRightMargin: 30
+
             width: parent.width
-            height: 60
+            height: 60 + Config.topMargin
             anchors.left: parent.left
             anchors.top: parent.top
             color: "#2f4f4f"
@@ -170,74 +173,60 @@ Item {
                 anchors.fill: parent
             }
 
-            // 返回按钮
-            Rectangle {
+            Text {
                 id: btnReturn
-                width: 60
-                height: 60
+                width: parent.height - Config.topMargin
+                height: width
+                y: Config.topMargin
+
                 anchors.left: parent.left
-                anchors.leftMargin: 5
-                color: "transparent"
-                Text {
-                    anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: parent.width * 0.65
-                    text: "\uf053"
-                    color: btnReturnArea.pressed ? "#6f9f9f" : "white"
-                }
+                font.family: "FontAwesome"
+                font.pixelSize: width * 0.85
+                text: "\uf104"
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                color: btnReturnArea.pressed ? "#6f9f9f" : "white"
                 MouseArea {
                     id: btnReturnArea
                     anchors.fill: parent
                     onClicked: {
                         stackView.pop()
-//                        imageListView.y = imageListView.height
                     }
-
                 }
 
                 Text {
-                    anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.right
-                    font.pixelSize: 20
-                    color: "white"
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pointSize: 15
                     text: qsTr("Photo")
+                    color: "white"
                 }
             }
 
-            Rectangle {
-                id: btnSelect
-                width: 60
-                height: 60
+            // 选择按钮
+            AbstractButton {
+                id: btnChoice
+                width: btnChoiceText.contentWidth + 20
+                height: btnChoiceText.contentHeight + 20
+                y: (parent.height - Config.topMargin - height) / 2 + Config.topMargin
                 anchors.right: parent.right
-                anchors.rightMargin: 10
-                color: "transparent"
+                anchors.rightMargin: parent.leftRightMargin
+
+                background: Rectangle {
+                    radius: height / 2
+                    color: btnChoice.pressed ? "#1f3f3f" : "#3f5f5f"
+                }
                 Text {
+                    id: btnChoiceText
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: parent.width * 0.65
-                    text: ImageModel.selectionStatus ? "\uf192" : "\uf10c"
-                    color: btnSelectArea.pressed ? "#6f9f9f" : (ImageModel.selectionStatus ? "#6f9f9f" : "white")
-                }
-                MouseArea {
-                    id: btnSelectArea
-                    anchors.fill: parent
-                    property bool selectionStatus: false
-                    onClicked: {
-                        selectionStatus = !selectionStatus
-                        ImageModel.selectionStatus = selectionStatus
-
-//                        bottom.y = ImageModel.selectionStatus ? imageListView.height - bottom.height : imageListView.height
-//                        bottom.state = ImageModel.selectionStatus ? "show" : "hide"
-                        bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
-                    }
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.right: parent.left
-                    font.pixelSize: 20
+                    font.pointSize: 15
                     color: "white"
-                    text: qsTr("Choice")
+                    text: ImageModel.selectionStatus ?
+                              qsTr("Cancel") : qsTr("Choice")
+                }
+                onClicked: {
+                    ImageModel.selectionStatus = !ImageModel.selectionStatus
+                    bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
                 }
             }
         }
@@ -246,7 +235,7 @@ Item {
         Rectangle {
             id: bottom
             width: parent.width
-            height: 60
+            height: 60 + Config.bottomMargin
             color: "#2f4f4f"
 
             property real posY: 0 - height
@@ -270,8 +259,8 @@ Item {
             // 删除按钮
             Item {
                 id: btnDelete
-                width: 60
-                height: 60
+                width: parent.height - Config.bottomMargin
+                height: width
                 anchors.right: parent.right
                 anchors.rightMargin: 5
                 Text {
@@ -289,7 +278,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.left
-                    font.pixelSize: 20
+                    font.pointSize: 15
                     color: "white"
                     text: qsTr("Delete")
                 }
@@ -312,7 +301,7 @@ Item {
 
     property bool ready: false
     StackView.onActivated: {
-        PhoneApi.setRotationScreen(-1)
+//        PhoneApi.setRotationScreen(-1)
         ready = true
     }
     property bool init: false

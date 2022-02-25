@@ -11,6 +11,7 @@ VideoPlayer::VideoPlayer(QQuickItem *parent)
 {
     m_image = QImage();
     m_index = -1;
+    m_status = __video_close;
 
     decode = new VideoProcess(this);
 //    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
@@ -23,6 +24,10 @@ VideoPlayer::VideoPlayer(QQuickItem *parent)
         // 否则暂停的时候无帧图片
         int size = videoProvider->add(img);
         if( size > 1 && decode->status() == VideoProcess::__running ) {
+            if( m_status == __video_close ) {
+                m_status = __video_playing;
+                emit playStatusChanged();
+            }
             emit frameUpdate();
         }
     });
@@ -38,8 +43,13 @@ VideoPlayer::VideoPlayer(QQuickItem *parent)
             m_index = -1;
             decode->closeStream();
             videoProvider->release();
+            m_status = __video_close;
+            emit playStatusChanged();
         }
-        emit playStatusChanged();
+        else if( decode->status() == VideoProcess::__pause ) {
+            m_status = __video_pause;
+            emit playStatusChanged();
+        }
     }, Qt::QueuedConnection);
 
     videoProvider = new VideoProvider;
@@ -107,13 +117,14 @@ void VideoPlayer::closeStream()
     videoProvider->release();
     m_image = QImage();
     m_index = -1;
+    m_status = __video_close;
     update();
     emit playStatusChanged();
 }
 
 int VideoPlayer::playing()
 {
-    return decode->status();
+    return m_status;
 }
 
 int VideoPlayer::playIndex()

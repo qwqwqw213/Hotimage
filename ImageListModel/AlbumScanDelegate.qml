@@ -2,29 +2,9 @@ import QtQuick 2.11
 
 Item {
     id: wrapper
-    property bool pinchAreaBool: true
-//    color: "transparent"
-
-//    property real initWidth : Math.min(width,height)
-//    property real initHeight: Math.max(width,height)
-    property int initw: width
-    property int inith: height
 
     signal itemClicked
     signal dragOut(var p)
-
-    onWidthChanged: {
-        initw = width
-        inith = height
-        flick.contentWidth = initw
-        flick.contentHeight = inith
-    }
-    onHeightChanged: {
-        initw = width
-        inith = height
-        flick.contentWidth = initw
-        flick.contentHeight = inith
-    }
 
     property alias contentX: flick.contentX
     property alias contentY: flick.contentY
@@ -34,13 +14,18 @@ Item {
     property alias paintH: image.paintedHeight
     property alias source: image.source
 
+    property alias parentW: wrapper.width
+    property alias parentH: wrapper.height
+
     Flickable {
         id: flick
+//        anchors.fill: parent
+        width: parent.width
+        height: parent.height
+        clip: true
 
-        anchors.fill: parent
-        contentWidth: initw
-        contentHeight: inith
-        z: 1
+        contentWidth: wrapper.width
+        contentHeight: wrapper.height
 
         onContentXChanged: {
           imagePlayer.hideTitle()
@@ -52,39 +37,38 @@ Item {
 
         PinchArea {
             id: pinchArea
-            width: Math.max(flick.contentWidth, flick.width)
-            height: Math.max(flick.contentHeight, flick.height)
+            width: flick.contentWidth
+            height: flick.contentHeight
             enabled: fileType === 0
-            property real initialWidth
-            property real initialHeight
 
+            property real pressedWidth
+            property real pressedHeight
+            property real minScaleWidth: wrapper.width * 0.85
+            property real minScaleHeight: wrapper.height * 0.85
 
             onPinchStarted: {
-                initialWidth = flick.contentWidth
-                initialHeight = flick.contentHeight
+                pressedWidth = flick.contentWidth
+                pressedHeight = flick.contentHeight
                 resizeAnimation.running = false
                 imagePlayer.hideTitle()
             }
 
             onPinchUpdated: {
-                console.log(pinch.scale)
-
                 // adjust content pos due to drag
                 flick.contentX += pinch.previousCenter.x - pinch.center.x
                 flick.contentY += pinch.previousCenter.y - pinch.center.y
 
                 // resize content
-                flick.resizeContent((initialWidth * pinch.scale) < imagePlayer.width ?
-                                        imagePlayer.width : (initialWidth * pinch.scale),
-                                    (initialHeight * pinch.scale) < imagePlayer.height ?
-                                        imagePlayer.height : (initialHeight * pinch.scale), pinch.center)
+                flick.resizeContent((pressedWidth * pinch.scale) < minScaleWidth ?
+                                        minScaleWidth : (pressedWidth * pinch.scale),
+                                    (pressedHeight * pinch.scale) < minScaleHeight ?
+                                        minScaleHeight : (pressedHeight * pinch.scale), pinch.center)
             }
 
             onPinchFinished: {
                 // Move its content within bounds.
-                if( flick.contentWidth < initw || flick.contentHeight < inith ) {
-                    console.log("pinch finished, resize")
-                    resizeAnimation.run(0, 0, initw, inith)
+                if( flick.contentWidth < wrapper.width || flick.contentHeight < wrapper.height ) {
+                    resizeAnimation.run(0, 0, wrapper.width, wrapper.height)
                 }
                 else {
                     flick.returnToBounds()
@@ -95,170 +79,177 @@ Item {
                 id: image
                 width: flick.contentWidth - (flick.contentWidth * (0.4 * dragScale))
                 height: flick.contentHeight - (flick.contentHeight * (0.4 * dragScale))
-                source: path
-  //              anchors.centerIn: parent
 
-                asynchronous: true
+//                source: path
+                source: VideoPlayer.playing > 0 ?
+                            ((VideoPlayer.playIndex === index) ? VideoPlayer.frameUrl : path)
+                          : path
+
+                asynchronous: VideoPlayer.playing > 0 ?
+                                  ((VideoPlayer.playIndex === index) ? false : true)
+                                : true
+
                 fillMode: Image.PreserveAspectFit
                 cache: false
 
                 property real dragScale: Math.abs(y / wrapper.height)
-                onYChanged: {
-                    imagePlayer.childOpacity = 1 - Math.abs(y / wrapper.height)
-                }
+//                onYChanged: {
+//                    imagePlayer.childOpacity = 1 - Math.abs(y / wrapper.height)
+//                }
             }
 
-            MouseArea {
-                id: mouseArea
-                Timer {
-                    id: timer
-                    interval: 100
-                    onTriggered: {
-                        imagePlayer.autoTitle()
-                    }
-                }
 
-                function isValidClicked(x, y) {
-                    var left = (image.width - image.paintedWidth) / 2
-                    var right = left + image.paintedWidth
-                    var top = (image.height - image.paintedHeight) / 2
-                    var bottom = top + image.paintedHeight
+//            MouseArea {
+//                id: mouseArea
+//                Timer {
+//                    id: timer
+//                    interval: 100
+//                    onTriggered: {
+//                        imagePlayer.autoTitle()
+//                    }
+//                }
 
-                    if( x >= left && x <= right
-                            && y >= top && y <= bottom ) {
-                        return {
-                            res: true,
-                            x: x - image.width / 2,
-                            y: y - image.height / 2
-                        }
-                    }
-                    else {
-                        return {
-                            res: false,
-                            x: 0,
-                            y: 0
-                        }
-                    }
-                }
+//                function isValidClicked(x, y) {
+//                    var left = (image.width - image.paintedWidth) / 2
+//                    var right = left + image.paintedWidth
+//                    var top = (image.height - image.paintedHeight) / 2
+//                    var bottom = top + image.paintedHeight
 
-                anchors.fill: parent
+//                    if( x >= left && x <= right
+//                            && y >= top && y <= bottom ) {
+//                        return {
+//                            res: true,
+//                            x: x - image.width / 2,
+//                            y: y - image.height / 2
+//                        }
+//                    }
+//                    else {
+//                        return {
+//                            res: false,
+//                            x: 0,
+//                            y: 0
+//                        }
+//                    }
+//                }
 
-                property real pressedX
-                property real pressedY
-                property real currentX
-                property real currentY
-                property bool dragFlag: false
+//                anchors.fill: parent
 
-
-                onPressed: {
-                    pressedX = mouseX
-                    pressedY = mouseY
-                    currentX = image.x
-                    currentY = image.y
-                }
-
-                onPositionChanged: {
-                    if( dragFlag ) {
-                        /*
-                         * 下拽退出时
-                         * 图片宽度会逐渐缩小, 位置会逐渐偏左
-                         * 所以需要用(flick.contentWidth - image.width) / 2 做居中处理
-                         */
-                        image.x = mouseX - pressedX + currentX + (flick.contentWidth - image.width) / 2
-                        var p = (mouseY - pressedY + currentY) / wrapper.height
-                        image.y = p * image.height
-                        wrapper.dragOut(Math.abs(p))
-                    }
-                    else if( flick.width < flick.contentWidth
-                            && flick.height < flick.contentHeight
-                            && flick.atYBeginning ) {
-                        dragFlag = true
-                        photoScan.interactive = false
-                        flick.interactive = false
-                    }
-                    else {
-                        var y = mouseY - pressedY;
-                        if( y > 30 && flick.atYBeginning ) {
-                            dragFlag = true
-                            photoScan.interactive = false
-                            flick.interactive = false
-                        }
-                    }
-                }
-
-                onReleased: {
-                    if( dragFlag ) {
-                        dragFlag = false
-                        flick.interactive = true
-                        photoScan.interactive = true
-                        image.x = 0
-                        image.y = 0
-                        var rect = imageListView.itemRect(index);
-                    }
-                }
+//                property real pressedX
+//                property real pressedY
+//                property real currentX
+//                property real currentY
+//                property bool dragFlag: false
 
 
-                onDoubleClicked: {
-                    var ret = isValidClicked(mouseX, mouseY)
-                    if( ret.res && fileType === 0 )
-                    {
-                        imagePlayer.hideTitle()
+//                onPressed: {
+//                    pressedX = mouseX
+//                    pressedY = mouseY
+//                    currentX = image.x
+//                    currentY = image.y
+//                }
 
-                        if( flick.contentWidth > initw
-                                || flick.contentHeight > inith ) {
-                            // zoom out
-                            resizeAnimation.run(0, 0, initw, inith)
-                        }
-                        else {
-                            // zoom in
-                            var w = initw * 3
-                            var h = inith * 3
-                            var cx = (w - initw) / 2
-                            var cy = (h - inith) / 2
-                            var x = cx + ret.x * 3
-                            if( x < 0 ) {
-                                x = 0
-                            }
-                            if( x > (w - initw) ) {
-                                x = w - initw
-                            }
+//                onPositionChanged: {
+//                    if( dragFlag ) {
+//                        /*
+//                         * 下拽退出时
+//                         * 图片宽度会逐渐缩小, 位置会逐渐偏左
+//                         * 所以需要用(flick.contentWidth - image.width) / 2 做居中处理
+//                         */
+//                        image.x = mouseX - pressedX + currentX + (flick.contentWidth - image.width) / 2
+//                        var p = (mouseY - pressedY + currentY) / wrapper.height
+//                        image.y = p * image.height
+//                        wrapper.dragOut(Math.abs(p))
+//                    }
+//                    else if( flick.width < flick.contentWidth
+//                            && flick.height < flick.contentHeight
+//                            && flick.atYBeginning ) {
+//                        dragFlag = true
+//                        photoScan.interactive = false
+//                        flick.interactive = false
+//                    }
+//                    else {
+//                        var y = mouseY - pressedY;
+//                        if( y > 30 && flick.atYBeginning ) {
+//                            dragFlag = true
+//                            photoScan.interactive = false
+//                            flick.interactive = false
+//                        }
+//                    }
+//                }
 
-                            var y = cy + ret.y * 3
-                            if( y < 0 ) {
-                                y = 0;
-                            }
-                            if( y > (h - inith) ) {
-                                y = inith
-                            }
+//                onReleased: {
+//                    if( dragFlag ) {
+//                        dragFlag = false
+//                        flick.interactive = true
+//                        photoScan.interactive = true
+//                        image.x = 0
+//                        image.y = 0
+//                        var rect = imageListView.itemRect(index);
+//                    }
+//                }
 
-                            resizeAnimation.run(x, y, w, h)
-                        }
 
-                        timer.stop()
-                    }
-                }
-                onClicked: {
-                    wrapper.itemClicked()
-                    if( fileType === 1 )
-                    {
-                        if( VideoPlayer.playing > 0 )
-                        {
-                            if( videoViewLoader.progressBarOpacity > 0 ) {
-                                videoViewLoader.progressBarOpacity = 0
-                            }
-                            else {
-                                videoViewLoader.progressBarOpacity = 1
-                            }
-                        }
-                        else {
-                            timer.start();
-                        }
-                    }
-                    else {
-                        timer.start();
-                    }
-                }
-            }
+//                onDoubleClicked: {
+//                    var ret = isValidClicked(mouseX, mouseY)
+//                    if( ret.res && fileType === 0 )
+//                    {
+//                        imagePlayer.hideTitle()
+
+//                        if( flick.contentWidth > wrapper.width
+//                                || flick.contentHeight > wrapper.height ) {
+//                            // zoom out
+//                            resizeAnimation.run(0, 0, wrapper.width, wrapper.height)
+//                        }
+//                        else {
+//                            // zoom in
+//                            var w = wrapper.width * 3
+//                            var h = wrapper.height * 3
+//                            var cx = (w - wrapper.width) / 2
+//                            var cy = (h - wrapper.height) / 2
+//                            var x = cx + ret.x * 3
+//                            if( x < 0 ) {
+//                                x = 0
+//                            }
+//                            if( x > (w - wrapper.width) ) {
+//                                x = w - wrapper.width
+//                            }
+
+//                            var y = cy + ret.y * 3
+//                            if( y < 0 ) {
+//                                y = 0;
+//                            }
+//                            if( y > (h - wrapper.height) ) {
+//                                y = wrapper.height
+//                            }
+
+//                            resizeAnimation.run(x, y, w, h)
+//                        }
+
+//                        timer.stop()
+//                    }
+//                }
+//                onClicked: {
+//                    wrapper.itemClicked()
+//                    if( fileType === 1 )
+//                    {
+//                        if( VideoPlayer.playing > 0 )
+//                        {
+//                            if( videoViewLoader.progressBarOpacity > 0 ) {
+//                                videoViewLoader.progressBarOpacity = 0
+//                            }
+//                            else {
+//                                videoViewLoader.progressBarOpacity = 1
+//                            }
+//                        }
+//                        else {
+//                            timer.start();
+//                        }
+//                    }
+//                    else {
+//                        timer.start();
+//                    }
+//                }
+//            }
 
             Text {
                 id: btnVideoPlay
@@ -282,12 +273,13 @@ Item {
   //                          imagePaintView.openStream(filePath, image.paintedWidth, image.paintedHeight)
                             VideoPlayer.openStream(filePath, image.paintedWidth, image.paintedHeight, index)
                             imagePlayer.hideTitle()
-                            videoViewLoader.progressBarOpacity = 1
+//                            videoViewLoader.progressBarOpacity = 1
                         }
                     }
                 }
             }
 
+            /*
             // VideoView
             Loader {
                 id: videoViewLoader
@@ -295,6 +287,7 @@ Item {
 
                 active: VideoPlayer.playing > 0 ?
                             ((VideoPlayer.playIndex === index) ? true : false) : false
+//                active: false
                 anchors.centerIn: parent
                 sourceComponent: videoView
 
@@ -360,6 +353,7 @@ Item {
                     }
                 }
             }
+            */
 
             ParallelAnimation {
                 id: resizeAnimation
@@ -414,12 +408,69 @@ Item {
         }
     }
 
+    MouseArea {
+        anchors.fill: parent
+        property real pressedX
+        property real pressedY
+        property real currentX
+        property real currentY
+        property bool dragFlag: false
+        enabled: false
+
+
+        onPressed: {
+            console.log("pressed")
+            pressedX = mouseX
+            pressedY = mouseY
+            currentX = image.x
+            currentY = image.y
+        }
+
+        onPositionChanged: {
+            if( dragFlag ) {
+                /*
+                 * 下拽退出时
+                 * 图片宽度会逐渐缩小, 位置会逐渐偏左
+                 * 所以需要用(flick.contentWidth - image.width) / 2 做居中处理
+                 */
+                image.x = mouseX - pressedX + currentX + (flick.contentWidth - image.width) / 2
+                var p = (mouseY - pressedY + currentY) / wrapper.height
+                image.y = p * image.height
+                wrapper.dragOut(Math.abs(p))
+            }
+            else if( flick.width < flick.contentWidth
+                    && flick.height < flick.contentHeight
+                    && flick.atYBeginning ) {
+                dragFlag = true
+                photoScan.interactive = false
+                flick.interactive = false
+            }
+            else {
+                var y = mouseY - pressedY;
+                if( y > 30 && flick.atYBeginning ) {
+                    dragFlag = true
+                    photoScan.interactive = false
+                    flick.interactive = false
+                }
+            }
+        }
+
+        onReleased: {
+            if( dragFlag ) {
+                dragFlag = false
+                flick.interactive = true
+                photoScan.interactive = true
+                image.x = 0
+                image.y = 0
+                var rect = imageListView.itemRect(index);
+            }
+        }
+    }
+
     ParallelAnimation {
         id: inoutAnimation
 
         property int duration: 200
-
-
 
 //        PropertyAnimation {
 //            target: flick

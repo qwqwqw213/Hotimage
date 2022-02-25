@@ -48,6 +48,7 @@ public:
     Q_INVOKABLE void setCameraParam(const qreal &emiss, const qreal &reflected,
                                     const qreal &ambient, const qreal &humidness,
                                     const qreal &correction, const int &distance);
+    Q_INVOKABLE void setHotspotInfo(const QString &ssid, const QString &password);
 
     Q_PROPERTY(int palette READ palette NOTIFY paletteChanged)
     int palette();
@@ -64,6 +65,7 @@ public:
     qreal correction();
     Q_PROPERTY(qreal distance READ distance CONSTANT)
     uint16_t distance();
+
     Q_PROPERTY(bool showTemp READ showTemp WRITE setShowTemp NOTIFY showTempChanged)
     bool showTemp();
     void setShowTemp(const bool &show);

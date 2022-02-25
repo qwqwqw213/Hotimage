@@ -25,6 +25,11 @@ public:
     Q_INVOKABLE void pause();
     Q_INVOKABLE void closeStream();
 
+    enum VideoStatus {
+        __video_close = 0,
+        __video_playing,
+        __video_pause,
+    };
     Q_PROPERTY(int playing READ playing NOTIFY playStatusChanged)
     int playing();
     Q_PROPERTY(int playIndex READ playIndex NOTIFY playStatusChanged)
@@ -56,6 +61,7 @@ private:
     int m_h;
     int m_index;
     VideoProvider *videoProvider;
+    VideoStatus m_status;
 
 Q_SIGNALS:
     void playStatusChanged();

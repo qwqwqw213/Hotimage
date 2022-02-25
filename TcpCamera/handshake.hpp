@@ -159,6 +159,9 @@ typedef struct
     float humidness;
     unsigned short distance;
     float correction;
+
+    std::string hotspot_ssid;
+    std::string hotspot_password;
 } t_setting_page;
 #endif
 
@@ -175,6 +178,8 @@ typedef struct
     PixelFormat format;
 } t_handshake_page;
 
+typedef void (*HandShakeCallback)(const int &msg, void *content);
+
 class HandShake
 {
 public:
@@ -185,6 +190,7 @@ enum RecvPageType
         __palette,
         __config,
         __mode,
+        __hotspot_info,
     };
     HandShake() { connected = false; }
     ~HandShake() { }
@@ -193,12 +199,13 @@ enum RecvPageType
 
 #ifndef ANDROID_APP
     void wait() { isWait = true; }
-    void reset(Socket *_s, const int _fd) {
+    void reset(Socket *_s, const int &_fd, HandShakeCallback func) {
         s = _s;
         fd = _fd;
         isWait = false;
         connected = false;
         canRecv = false;
+        msg_callback_func = func;
         if( !t.joinable() )
         {
             exit = false;
@@ -235,6 +242,9 @@ enum RecvPageType
         byte += (char)t.format;
         return byte;
     }
+
+    std::string hotspotSSID() { return hotspot_ssid; }
+    std::string hotspotPassword() { return hotspot_password; }
 #else
     void disconnect() { connected = false; }
 #endif
@@ -359,6 +369,17 @@ enum RecvPageType
             byte[2] = t.mode;
         }
             break;
+        case __hotspot_info: {
+            int offset = 2;
+            byte.replace(offset, t.hotspot_ssid.length(), t.hotspot_ssid.c_str());
+            offset = offset + t.hotspot_ssid.length();
+            byte[offset] = ';';
+            offset = offset + 1;
+            byte.replace(offset, t.hotspot_password.length(), t.hotspot_password.c_str());
+            offset = offset + t.hotspot_password.length();
+            byte[offset] = ';';
+        }
+            break;
         default: break;
         }
         return byte;
@@ -375,6 +396,9 @@ private:
     bool isWait;
     XthermControl ctl;
     bool canRecv;
+    std::string hotspot_ssid;
+    std::string hotspot_password;
+    HandShakeCallback msg_callback_func;
 
     void decode(const char *buf) {
         if( buf )
@@ -454,6 +478,28 @@ private:
                           << "humi:" << humi << "\n"
                           << "fix:" << fix << "\n"
                           << "distance:" << distance << "\n";
+            }
+                break;
+            case HandShake::__hotspot_info: {
+                int start = 2;
+                size_t offset = str.find(';');
+                if( offset != std::string::npos
+                    && str.find(';', offset) != std::string::npos )
+                    {
+                    hotspot_ssid = str.substr(start, offset - start);
+                    offset += 1;
+                    hotspot_password = str.substr(offset, str.find(';', offset) - offset);
+                    std::cout << "- hotspot info -\n"
+                              << "          ssid: " << hotspot_ssid << "\n"
+                              << "      password: " << hotspot_password << "\n";
+                    if( msg_callback_func ) {
+                        msg_callback_func(HandShake::__hotspot_info, this);
+                    }
+
+                }
+                else {
+                    std::cout << "cannot find hotspot info, socket data error \n";
+                }
             }
                 break;
             default: break;

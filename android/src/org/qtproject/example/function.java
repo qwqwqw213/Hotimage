@@ -8,8 +8,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowInsets;
 import android.view.DisplayCutout;
-
+import android.content.Intent;
+import android.provider.Settings;
 import android.content.Context;
+import android.net.Uri;
+import android.content.BroadcastReceiver;
 
 import android.view.WindowManager;
 
@@ -18,9 +21,24 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
+// output
+import android.util.Log;
+
+// wifi
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager.LocalOnlyHotspotReservation;
+import android.os.Handler;
+import java.lang.reflect.Method;
+// activity
+import android.content.IntentFilter;
+import android.app.Instrumentation;
+import android.content.ComponentName;
+
+
 public class function extends QtActivity {
 
-    private static function m_self;
+    public static function m_self;
 
     private Context context;
 //    private SensorManager mSensorManager;
@@ -30,6 +48,173 @@ public class function extends QtActivity {
         m_self = this;
         System.out.println("java -> init");
     }
+
+    public int testGetInt() {
+        return 0xff;
+    }
+
+    private final int MESSAGE_HOTSPOT_UPDATE = 0;
+    public native static void AndroidMessage(int msg, int wParam, int lParam);
+
+    private WifiManager wifiManager;
+    WifiConfiguration wifiConfig;
+    WifiManager.LocalOnlyHotspotReservation hotspotReservation;
+
+    private void initHotspot() {
+        wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+
+        System.out.println("java -> ap open state: " + isApOpen());
+
+        wifiConfig = null;
+        wifiConfig = apConfiguration();
+    }
+
+    public void turnToHotspot() {
+        System.out.println("java -> turn to hotspot");
+        Intent intent = new Intent();
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        intent.setAction("android.intent.action.MAIN");
+        ComponentName cn = new ComponentName("com.android.settings", "com.android.settings.Settings$TetherSettingsActivity");
+        intent.setComponent(cn);
+        startActivity(intent);
+    }
+
+    public String apSSID() {
+        return wifiConfig == null ? "" : wifiConfig.SSID;
+    }
+
+    public String apPassword() {
+        return wifiConfig == null ? "" : wifiConfig.preSharedKey;
+    }
+
+    public boolean isApOpen() {
+        try
+        {
+            final Method method = wifiManager.getClass().getDeclaredMethod("isWifiApEnabled");
+            method.setAccessible(true); //in the case of visibility change in future APIs
+            return (Boolean) method.invoke(wifiManager);
+        }
+        catch (final Throwable ignored)
+        {
+        }
+
+        return false;
+    }
+
+    private WifiConfiguration apConfiguration() {
+        if( android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.O )
+        {
+            try {
+              Method method = wifiManager.getClass().getMethod("getWifiApConfiguration");
+              return (WifiConfiguration) method.invoke(wifiManager);
+            } catch (Exception e) {
+              Log.e(this.getClass().toString(), "", e);
+              return null;
+            }
+        }
+        else {
+            return null;
+        }
+    }
+
+    /*
+    private void lowSdkTurnOnOffHotspot() {
+        try {
+            // if WiFi is on, turn it off
+            boolean status = isApOpen();
+            System.out.println("java -> current hotspot status: " + status);
+            if( status ) {
+                wifiManager.setWifiEnabled(false);
+            }
+            Method method = wifiManager.getClass().getMethod("setWifiApEnabled",
+                                                             WifiConfiguration.class,
+                                                             boolean.class);
+            method.setAccessible(true);
+            boolean flag = (Boolean) method.invoke(wifiManager, wifiConfig, !status);
+            if( flag && !status ) {
+                wifiConfig = apConfiguration();
+                AndroidMessage(MESSAGE_HOTSPOT_UPDATE, 0, 0);
+            }
+            else {
+                AndroidMessage(MESSAGE_HOTSPOT_UPDATE, 0, 0);
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void turnOnHotspot() {
+        // wifi
+        if( android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.O ) {
+            System.out.println("java -> turn on hotspot(sdk < Build.VERSION_CODES.O)");
+
+            // 版本小于Build.VERSION_CODES.O(sdk api < 26, android 8)
+            // 打开热点需要申请ACTION_MANAGE_WRITE_SETTINGS权限
+            if( !Settings.System.canWrite(this) ) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                startActivityForResult(intent, REQUEST_WHITE_SETTINGS);
+            }
+            else {
+                lowSdkTurnOnOffHotspot();
+            }
+        }
+        else
+        {
+            System.out.println("java -> turn on hotspot");
+            wifiManager.startLocalOnlyHotspot(new WifiManager.LocalOnlyHotspotCallback() {
+                @Override
+                public void onStarted(WifiManager.LocalOnlyHotspotReservation reservation) {
+                    super.onStarted(reservation);
+                    hotspotReservation = reservation;
+                    if( hotspotReservation != null ) {
+                        wifiConfig = hotspotReservation.getWifiConfiguration();
+
+                        Log.v("DANG", "THE PASSWORD IS: "
+                            + wifiConfig.preSharedKey
+                            + " \n SSID is : "
+                            + wifiConfig.SSID);
+                    }
+                    else {
+                        System.out.println("java -> on started, WifiManager.LocalOnlyHotspotReservation is null");
+                    }
+                }
+
+              @Override
+              public void onStopped() {
+                super.onStopped();
+                Log.v("DANG", "Local Hotspot Stopped");
+              }
+
+              @Override
+              public void onFailed(int reason) {
+                super.onFailed(reason);
+                Log.v("DANG", "Local Hotspot failed to start");
+              }
+            }, new Handler());
+        }
+    }
+
+    private final int REQUEST_WHITE_SETTINGS = 1;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        System.out.println("java -> onActivityResult\n"
+                           + " requestCode: " + requestCode);
+
+        switch(requestCode)
+        {
+        case REQUEST_WHITE_SETTINGS:
+            System.out.println("java -> REQUEST_WHITE_SETTINGS status: " + Settings.System.canWrite(this));
+            if( Settings.System.canWrite(this) ) {
+                lowSdkTurnOnOffHotspot();
+            }
+            break;
+        default: break;
+        }
+    }
+    */
 
 //    private static OrientationEventListener m_OrientationListener;
 
@@ -41,6 +226,7 @@ public class function extends QtActivity {
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
         System.out.println("java -> on attached to window");
+
         if( android.os.Build.VERSION.SDK_INT >= 28 )
         {
 //            // 获取屏幕安全边界
@@ -68,6 +254,11 @@ public class function extends QtActivity {
    }
 
     @Override
+    public void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         System.out.println("java -> on craete");
@@ -85,6 +276,9 @@ public class function extends QtActivity {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             getWindow().setAttributes(params);
         }
+
+        // wifi manager
+        initHotspot();
 
         /*
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);

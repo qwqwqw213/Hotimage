@@ -4,8 +4,8 @@
 #include "QAndroidJniObject"
 #include "QtAndroid"
 #include "QAndroidJniEnvironment"
-#include "QDebug"
 #endif
+#include "QDebug"
 
 /*
     Object Types
@@ -40,10 +40,14 @@
         Custom type     L<fully-qualified-name>;
  */
 
-static int cutOutTop = 0;
-static int cutOutLeft = 0;
-static int cutOutBottom = 0;
-static int cutOutRight = 0;
+namespace Java {
+    static int cutOutTop = 0;
+    static int cutOutLeft = 0;
+    static int cutOutBottom = 0;
+    static int cutOutRight = 0;
+    static QString hotspotSSID = QString("");
+    static QString hotspotPassword = QString("");
+}
 
 #ifdef Q_OS_ANDROID
 #ifdef __cplusplus
@@ -62,10 +66,26 @@ JNIEXPORT void JNICALL Java_org_qtproject_example_function_safeArea(JNIEnv */*en
                                                                     jobject /*obj*/,
                                                                     int top, int left, int bottom, int right)
 {
-    cutOutTop = top;
-    cutOutLeft = left;
-    cutOutBottom = bottom;
-    cutOutRight = right;
+    Java::cutOutTop = top;
+    Java::cutOutLeft = left;
+    Java::cutOutBottom = bottom;
+    Java::cutOutRight = right;
+}
+
+JNIEXPORT void JNICALL Java_org_qtproject_example_function_AndroidMessage(JNIEnv /*env*/,
+                                                                    jobject /*obj*/,
+                                                                    int msg, int wParam, int lParam)
+{
+    if( !ISVALID(g_Android) ) {
+        return;
+    }
+    switch (msg) {
+    case 0: {
+
+    }
+        break;
+    default: break;
+    }
 }
 
 #ifdef __cplusplus
@@ -80,8 +100,12 @@ public:
     ~AndroidInterfacePrivate();
 
 #ifdef Q_OS_ANDROID
-    QAndroidJniObject obj;
+    QAndroidJniObject mainActivity;
+    QAndroidJniEnvironment env;
 #endif
+
+    bool requestPermission(const QStringList &list);
+    bool requestPermissionActivity(const QString &url);
 
 private:
     AndroidInterface *f;
@@ -99,6 +123,12 @@ AndroidInterface::~AndroidInterface()
 
 }
 
+void AndroidInterface::updateSetting()
+{
+    qDebug() << "hotspot status:" << hotspotOpen();
+    emit updateHotspotInfo();
+}
+
 void AndroidInterface::setRotationScreen(const int &index)
 {
     if( index < __unspecified
@@ -106,14 +136,11 @@ void AndroidInterface::setRotationScreen(const int &index)
         return;
     }
 #ifdef Q_OS_ANDROID
-    QAndroidJniEnvironment env;
-    QAndroidJniObject activity = QtAndroid::androidActivity();
-
-    jint orient = activity.callMethod<jint>( "getRequestedOrientation" );   // 调用Android SDK方法，获取当前屏幕显示方向
-    if(env->ExceptionCheck())       //异常捕获
+    jint orient = p->mainActivity.callMethod<jint>( "getRequestedOrientation" );   // 调用Android SDK方法，获取当前屏幕显示方向
+    if(p->env->ExceptionCheck())       //异常捕获
     {
         qDebug() << "exception occured when get";
-        env->ExceptionClear();
+        p->env->ExceptionClear();
     }
     qDebug() << "set ratation:" << index << "current:" << orient;
     if( orient == index ) {
@@ -121,11 +148,11 @@ void AndroidInterface::setRotationScreen(const int &index)
     }
 
     orient = index;
-    activity.callMethod<void>("setRequestedOrientation", "(I)V", orient);   // 调用Android SDK方法，设置屏幕方向
-    if(env->ExceptionCheck())       //异常捕获
+    p->mainActivity.callMethod<void>("setRequestedOrientation", "(I)V", orient);   // 调用Android SDK方法，设置屏幕方向
+    if(p->env->ExceptionCheck())       //异常捕获
     {
         qDebug() << "exception occured when set";
-        env->ExceptionClear();
+        p->env->ExceptionClear();
     }
     qDebug() << "now screen orientation = " << orient;
 #endif
@@ -133,38 +160,82 @@ void AndroidInterface::setRotationScreen(const int &index)
 
 void AndroidInterface::requestPhotoWritePermission()
 {
-#ifdef Q_OS_ANDROID
-    QtAndroid::PermissionResult result = QtAndroid::checkPermission("android.permission.WRITE_EXTERNAL_STORAGE");
-    if( result == QtAndroid::PermissionResult::Denied ) {
-        QtAndroid::PermissionResultMap resultHash = QtAndroid::requestPermissionsSync(QStringList({"android.permission.WRITE_EXTERNAL_STORAGE"}));
-        if( resultHash["android.permission.WRITE_EXTERNAL_STORAGE"] == QtAndroid::PermissionResult::Denied ) {
-            qDebug() << "request write permission success";
-        }
+    bool flag = p->requestPermission(QStringList() << QString("android.permission.WRITE_EXTERNAL_STORAGE"));
+    if( !flag ) {
+        emit requestPermissionFail();
     }
-    else {
-//        qDebug() << "has write permission";
-    }
-#endif
 }
 
 int AndroidInterface::safeAeraLeft()
 {
-    return cutOutLeft;
+    return Java::cutOutLeft;
 }
 
 int AndroidInterface::safeAeraRight()
 {
-    return cutOutRight;
+    return Java::cutOutRight;
 }
 
 int AndroidInterface::safeAreaTop()
 {
-    return cutOutTop;
+    return Java::cutOutTop;
 }
 
 int AndroidInterface::safeAeraBottom()
 {
-    return cutOutBottom;
+    return Java::cutOutBottom;
+}
+
+bool AndroidInterface::hotspotOpen()
+{
+#ifdef Q_OS_ANDROID
+    return p->mainActivity.callMethod<jboolean>("isApOpen");
+//    return false;
+#else
+    return false;
+#endif
+}
+
+QString AndroidInterface::hotspotSSID()
+{
+#ifdef Q_OS_ANDROID
+//    QAndroidJniObject obj = p->mainActivity.callObjectMethod<jstring>("apSSID");
+//    return obj.toString();
+    return QString("");
+#else
+    return "";
+#endif
+}
+
+QString AndroidInterface::hotspotPassword()
+{
+#ifdef Q_OS_ANDROID
+//    QAndroidJniObject obj = p->mainActivity.callObjectMethod<jstring>("apPassword");
+//    return obj.toString();
+    return QString("");
+#else
+    return "";
+#endif
+}
+
+void AndroidInterface::openHotspot()
+{
+#ifdef Q_OS_ANDROID
+    p->mainActivity.callMethod<void>("turnToHotspot");
+//    p->mainActivity.callMethod<void>("turnOnHotspot");
+#else
+    /* 热点开关测试 */
+    if( Java::hotspotSSID.isEmpty()
+            && Java::hotspotPassword.isEmpty() ) {
+        Java::hotspotSSID = "hotspot ssid";
+        Java::hotspotPassword = "hotspot password";
+    }
+    else {
+        Java::hotspotSSID.clear();
+        Java::hotspotPassword.clear();
+    }
+    emit updateHotspotInfo();
+#endif
 }
 
 AndroidInterfacePrivate::AndroidInterfacePrivate(AndroidInterface *parent)
@@ -173,13 +244,51 @@ AndroidInterfacePrivate::AndroidInterfacePrivate(AndroidInterface *parent)
 
 #ifdef Q_OS_ANDROID
 //    qDebug() << "android sdk version:" << QtAndroid::androidSdkVersion();
+    mainActivity = QtAndroid::androidActivity();
 
+    /*
+    QAndroidJniObject className =
+                mainActivity.callObjectMethod<jstring>("getLocalClassName");
+    qDebug() << "java class name:" << className.toString();
+
+    jint testInt = mainActivity.callMethod<jint>("testGetInt");
+    qDebug() << "java test get int:" << testInt;
+    */
 #endif
 }
 
 AndroidInterfacePrivate::~AndroidInterfacePrivate()
 {
 
+}
+
+bool AndroidInterfacePrivate::requestPermission(const QStringList &list)
+{
+#ifdef Q_OS_ANDROID
+    for(QString permission : list) {
+        QtAndroid::PermissionResult result = QtAndroid::checkPermission(permission);
+        if( result == QtAndroid::PermissionResult::Denied )
+        {
+            QtAndroid::PermissionResultMap resultHash =
+                    QtAndroid::requestPermissionsSync(QStringList() << permission);
+            if( resultHash[permission] == QtAndroid::PermissionResult::Denied ) {
+                qDebug() << QString("request %1 permission fail").arg(permission);
+                return false;
+            }
+        }
+        else {
+            qDebug() << QString("%1 perssion is granted").arg(permission);
+        }
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool AndroidInterfacePrivate::requestPermissionActivity(const QString &url)
+{
+    return true;
 }
 
 AndroidInterface * AndroidInterface::android_self = nullptr;

@@ -64,6 +64,10 @@ public:
     int leftMargin();
     Q_PROPERTY(int rightMargin READ rightMargin CONSTANT)
     int rightMargin();
+    Q_PROPERTY(int topMargin READ topMargin CONSTANT)
+    int topMargin();
+    Q_PROPERTY(int bottomMargin READ bottomMargin CONSTANT)
+    int bottomMargin();
 
     Q_PROPERTY(bool canReadTemperature READ canReadTemperature CONSTANT)
     bool canReadTemperature();

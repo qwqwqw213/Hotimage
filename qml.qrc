@@ -18,5 +18,6 @@
         <file>translation/Cn.qm</file>
         <file>ImageListModel/VideoProgressbar.qml</file>
         <file>ScaleBar/ScaleBar.qml</file>
+        <file>Setting/SwitchButton/SwitchButton.qml</file>
     </qresource>
 </RCC>

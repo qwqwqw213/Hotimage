@@ -31,9 +31,9 @@ ApplicationWindow {
         color: "black"
     }
 
-    onVisibleChanged: {
-        console.log("main visble status:", visible)
-    }
+//    onVisibleChanged: console.log("main visble status:", visible)
+    onWidthChanged: console.log("main width:", width)
+    onHeightChanged: console.log("main height:", height)
 
     property real oldRotation: 0
     PropertyAnimation {
@@ -58,6 +58,7 @@ ApplicationWindow {
 //        anchors.fill: parent
         color: "black"
 
+        property bool landscape: width > height ? true : false
         property bool videoPlay: true
         StackView.onDeactivated: {
             videoPlay = false
@@ -66,65 +67,39 @@ ApplicationWindow {
             videoPlay = true
         }
         StackView.onActivated: {
-            PhoneApi.setRotationScreen(0)
+//            PhoneApi.setRotationScreen(0)
+            stackViewMouseArea.prevItem = null
         }
 
         // 顶部按钮栏
         Rectangle {
             id: topTool
-            width: parent.width * 0.1
-            height: parent.height
+            width: mainView.landscape ? parent.width * 0.1 : parent.width
+            height: mainView.landscape ? parent.height : parent.height * 0.1
             color: "#90000000"
             z: 2
 
-            property real safeWidth: Config.leftMargin > 0 ?
-                                         width - Config.leftMargin : width * 0.8
+            property real safeWidth: (width - Config.leftMargin) * 0.8
+            property real safeHeight: (height - Config.topMargin) * 0.8
+            property real buttonSize: mainView.landscape ? safeWidth * 0.75 : safeHeight * 0.75
 
-            // 设置按钮
-            Rectangle {
-                id: btnSetting
-                width: parent.safeWidth * 0.75
-                height: width
-                anchors.top: parent.top
-                anchors.topMargin: height / 2
-                anchors.left: btnTempSetting.left
-                color: "transparent"
-//                color: "red"
-
-                Text {
-                    anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: btnSetting.width * 0.8
-                    text: "\uf013"
-                    color: btnSettingArea.pressed ? "#a0a0a0" : "white"
-                    rotation: window.oldRotation
-                }
-
-                MouseArea {
-                    id: btnSettingArea
-                    anchors.fill: parent
-                    onClicked: {
-                        setting.open()
-                    }
-                }
-            }
+            onWidthChanged: console.log("width changed", safeWidth, safeHeight, buttonSize)
+            onHeightChanged: console.log("height changed", safeWidth, safeHeight, buttonSize)
 
             // 温度开关
-            Rectangle {
+            Item {
                 id: btnTempSetting
-                width: parent.safeWidth * 0.75
-                height: width
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.horizontalCenterOffset: Config.leftMargin / 2
-                anchors.verticalCenter: parent.verticalCenter
-                color: "transparent"
+                width: parent.buttonSize
+                height: parent.buttonSize
+                x: (parent.width - width) / 2
+                y: Config.topMargin + (parent.height - Config.topMargin - height) / 2
                 visible: Config.canReadTemperature
 
                 Text {
                     id: icon
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnTempSetting.width * 0.8
+                    font.pixelSize: parent.width * 0.8
                     text: "\uf2cb"
                     color: TcpCamera.showTemp ? "#dc143c" : "#696969"
                     rotation: window.oldRotation
@@ -140,19 +115,18 @@ ApplicationWindow {
             }
 
             // 快门刷新按钮
-            Rectangle {
+            Item {
                 id: btnShutter
-                width: parent.safeWidth * 0.75
-                height: width
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: height / 2
-                anchors.left: btnTempSetting.left
-                color: "transparent"
+                width: parent.buttonSize
+                height: parent.buttonSize
+                anchors.top: btnTempSetting.top
+                anchors.left: parent.left
+                anchors.leftMargin: width / 2
 
                 Text {
                     anchors.centerIn: parent
                     font.family: "FontAwesome"
-                    font.pixelSize: btnShutter.width * 0.8
+                    font.pixelSize: parent.width * 0.8
                     text: "\uf021"
                     color: btnShutterArea.pressed ? "#a0a0a0" : "white"
                     rotation: window.oldRotation
@@ -166,28 +140,54 @@ ApplicationWindow {
                     }
                 }
             }
+
+            // 设置按钮
+            Item {
+                id: btnSetting
+                width: parent.buttonSize
+                height: parent.buttonSize
+                anchors.top: btnTempSetting.top
+                anchors.right: parent.right
+                anchors.rightMargin: width / 2
+
+                Text {
+                    anchors.centerIn: parent
+                    font.family: "FontAwesome"
+                    font.pixelSize: parent.width * 0.8
+                    text: "\uf013"
+                    color: btnSettingArea.pressed ? "#a0a0a0" : "white"
+                    rotation: window.oldRotation
+                }
+
+                MouseArea {
+                    id: btnSettingArea
+                    anchors.fill: parent
+                    onClicked: {
+                        stackView.push(setting)
+//                        stackView.push("qrc:/Setting/Setting.qml")
+                    }
+                }
+            }
         }
 
         // 摄像头图像
         Rectangle {
-            width: parent.width * 0.7
-            height: parent.height
-//            x: parent.width * 0.1
-//            y: 0
-            anchors.left: topTool.right
-
-//            anchors.fill: parent
-
+            id: cameraFrame
+            anchors.left: parent.left
+            anchors.top: topTool.bottom
+            width: parent.width
+            height: parent.height - (topTool.height + bottomTool.height)
             clip: true
             color: "black"
 
             Image {
-                id: cameraFrame
                 anchors.centerIn: parent
-                width: parent.width * scaleBar.value
-                height: parent.height * scaleBar.value
-                source: mainView.videoPlay ?
-                            (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
+                width: parent.height * scaleBar.value
+                height: parent.width * scaleBar.value
+//                source: mainView.videoPlay ?
+//                            (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
+                source: TcpCamera.isConnected ? TcpCamera.videoFrameUrl : ""
+                rotation: 90
 
                 // 录像标志
                 Text {
@@ -218,13 +218,13 @@ ApplicationWindow {
                 }
             }
 
+            // 图像放大按钮
             ScaleBar {
                 id: scaleBar
-                width: parent.width * 0.2
+                width: parent.width
 //                width: (parent.width - bottomTool.width - topTool.width) * 0.2
-                height: parent.height
-                anchors.right: parent.right
-//                anchors.rightMargin: bottomTool.width
+                height: parent.height * 0.2
+                anchors.bottom: parent.bottom
                 textRotation: window.oldRotation
             }
         }
@@ -258,34 +258,31 @@ ApplicationWindow {
         // 底部按钮栏
         Rectangle {
             id: bottomTool
-            width: parent.width * 0.2
-            height: parent.height
+            width: mainView.landscape ? parent.width * 0.15 : parent.width
+            height: mainView.landscape ? parent.height : parent.height * 0.15
             color: "#90000000"
-            anchors.right: parent.right
             z: 2
+            anchors.top: cameraFrame.bottom
 
-            property real safeWidth: Config.rightMargin > 0 ?
-                                         width - Config.rightMargin : width * 0.8
+            property real safeWidth: (width - Config.rightMargin) * 0.8
+            property real safeHeight: (height - Config.bottomMargin) * 0.8
+            property real buttonSize: mainView.landscape ? safeWidth * 0.75 : safeHeight * 0.75
 
             // 截图按钮
             Rectangle {
                 id: btnCapture
-                width: parent.safeWidth * 0.55
-                height: width
-//                anchors.centerIn: parent
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.horizontalCenterOffset: 0 - Config.rightMargin / 2
-                anchors.verticalCenter: parent.verticalCenter
-
+                x: (parent.width - width) / 2
+                y: (parent.height - Config.bottomMargin - height) / 2
+                width: parent.buttonSize
+                height: parent.buttonSize
                 color: "transparent"
 
                 border.color: btnCaptureArea.pressed ? "#A0A0A0" : "white"
-                border.width: 4
+                border.width: (width / 2) * 0.1
                 radius: width / 2
 
                 Rectangle {
                     id: btnCaptrueIcon
-//                    anchors.centerIn: parent
                     x: (parent.width - width) / 2
                     y: (parent.height - height) / 2
                     width: parent.width * 0.85
@@ -316,15 +313,13 @@ ApplicationWindow {
             }
 
             // 相册按钮
-            Rectangle {
+            Item {
                 id: btnPhoto
-                width: parent.safeWidth * 0.375
-                height: width
-//                anchors.left: btnCapture.left
-                anchors.horizontalCenter: btnCapture.horizontalCenter
-                anchors.top: parent.top
-                anchors.topMargin: height / 2
-                color: "transparent"
+                width: parent.buttonSize * 0.85
+                height: parent.buttonSize * 0.85
+                anchors.verticalCenter: btnCapture.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: width / 2
 
                 Behavior on scale {
                     NumberAnimation {
@@ -340,12 +335,10 @@ ApplicationWindow {
                     rotation: window.oldRotation
 
                     Rectangle {
-                        width: parent.width + 2
-                        height: parent.width + 2
+                        anchors.fill: parent
                         color: "transparent"
                         border.color: "white"
                         border.width: 1
-                        anchors.centerIn: parent
                     }
 
                     Text {
@@ -369,6 +362,7 @@ ApplicationWindow {
                     }
                     onClicked: {
                         stackView.push(imageListView)
+//                        imageListView.visible = true
                     }
                 }
 
@@ -381,15 +375,13 @@ ApplicationWindow {
             }
 
             // 录像按钮
-            Rectangle {
+            Item {
                 id: btnRecord
-                width: parent.safeWidth * 0.375 // parent.width * 0.5 * 0.75
-                height: width
-//                anchors.left: btnCapture.left
-                anchors.horizontalCenter: btnCapture.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: height / 2
-                color: "transparent"
+                width: parent.buttonSize * 0.85
+                height: parent.buttonSize * 0.85
+                anchors.verticalCenter: btnCapture.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: width / 2
 
                 Text {
                     anchors.centerIn: parent
@@ -409,99 +401,145 @@ ApplicationWindow {
                 }
             }
         }
+    }
 
-        MouseArea {
-            id: mainViewArea
-            anchors.fill: parent
-            enabled: false
-            onReleased: {
-                if( setting.visible ) {
-                    setting.tohide = true
-                }
-                enabled = false
-            }
-        }
-
-//        ImagePlayer {}
-
-        Setting {
-            id: setting
-            width: parent.width * 0.5 + Config.leftMargin
-            height: parent.height
-        }
+    Setting {
+        id: setting
     }
 
     ImageListView {
         id: imageListView
+//        anchors.fill: parent
 //        visible: false
 //        y: parent.height
     }
+
 
     StackView {
         id: stackView
         anchors.fill: parent
         initialItem: mainView
 
+        property real hideX: 0 - width * 0.3
+
+        focus: true
+        Keys.onReleased: {
+            if( event.key === Qt.Key_Back ) {
+                if( stackView.depth > 1 ) {
+                    stackView.pop()
+                    event.accepted = true
+                }
+            }
+        }
+
         pushEnter: Transition {
-            YAnimator {
-                from: height
+            XAnimator {
+                from: width
                 to: 0
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         pushExit: Transition {
-//            XAnimator {
-//                from: 0
-//                to: 0 - width
-//                duration: 200
-//                easing.type: Easing.OutCurve
-//            }
-            ScaleAnimator {
-                from: 1.0
-                to: 0.9
+            XAnimator {
+                from: 0
+                to: stackView.hideX
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         popEnter: Transition {
-//            XAnimator {
-//                from: 0 - width
-//                to: 0
-//                duration: 200
-//                easing.type: Easing.OutCurve
-//            }
-            ScaleAnimator {
-                from: 0.9
-                to: 1.0
+            XAnimator {
+                from: stackViewMouseArea.prevItem === null ?
+                        stackView.hideX : stackViewMouseArea.prevItem.x
+                to: 0
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
         popExit: Transition {
-            YAnimator {
+            XAnimator {
                 from: 0
-                to: height
+                to: width
                 duration: 200
                 easing.type: Easing.OutCurve
             }
         }
-
-
     }
 
-    Loading {
-        visible: TcpCamera.isConnected
+    MouseArea {
+        id: stackViewMouseArea
         anchors.fill: parent
-        text: qsTr("Camera connecting...")
+
+        enabled: stackView.depth > 1
+        scrollGestureEnabled: false
+//        propagateComposedEvents: true
+
+        property bool pressValid: false
+        property bool moveValid: false
+        property real pressedX
+        property real currentX
+        property var prevItem: null
+
+        onPressed: {
+            if( mouseX < 10
+                && mouseY > 60
+                && stackView.depth > 1 )
+            {
+                pressValid = true;
+                pressedX = mouseX
+                currentX = stackView.currentItem.x
+                prevItem = stackView.get(0)
+            }
+            else {
+                mouse.accepted = false
+            }
+        }
+        onPositionChanged: {
+            if( pressValid && !moveValid ) {
+                if( mouseX - pressedX > 20 ) {
+                    moveValid = true
+                }
+            }
+            if( moveValid ) {
+                prevItem.visible = true
+                var x = mouseX - pressedX + currentX
+                if( x > stackView.currentItem.width ) {
+                    x = width
+                }
+                if( x < 0 ) {
+                    x = 0
+                }
+
+                var p = stackView.currentItem.x / stackView.currentItem.width
+                stackView.currentItem.x = x
+                prevItem.x = stackView.hideX - (stackView.hideX * p)
+            }
+
+        }
+        onReleased: {
+            if( pressValid ) {
+                pressValid = false
+                if( moveValid ) {
+                    moveValid = false
+                    stackView.pop()
+                }
+            }
+        }
     }
+
+//    Loading {
+//        visible: !TcpCamera.isConnected
+//        anchors.fill: parent
+//        text: qsTr("Camera connecting...")
+//    }
 
     // 消息注册
     Connections {
         target: TcpCamera
         onMsg: {
 //            console.log(str)
-            messagebox.showMsg(str)
+            messagebox.text = str
         }
 
         onCaptureFinished: {
@@ -509,9 +547,9 @@ ApplicationWindow {
         }
 
         onConnectStatusChanged: {
-            if( stackView.depth > 1 && !TcpCamera.isConnected ) {
-                stackView.pop()
-            }
+//            if( stackView.depth > 1 && !TcpCamera.isConnected ) {
+//                stackView.pop()
+//            }
         }
     }
 

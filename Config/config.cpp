@@ -183,6 +183,10 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                     p->tcpCamera->open();
                 }
             }
+
+            if( !p->androidInterface.isNull() ) {
+                p->androidInterface->updateSetting();
+            }
         }
             break;
         case Qt::ApplicationSuspended: {
@@ -203,10 +207,10 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     p->width = r.width();
     p->height = r.height();
 #else
-    p->width = 960;
-    p->height = 515;
-//    p->width = 515;
-//    p->height = 960;
+//    p->width = 960;
+//    p->height = 515;
+    p->width = 515;
+    p->height = 960;
 #endif
     if( p->width > p->height ) {
         p->isLandscape = true;
@@ -254,25 +258,28 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     p->iosInterface->keepScreenOn();
     SafeArea s;
     p->iosInterface->safeArea(&s);
-    qDebug() << "Safe area:" << s.top << s.left << s.bottom << s.right;
     p->leftMargin = s.left;
     p->rightMargin = s.right;
+    p->topMargin = s.top;
+    p->bottomMargin = s.bottom;
 #elif defined (Q_OS_ANDROID)
     qreal ratio = p->screen->devicePixelRatio();
     p->leftMargin = p->androidInterface->safeAeraLeft() / ratio;
     p->rightMargin = p->androidInterface->safeAeraRight() / ratio;
     p->topMargin = p->androidInterface->safeAreaTop() / ratio;
     p->bottomMargin = p->androidInterface->safeAeraBottom() / ratio;
-
-    qDebug() << QString("android safe area(ratio: %1):").arg(ratio) << Qt::endl
-             << "   top:" << p->topMargin << Qt::endl
-             << "   left:" << p->leftMargin << Qt::endl
-             << "   bottom:" << p->bottomMargin << Qt::endl
-             << "   right:" << p->rightMargin << Qt::endl;
 #else
     p->leftMargin = 0;
     p->rightMargin = 0;
+    p->topMargin = 45;
+    p->bottomMargin = 45;
 #endif
+
+    qDebug() << QString("- safe area -") << Qt::endl
+             << "   top     :" << p->topMargin << Qt::endl
+             << "   left    :" << p->leftMargin << Qt::endl
+             << "   bottom  :" << p->bottomMargin << Qt::endl
+             << "   right   :" << p->rightMargin << Qt::endl;
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
@@ -362,6 +369,16 @@ int Config::rightMargin()
     return p->rightMargin;
 }
 
+int Config::topMargin()
+{
+    return p->topMargin;
+}
+
+int Config::bottomMargin()
+{
+    return p->bottomMargin;
+}
+
 bool Config::canReadTemperature()
 {
 #ifdef TEMPERATURE_SDK
@@ -400,15 +417,10 @@ ConfigPrivate::ConfigPrivate(Config *parent)
         qreal x = r->x();
         qreal y = r->y();
         int rotation = oldRotation;
-        if (x > -2.5 && x <= 2.5 && y > 7.5 && y <= 10 && (rotation != 270 && rotation != -90)) {
-            if( rotation == 0 || rotation == -180 ) {
-                rotation = -90;
-            }
-            else {
-                rotation = rotation == -270 ? -90 : 270;
-            }
-        }
-        else if (x > 7.5 && x <= 10 && y > -2.5 && y <= 2.5 && (rotation != 0 && rotation != -360)) {
+        if (x > -2.5 && x <= 2.5 && y > 7.5 && y <= 10
+                /*&& (rotation != 270 && rotation != -90)*/
+                && (rotation != 0 && rotation != -360)) {
+            // home button bottom
             if( rotation == -270 ) {
                 rotation = -360;
             }
@@ -416,7 +428,10 @@ ConfigPrivate::ConfigPrivate(Config *parent)
                 rotation = 0;
             }
         }
-        else if (x > -2.5 && x <= 2.5 && y > -10 && y <= -7.5 && (rotation != 90 && rotation != -270)) {
+        else if (x > 7.5 && x <= 10 && y > -2.5 && y <= 2.5
+                 /*&& (rotation != 0 && rotation != -360)*/
+                 && (rotation != -270 && rotation != 90)) {
+            // home button right
             if( rotation == -180 || rotation == -360 ) {
                 rotation = -270;
             }
@@ -424,12 +439,26 @@ ConfigPrivate::ConfigPrivate(Config *parent)
                 rotation = rotation == -90 ? -270 : 90;
             }
         }
-        else if (x > -10 && x <= -7.5 && y > -2.5 && y < 2.5 && (rotation != 180 && rotation != -180)) {
+        else if (x > -2.5 && x <= 2.5 && y > -10 && y <= -7.5
+                 /*&& (rotation != 90 && rotation != -270)*/
+                 && (rotation != 180 && rotation != -180)) {
+            // home button top
             if( rotation == -90 || rotation == -270 ) {
                 rotation = -180;
             }
             else {
                 rotation = 180;
+            }
+        }
+        else if (x > -10 && x <= -7.5 && y > -2.5 && y < 2.5
+                 /*&& (rotation != 180 && rotation != -180)*/
+                 && (rotation != -90 && rotation != 270)) {
+            // home button left
+            if( rotation == 0 || rotation == -180 ) {
+                rotation = -90;
+            }
+            else {
+                rotation = rotation == -270 ? -90 : 270;
             }
         }
 
@@ -442,17 +471,6 @@ ConfigPrivate::ConfigPrivate(Config *parent)
     gyroscope = new QGyroscope;
     QObject::connect(gyroscope, &QGyroscope::readingChanged, [=](){
         QGyroscopeReading *r = gyroscope->reading();
-        qint64 ts = QDateTime::currentDateTime().toMSecsSinceEpoch();
-        qreal interval = ts - old_ts;
-        old_ts = ts;
-
-        float roll;
-        float pitch;
-        float yaw;
-        qDebug() << "roll:" << roll * 60 << "pitch:" << pitch * 60 << "yaw:" << yaw * 60
-                 << r->x() << r->y() << r->z()
-                 << accelerometer_x << accelerometer_y << accelerometer_z
-                 << interval;
     });
 
     old_ts = QDateTime::currentDateTime().toMSecsSinceEpoch();
