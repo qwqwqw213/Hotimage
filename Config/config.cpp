@@ -53,7 +53,7 @@ public:
     QScopedPointer<VideoPlayer> videoPlayer;
 #if defined (Q_OS_IOS)
     QScopedPointer<IOSInterface> iosInterface;
-#else
+#elif defined (Q_OS_ANDROID)
     QScopedPointer<AndroidInterface> androidInterface;
 #endif
 

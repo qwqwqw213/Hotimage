@@ -91,7 +91,9 @@ Rectangle {
             spacing: -1
 
             function turnToHotspot() {
-                PhoneApi.openHotspot()
+                if( Config.isMobile ) {
+                    PhoneApi.openHotspot()
+                }
             }
 
             Loader {
@@ -107,7 +109,7 @@ Rectangle {
                 sourceComponent: inputItem
                 onLoaded: {
                     item.text = qsTr("SSID")
-                    item.value = PhoneApi.hotspotSSID
+                    item.value = Config.isMobile ? PhoneApi.hotspotSSID : ""
                 }
             }
 
@@ -115,7 +117,7 @@ Rectangle {
                 sourceComponent: inputItem
                 onLoaded: {
                     item.text = qsTr("Password")
-                    item.value = PhoneApi.hotspotPassword
+                    item.value = Config.isMobile ? PhoneApi.hotspotPassword : ""
                 }
             }
 

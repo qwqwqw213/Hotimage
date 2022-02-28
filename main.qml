@@ -456,7 +456,7 @@ ApplicationWindow {
         }
         popExit: Transition {
             XAnimator {
-                from: 0
+                from: stackView.currentItem.x
                 to: width
                 duration: 200
                 easing.type: Easing.OutCurve
@@ -478,7 +478,7 @@ ApplicationWindow {
         property real currentX
         property var prevItem: null
 
-        onPressed: {
+        onPressed: (mouse) => {
             if( mouseX < 10
                 && mouseY > 60
                 && stackView.depth > 1 )
@@ -487,6 +487,7 @@ ApplicationWindow {
                 pressedX = mouseX
                 currentX = stackView.currentItem.x
                 prevItem = stackView.get(0)
+                console.log("stack view prev")
             }
             else {
                 mouse.accepted = false
