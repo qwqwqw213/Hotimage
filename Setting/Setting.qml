@@ -1,6 +1,5 @@
 import QtQuick 2.14
 import QtQuick.Layouts 1.4
-import QtQuick.Controls 1.4
 import QtQuick.Controls 2.14
 
 import "./SwitchButton"
@@ -45,7 +44,6 @@ Rectangle {
             Text {
                 anchors.left: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                font.pointSize: 15
                 text: qsTr("Setting")
                 color: "white"
             }

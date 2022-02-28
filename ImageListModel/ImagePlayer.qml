@@ -387,30 +387,11 @@ Item {
                 Text {
                     anchors.left: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    font.pointSize: 15
                     text: ImageModel.name
                     color: "white"
                 }
             }
         }
-
-//                Text {
-//                    id: titleText
-//                    anchors.verticalCenter: parent.verticalCenter
-//                    anchors.left: parent.right
-//                    font.pixelSize: 20
-//                    color: "white"
-//    //                text: qsTr("Photo")
-//                }
-//                 当前Item切换, 更新标题文本
-//                Connections {
-//                    target: ImageModel
-//                    onCurrentIndexChanged: {
-//                        titleText.text = ImageModel.name
-//                    }
-//                }
-//            }
-//        }
 
         // bottom bar
         Rectangle {

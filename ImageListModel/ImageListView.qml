@@ -194,7 +194,6 @@ Item {
                 Text {
                     anchors.left: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    font.pointSize: 15
                     text: qsTr("Photo")
                     color: "white"
                 }
@@ -216,7 +215,6 @@ Item {
                 Text {
                     id: btnChoiceText
                     anchors.centerIn: parent
-                    font.pointSize: 15
                     color: "white"
                     text: ImageModel.selectionStatus ?
                               qsTr("Cancel") : qsTr("Choice")
@@ -266,7 +264,6 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.left
-                    font.pointSize: 15
                     color: "white"
                     text: qsTr("Delete")
                 }

@@ -14,7 +14,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        AndroidInterface/androidinterface.cpp \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
         Function/Wireless/wireless.cpp \
@@ -38,7 +37,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    AndroidInterface/androidinterface.h \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
     Function/Wireless/wireless.h \
@@ -160,17 +158,18 @@ QT += \
     sensors
 
 HEADERS += \
+    AndroidInterface/androidinterface.h \
+    Function/VideoProcess/videoprocess.h \
     libs/xtherm/thermometry.h \
     libs/ffmpeg/libavcodec/avcodec.h \
     libs/ffmpeg/libavformat/avformat.h \
     libs/ffmpeg/libavutil/avutil.h \
     libs/ffmpeg/libswresample/swresample.h \
-    libs/ffmpeg/libswscale/swscale.h \
-    Function/VideoProcess/videoprocess.h
+    libs/ffmpeg/libswscale/swscale.h
 
 SOURCES += \
+    AndroidInterface/androidinterface.cpp \
     Function/VideoProcess/videoprocess.cpp
-
 
 DISTFILES += \
     android/AndroidManifest.xml \

@@ -160,10 +160,12 @@ void AndroidInterface::setRotationScreen(const int &index)
 
 void AndroidInterface::requestPhotoWritePermission()
 {
+#ifdef Q_OS_ANDROID
     bool flag = p->requestPermission(QStringList() << QString("android.permission.WRITE_EXTERNAL_STORAGE"));
     if( !flag ) {
         emit requestPermissionFail();
     }
+#endif
 }
 
 int AndroidInterface::safeAeraLeft()

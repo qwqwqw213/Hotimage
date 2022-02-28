@@ -2,7 +2,6 @@
 
 #include "ImageListModel/imagelistmodel.h"
 #include "TcpCamera/tcpcamera.h"
-#include "AndroidInterface/androidinterface.h"
 #include "VideoPlayer/videoplayer.h"
 
 #include "QDebug"
@@ -25,6 +24,8 @@
 
 #ifdef Q_OS_IOS
 #include "IOSInterface/iosinterface.h"
+#elif defined (Q_OS_ANDROID)
+#include "AndroidInterface/androidinterface.h"
 #endif
 
 class ConfigPrivate
@@ -47,12 +48,13 @@ public:
     qreal accelerometer_z;
 #endif
 
-    QScopedPointer<AndroidInterface> androidInterface;
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
     QScopedPointer<VideoPlayer> videoPlayer;
-#ifdef Q_OS_IOS
+#if defined (Q_OS_IOS)
     QScopedPointer<IOSInterface> iosInterface;
+#else
+    QScopedPointer<AndroidInterface> androidInterface;
 #endif
 
     QScreen *screen;
@@ -182,10 +184,12 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
                     p->tcpCamera->open();
                 }
             }
-
+#ifdef Q_OS_IOS
+#elif defined (Q_OS_ANDROID)
             if( !p->androidInterface.isNull() ) {
                 p->androidInterface->updateSetting();
             }
+#endif
         }
             break;
         case Qt::ApplicationSuspended: {
@@ -222,10 +226,40 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     QQmlContext *cnt = e->rootContext();
 
+
+#if defined(Q_OS_IOS)
+    p->iosInterface.reset(new IOSInterface);
+    cnt->setContextProperty("PhoneApi", p->iosInterface.data());
+    p->iosInterface->keepScreenOn();
+    SafeArea s;
+    p->iosInterface->safeArea(&s);
+    p->leftMargin = s.left;
+    p->rightMargin = s.right;
+    p->topMargin = s.top;
+    p->bottomMargin = s.bottom;
+#elif defined (Q_OS_ANDROID)
     // 安卓模块
     p->androidInterface.reset(new AndroidInterface);
     cnt->setContextProperty("PhoneApi", p->androidInterface.data());
     p->androidInterface->requestPhotoWritePermission();
+
+    qreal ratio = p->screen->devicePixelRatio();
+    p->leftMargin = p->androidInterface->safeAeraLeft() / ratio;
+    p->rightMargin = p->androidInterface->safeAeraRight() / ratio;
+    p->topMargin = p->androidInterface->safeAreaTop() / ratio;
+    p->bottomMargin = p->androidInterface->safeAeraBottom() / ratio;
+#else
+    p->leftMargin = 0;
+    p->rightMargin = 0;
+    p->topMargin = 45;
+    p->bottomMargin = 45;
+#endif
+
+    qDebug() << QString("- safe area -") << Qt::endl
+             << "   top     :" << p->topMargin << Qt::endl
+             << "   left    :" << p->leftMargin << Qt::endl
+             << "   bottom  :" << p->bottomMargin << Qt::endl
+             << "   right   :" << p->rightMargin << Qt::endl;
 
     // 配置模块
     cnt->setContextProperty("Config", this);
@@ -251,34 +285,6 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
     p->tcpCamera->open();
-
-#if defined(Q_OS_IOS)
-    p->iosInterface.reset(new IOSInterface);
-    p->iosInterface->keepScreenOn();
-    SafeArea s;
-    p->iosInterface->safeArea(&s);
-    p->leftMargin = s.left;
-    p->rightMargin = s.right;
-    p->topMargin = s.top;
-    p->bottomMargin = s.bottom;
-#elif defined (Q_OS_ANDROID)
-    qreal ratio = p->screen->devicePixelRatio();
-    p->leftMargin = p->androidInterface->safeAeraLeft() / ratio;
-    p->rightMargin = p->androidInterface->safeAeraRight() / ratio;
-    p->topMargin = p->androidInterface->safeAreaTop() / ratio;
-    p->bottomMargin = p->androidInterface->safeAeraBottom() / ratio;
-#else
-    p->leftMargin = 0;
-    p->rightMargin = 0;
-    p->topMargin = 45;
-    p->bottomMargin = 45;
-#endif
-
-    qDebug() << QString("- safe area -") << Qt::endl
-             << "   top     :" << p->topMargin << Qt::endl
-             << "   left    :" << p->leftMargin << Qt::endl
-             << "   bottom  :" << p->bottomMargin << Qt::endl
-             << "   right   :" << p->rightMargin << Qt::endl;
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
@@ -380,12 +386,11 @@ int Config::bottomMargin()
 
 bool Config::canReadTemperature()
 {
+#ifdef TEMPERATURE_SDK
     return true;
-//#ifdef TEMPERATURE_SDK
-//    return true;
-//#else
-//    return false;
-//#endif
+#else
+    return false;
+#endif
 }
 
 bool Config::isMobile()
