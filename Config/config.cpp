@@ -47,7 +47,6 @@ public:
     qreal accelerometer_z;
 #endif
 
-
     QScopedPointer<AndroidInterface> androidInterface;
     QScopedPointer<ImageListModel> imageModel;
     QScopedPointer<TcpCamera> tcpCamera;
@@ -381,11 +380,12 @@ int Config::bottomMargin()
 
 bool Config::canReadTemperature()
 {
-#ifdef TEMPERATURE_SDK
     return true;
-#else
-    return false;
-#endif
+//#ifdef TEMPERATURE_SDK
+//    return true;
+//#else
+//    return false;
+//#endif
 }
 
 bool Config::isMobile()

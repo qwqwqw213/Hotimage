@@ -53,17 +53,17 @@ public:
     Q_PROPERTY(int palette READ palette NOTIFY paletteChanged)
     int palette();
 
-    Q_PROPERTY(qreal emiss READ emiss CONSTANT)
+    Q_PROPERTY(qreal emiss READ emiss NOTIFY cameraParamChanged)
     qreal emiss();
-    Q_PROPERTY(qreal reflected READ reflected CONSTANT)
+    Q_PROPERTY(qreal reflected READ reflected NOTIFY cameraParamChanged)
     qreal reflected();
-    Q_PROPERTY(qreal ambient READ ambient CONSTANT)
+    Q_PROPERTY(qreal ambient READ ambient NOTIFY cameraParamChanged)
     qreal ambient();
-    Q_PROPERTY(qreal humidness READ humidness CONSTANT)
+    Q_PROPERTY(qreal humidness READ humidness NOTIFY cameraParamChanged)
     qreal humidness();
-    Q_PROPERTY(qreal correction READ correction CONSTANT)
+    Q_PROPERTY(qreal correction READ correction NOTIFY cameraParamChanged)
     qreal correction();
-    Q_PROPERTY(qreal distance READ distance CONSTANT)
+    Q_PROPERTY(qreal distance READ distance NOTIFY cameraParamChanged)
     uint16_t distance();
 
     Q_PROPERTY(bool showTemp READ showTemp WRITE setShowTemp NOTIFY showTempChanged)
@@ -95,6 +95,7 @@ Q_SIGNALS:
     void recordTimeChanged();
     void videoFrame(QImage);
     void cameraSNChanged();
+    void cameraParamChanged();
 };
 
 #endif // RECV_H

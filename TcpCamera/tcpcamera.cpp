@@ -182,11 +182,11 @@ bool TcpCamera::isConnected()
 
 void TcpCamera::open()
 {
-//    if( isOpen() || p->cfg.ip.isEmpty() ) {
-//        return;
-//    }
-//    p->frameCount = 0;
-//    p->thread->start();
+    if( isOpen() || p->cfg.ip.isEmpty() ) {
+        return;
+    }
+    p->frameCount = 0;
+    p->thread->start();
 }
 
 void TcpCamera::close()
@@ -515,6 +515,24 @@ TcpCameraPrivate::~TcpCameraPrivate()
 void TcpCameraPrivate::searchDevice()
 {
     hasFrame = false;
+    // 初次尝试连接上次已连接的设备IP
+    if( !deviceIP.isEmpty() ) {
+        qDebug() << "connect prev ip:" << deviceIP;
+        socket->connectToHost(deviceIP, cfg.port);
+        socket->waitForConnected(1000);
+        if( socket->state() == QAbstractSocket::ConnectedState ) {
+            const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
+            for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
+                if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
+                     localIP = address.toString();
+                }
+            }
+
+            qDebug() << "connect success, local ip:" << localIP;
+            return;
+        }
+    }
+
     while (!exit)
     {
         localIP.clear();
@@ -533,12 +551,14 @@ void TcpCameraPrivate::searchDevice()
             int index = 1;
             while (true && socket && !exit)
             {
+
                 QString ip = ip_front + QString::number(index);
                 if( ip == localIP ) {
+                    index ++;
                     continue;
                 }
 
-                qDebug() << "connect ip:" << ip << "port:" << cfg.port;
+                qDebug() << "connect ip:" << ip << "port:" << cfg.port << "local:" << localIP;
                 socket->connectToHost(ip, cfg.port);
                 socket->waitForConnected(50);
                 if( socket->state() == QAbstractSocket::ConnectedState ) {
@@ -705,6 +725,7 @@ void TcpCameraPrivate::onReadyRead()
         frameCount ++;
 
         // 按键处理
+        /*
         int key = (int)(tail.back());
         if( key == 0 )
         {
@@ -724,6 +745,7 @@ void TcpCameraPrivate::onReadyRead()
                 qDebug() << "key reset";
             }
         }
+        */
 
         uint16_t *data = reinterpret_cast<uint16_t *>(buf.data());
         uint16_t *temp = data + (cfg.cam.w * (cfg.cam.h - IMAGE_Y_OFFSET));
@@ -927,12 +949,19 @@ void TcpCameraPrivate::onReadyRead()
 
 void TcpCameraPrivate::readSetting()
 {
+    // 初始化 参数
+    deviceIP.clear();
+    localIP.clear();
+
+
 #ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/cameraparam.ini");
 #else
     QString path = QGuiApplication::applicationDirPath() + QString("/cameraparam.ini");
 #endif
     QSettings *s = new QSettings(path, QSettings::IniFormat);
+
+    deviceIP = s->value("Socket/DeviceIP", "").toString();
 
     cfg.ip = SERVER_IP;
     cfg.port = SERVER_PORT;
@@ -948,6 +977,13 @@ void TcpCameraPrivate::readSetting()
     showTemp = s->value("normal/showtemp", false).toBool();
 
     qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
+    qDebug() << "- camera param -" << Qt::endl
+             << "            emiss:" << cfg.set.emiss << Qt::endl
+             << "        reflected:" << cfg.set.reflected << Qt::endl
+             << "          ambient:" << cfg.set.ambient << Qt::endl
+             << "        humidness:" << cfg.set.humidness << Qt::endl
+             << "       correction:" << cfg.set.correction << Qt::endl
+             << "         distance:" << cfg.set.distance;
 //    emit f->paletteChanged();
 
     delete s;
@@ -963,6 +999,8 @@ void TcpCameraPrivate::saveSetting()
 #endif
     qDebug() << "save setting path:" << path;
     QSettings *s = new QSettings(path, QSettings::IniFormat);
+
+    s->setValue("Socket/DeviceIP", deviceIP);
 
     s->setValue("Normal/palette", cfg.set.palette);
     s->setValue("Normal/mode", cfg.set.mode);
@@ -1033,6 +1071,7 @@ void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected
     cfg.set.correction = correction;
     cfg.set.distance = distance;
     QByteArray byte = handshake.pack(cfg.set);
+    emit f->cameraParamChanged();
     emit write(byte);
 }
 

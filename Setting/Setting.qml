@@ -199,6 +199,7 @@ Rectangle {
             }
 
             Loader {
+                active: Config.canReadTemperature
                 sourceComponent: section
                 onLoaded: {
                     item.text = qsTr("Camera Param")
@@ -207,12 +208,13 @@ Rectangle {
 
             Loader {
                 id: emissSlider
+                property real pValue: TcpCamera.emiss
+                property real pTo: 1
+                property real pFrom: 0.1
+                property real pStep: 0.1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = 0.1
-                    item.to = 1
-                    item.step = 0.01
-                    item.value = TcpCamera.emiss
                     item.text = qsTr("Emiss")
                     item.floatLength = 2
                 }
@@ -220,48 +222,52 @@ Rectangle {
 
             Loader {
                 id: reflectedSlider
+                property real pValue: TcpCamera.reflected
+                property real pTo: 120
+                property real pFrom: -20
+                property real pStep: 0.1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = -20
-                    item.to = 120
-                    item.step = 0.1
-                    item.value = TcpCamera.reflected
                     item.text = qsTr("Reflected")
                 }
             }
 
             Loader {
                 id: ambientSlider
+                property real pValue: TcpCamera.ambient
+                property real pTo: 120
+                property real pFrom: -20
+                property real pStep: 0.1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = -20
-                    item.to = 120
-                    item.step = 0.1
-                    item.value = TcpCamera.ambient
                     item.text = qsTr("Ambient")
                 }
             }
 
             Loader {
                 id: humidnessSlider
+                property real pValue: TcpCamera.humidness
+                property real pTo: 120
+                property real pFrom: -20
+                property real pStep: 0.1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = -20
-                    item.to = 120
-                    item.step = 0.1
-                    item.value = TcpCamera.humidness
                     item.text = qsTr("Humidness")
                 }
             }
 
             Loader {
                 id: correctionSlider
+                property real pValue: TcpCamera.correction
+                property real pTo: 3
+                property real pFrom: 0
+                property real pStep: 0.1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = 0
-                    item.to = 3
-                    item.step = 0.01
-                    item.value = TcpCamera.correction
                     item.text = qsTr("Correction")
                     item.floatLength = 2
                 }
@@ -269,24 +275,19 @@ Rectangle {
 
             Loader {
                 id: distanceSlider
+                property real pValue: TcpCamera.distance
+                property real pTo: 50
+                property real pFrom: 0
+                property real pStep: 1
+                active: Config.canReadTemperature
                 sourceComponent: sliderItem
                 onLoaded: {
-                    item.from = 0
-                    item.to = 50
-                    item.step = 1
-                    item.value = TcpCamera.distance
                     item.text = qsTr("Distance")
                 }
             }
 
             function onSaveClicked() {
                 messagebox.text = qsTr("Save success")
-                console.log(emissSlider.item.value,
-                            reflectedSlider.item.value,
-                            ambientSlider.item.value,
-                            humidnessSlider.item.value,
-                            correctionSlider.item.value,
-                            distanceSlider.item.value)
                 TcpCamera.setCameraParam(emissSlider.item.value,
                                          reflectedSlider.item.value,
                                          ambientSlider.item.value,
@@ -297,6 +298,7 @@ Rectangle {
 
             Loader {
                 id: btnSave
+                active: Config.canReadTemperature
                 sourceComponent: iconButton
                 onLoaded: {
                     item.iconSource = "\uf085"
@@ -345,10 +347,10 @@ Rectangle {
 
             Loader {
                 id: cameraSN
+                property var pValue: TcpCamera.cameraSN
                 sourceComponent: infoItem
                 onLoaded: {
                     item.text = qsTr("SN")
-                    item.value = TcpCamera.cameraSN
                     item.isBottom = true
                 }
             }
@@ -359,23 +361,6 @@ Rectangle {
                 implicitWidth: 5
                 color: "#b0505050"
                 radius: implicitWidth / 2
-            }
-        }
-
-        Component.onCompleted: {
-            emissSlider.item.value = TcpCamera.emiss
-            reflectedSlider.item.value = TcpCamera.reflected
-            ambientSlider.item.value = TcpCamera.ambient
-            humidnessSlider.item.value = TcpCamera.humidness
-            correctionSlider.item.value = TcpCamera.correction
-            distanceSlider.item.value = TcpCamera.distance
-            cameraSN.item.value = TcpCamera.cameraSN
-        }
-
-        Connections {
-            target: TcpCamera
-            onCameraSNChanged: {
-                cameraSN.item.value = TcpCamera.cameraSN
             }
         }
     }
@@ -531,10 +516,14 @@ Rectangle {
         id: sliderItem
         Rectangle {
             property string text: ""
-            property alias value: slider.value
-            property alias from: slider.from
-            property alias to: slider.to
-            property alias step: slider.stepSize
+//            property alias value: slider.value
+            property real value: pValue
+            property real to: pTo
+            property real from: pFrom
+            property real step: pStep
+//            property alias from: slider.from
+//            property alias to: slider.to
+//            property alias step: slider.stepSize
             property int floatLength: 1
             property bool isBottom: false
             property real leftRightMargin: 30
@@ -567,6 +556,10 @@ Rectangle {
                 anchors.rightMargin: Config.rightMargin > 0
                                     ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
                 anchors.verticalCenter: parent.verticalCenter
+                value: parent.value
+                from: parent.from
+                to: parent.to
+                stepSize: parent.step
             }
 
             // 底部横条
@@ -585,7 +578,7 @@ Rectangle {
         id: infoItem
         Item {
             property alias text: text.text
-            property alias value: value.text
+            property var value: pValue
             property real leftRightMargin: 30
             property bool isBottom: false
 
@@ -607,6 +600,7 @@ Rectangle {
                 anchors.rightMargin: Config.rightMargin > 0
                                     ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
                 anchors.verticalCenter: parent.verticalCenter
+                text: parent.value
             }
 
             // 底部横条

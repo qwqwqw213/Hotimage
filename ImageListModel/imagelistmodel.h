@@ -39,7 +39,7 @@ public:
     int currentIndex();
     Q_INVOKABLE void setCurrentIndex(const int &index);
 
-    Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString name READ name NOTIFY currentIndexChanged)
     QString name();
 
     Q_PROPERTY(int lastType  READ lastType NOTIFY addNewFile)

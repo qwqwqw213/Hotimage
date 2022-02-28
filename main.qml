@@ -83,9 +83,6 @@ ApplicationWindow {
             property real safeHeight: (height - Config.topMargin) * 0.8
             property real buttonSize: mainView.landscape ? safeWidth * 0.75 : safeHeight * 0.75
 
-            onWidthChanged: console.log("width changed", safeWidth, safeHeight, buttonSize)
-            onHeightChanged: console.log("height changed", safeWidth, safeHeight, buttonSize)
-
             // 温度开关
             Item {
                 id: btnTempSetting
@@ -528,11 +525,11 @@ ApplicationWindow {
         }
     }
 
-//    Loading {
-//        visible: !TcpCamera.isConnected
-//        anchors.fill: parent
-//        text: qsTr("Camera connecting...")
-//    }
+    Loading {
+        visible: !TcpCamera.isConnected
+        anchors.fill: parent
+        text: qsTr("Camera connecting...")
+    }
 
     // 消息注册
     Connections {

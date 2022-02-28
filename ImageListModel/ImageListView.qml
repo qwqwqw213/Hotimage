@@ -8,8 +8,6 @@ Item {
     property alias interactive: imageList.interactive
 
     function itemRect(index) {
-//        imageList.positionViewAtIndex(index, ListView.Center)
-
         var item = imageList.itemAtIndex(index)
         if( item === null ) {
             imageList.positionViewAtIndex(index, ListView.Center)
@@ -17,9 +15,9 @@ Item {
         }
 
         var x = item.x
-        var y = (item.y - imageList.originY)
-                - (imageList.contentY - imageList.originY)
-                + imageList.y
+        var y = Math.round((item.y - imageList.originY)
+                           - (imageList.contentY - imageList.originY)
+                           + imageList.y)
         var w = item.width
         var h = item.height
 
@@ -29,6 +27,7 @@ Item {
          *  重新定位GridView的Content Y
          */
         if( y < imageList.y || (y + h) > imageList.height ) {
+            console.log("reset content y", index, y, y + h, imageList.y, imageList.height)
             imageList.positionViewAtIndex(index, ListView.Center)
             return itemRect(index)
         }
@@ -51,6 +50,8 @@ Item {
             id: imageList
             property int row: imageListView.width > imageListView.height ?
                                   5 : 3
+            property real maxContentY: contentHeight - height + originY
+
             anchors.fill: parent
             cellWidth: imageListView.width > imageListView.height ?
                            (imageListView.width / row) : (imageListView.width / row)
@@ -59,8 +60,11 @@ Item {
 
             topMargin: title.height
             bottomMargin: bottom.height + bottom.posY
-//            cacheBuffer: (row * (height / cellWidth)) * 2
-//            onWidthChanged: console.log("cache buffer:", cacheBuffer)
+            onBottomMarginChanged: {
+                if( maxContentY > 0 && contentY >= (maxContentY - 5) ) {
+                    contentY = maxContentY + bottomMargin
+                }
+            }
 
             delegate: Rectangle {
                 id: delegate
@@ -109,7 +113,13 @@ Item {
                         font.pixelSize: 30
                         text: selection ? "\uf192" : "\uf10c"
                         color: selection ? "#6f9f9f" : "white"
-                        visible: ImageModel.selectionStatus
+//                        visible: ImageModel.selectionStatus
+                        opacity: ImageModel.selectionStatus ? 1 : 0
+                        Behavior on opacity {
+                            OpacityAnimator {
+                                duration: 150
+                            }
+                        }
                     }
                 }
 
@@ -141,19 +151,6 @@ Item {
                     color: "#b0505050"
                     radius: implicitWidth / 2
                 }
-            }
-
-//            onContentYChanged: {
-//                console.log("content y:", imageList.contentY, "origin y:", imageList.originY)
-//            }
-        }
-
-        // 选择区域
-        MouseArea {
-            anchors.fill: imageList
-            visible: false
-            onPressed: {
-                console.log("pressed")
             }
         }
 
@@ -247,15 +244,6 @@ Item {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: posY
 
-            onYChanged: {
-                if( imageList.contentHeight >= imageList.height ) {
-                    var bottom = imageList.contentHeight - imageList.height + imageList.originY
-                    if( imageList.contentY >= bottom && ready ) {
-                        imageList.contentY = bottom + y
-                    }
-                }
-            }
-
             // 删除按钮
             Item {
                 id: btnDelete
@@ -293,26 +281,29 @@ Item {
         visible: false
     }
 
-    Component.onCompleted: {
-//        imageList.positionViewAtEnd()
-//        console.log(imageList.count)
-//        imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
-    }
-
     property bool ready: false
     StackView.onActivated: {
-//        PhoneApi.setRotationScreen(-1)
         ready = true
     }
+
     property bool init: false
     StackView.onActivating: {
         if( !init ) {
             init = true
-            imageList.positionViewAtIndex(imageList.count - 1, ListView.End)
+            var y = imageList.contentHeight - imageList.height + imageList.originY
+            if( y < 0 ) {
+                y = 0
+            }
+            imageList.contentY = y
+        }
+        else {
+            imageList.contentY = oldContentY
         }
     }
 
+    property real oldContentY: 0
     StackView.onDeactivated: {
         ready = false
+        oldContentY = imageList.contentY
     }
 }

@@ -9,22 +9,22 @@ Item {
 
     onVisibleChanged: {
         if( visible === false ) {
-            toolbar.barY = 0
+            toolbar.opacity = 1
         }
     }
 
     function hideTitle() {
         if( imagePlayer.visible ) {
-            toolbar.barY = 60
+            toolbar.opacity = 0
         }
     }
 
     function autoTitle() {
-        if( toolbar.barY > 0 ) {
-            toolbar.barY = 0
+        if( toolbar.opacity > 0 ) {
+            toolbar.opacity = 0
         }
         else {
-            toolbar.barY = 60
+            toolbar.opacity = 1
         }
     }
 
@@ -299,8 +299,10 @@ Item {
             width: photoScan.width
             height: photoScan.height
             onDragOut: {
-//                console.log(p)
-                toolbar.barY = p * 60
+//                console.log(p, toolbar.barY)
+//                if( toolbar.barY === 60 ) {
+//                    toolbar.barY = p * 60
+//                }
             }
         }
 
@@ -343,80 +345,79 @@ Item {
         id: toolbar
         anchors.fill: parent
         z: 5
-        opacity: childOpacity
 
-        property real barY: 0
-        Behavior on barY {
-            NumberAnimation { duration: 200 }
+        Behavior on opacity {
+            OpacityAnimator { duration: 200 }
         }
 
         // top bar
         Rectangle {
             width: parent.width
-            height: 60
+            height: 60 + Config.topMargin
             anchors.left: parent.left
             anchors.top: parent.top
-            anchors.topMargin: 0 - toolbar.barY
             color: "#2f4f4f"
 
             MouseArea {
                 anchors.fill: parent
             }
 
-            Rectangle {
+            Text {
                 id: btnReturn
-                width: 60
-                height: 60
+                width: parent.height - Config.topMargin
+                height: width
+                y: Config.topMargin
+
                 anchors.left: parent.left
-                anchors.leftMargin: 5
-                color: "transparent"
-                Text {
-                    anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: parent.width * 0.65
-                    text: "\uf053"
-                    color: btnReturnArea.pressed ? "#6f9f9f" : "white"
-                }
+                font.family: "FontAwesome"
+                font.pixelSize: width * 0.85
+                text: "\uf104"
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                color: btnReturnArea.pressed ? "#6f9f9f" : "white"
                 MouseArea {
                     id: btnReturnArea
                     anchors.fill: parent
-                    /*
-                     *  返回点击
-                     */
                     onClicked: {
-    //                    imagePaintView.closeStream()
                         imagePlayer.quit()
-
-
                         VideoPlayer.closeStream()
                     }
                 }
 
                 Text {
-                    id: titleText
-                    anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.right
-                    font.pixelSize: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pointSize: 15
+                    text: ImageModel.name
                     color: "white"
-    //                text: qsTr("Photo")
-                }
-                // 当前Item切换, 更新标题文本
-                Connections {
-                    target: ImageModel
-                    onCurrentIndexChanged: {
-                        titleText.text = ImageModel.name
-                    }
                 }
             }
         }
 
+//                Text {
+//                    id: titleText
+//                    anchors.verticalCenter: parent.verticalCenter
+//                    anchors.left: parent.right
+//                    font.pixelSize: 20
+//                    color: "white"
+//    //                text: qsTr("Photo")
+//                }
+//                 当前Item切换, 更新标题文本
+//                Connections {
+//                    target: ImageModel
+//                    onCurrentIndexChanged: {
+//                        titleText.text = ImageModel.name
+//                    }
+//                }
+//            }
+//        }
+
         // bottom bar
         Rectangle {
             width: parent.width
-            height: 60
+            height: 60 + Config.bottomMargin
             anchors.left: parent.left
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0 - toolbar.barY
             color: "#2f4f4f"
 
             MouseArea {
@@ -429,8 +430,8 @@ Item {
             GridView {
                 id: miniPhtotList
                 width: parent.width
-                height: parent.height
-                anchors.bottom: parent.bottom
+                height: parent.height - Config.bottomMargin
+                anchors.top: parent.top
                 model: ImageModel
                 cellWidth: width > height ? height : width
                 cellHeight: cellWidth
@@ -499,6 +500,76 @@ Item {
                             photoScan.positionViewAtIndex(index, ListView.Beginning)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    Loader {
+        id: videoViewLoader
+        property real progressBarOpacity: 1
+        active: VideoPlayer.playing > 0 ? true : false
+        anchors.centerIn: parent
+        sourceComponent: videoView
+
+        Component {
+            id: videoView
+            Image {
+                width: flick.contentWidth - 10
+                height: flick.contentHeight - 10
+                source: VideoPlayer.playIndex === index ? VideoPlayer.frameUrl : ""
+                anchors.centerIn: parent
+                fillMode: Image.PreserveAspectFit
+
+                // 视频顶部按钮
+                Rectangle {
+                    id: btnVideoQuit
+                    width: 50
+                    height: 50
+                    anchors.left: progressBarItem.left
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
+                    radius: 10
+                    color: "#D0505050"
+                    opacity: videoViewLoader.progressBarOpacity
+
+                    Text {
+                        id: btnVideoQuitIcon
+                        font.family: "FontAwesome"
+                        font.pixelSize: parent.height * 0.75
+                        color: btnVideoQuitArea.pressed ? "#f0f0f0" : "white"
+                        text: "\uf00d"
+                        anchors.centerIn: parent
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 200
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: btnVideoQuitArea
+                        anchors.fill: parent
+                        onPressed: {
+                            btnVideoQuitIcon.scale = 0.75
+                        }
+                        onReleased: {
+                            btnVideoQuitIcon.scale = 1
+                        }
+                        onClicked: {
+                            // close video stream
+                            VideoPlayer.closeStream()
+                        }
+                    }
+                }
+
+                VideoProgressbar {
+                    id: progressBarItem
+                    width: parent.width * 0.85
+                    height: Config.isLandscape ? 60 : 120
+                    x: (parent.width - width) / 2.0
+                    y: parent.height - height - 10
+                    opacity: videoViewLoader.progressBarOpacity
                 }
             }
         }
