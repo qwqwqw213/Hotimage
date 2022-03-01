@@ -224,6 +224,12 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 textRotation: window.oldRotation
             }
+
+            Loading {
+                visible: !TcpCamera.isConnected
+                anchors.fill: parent
+                text: qsTr("Camera connecting...")
+            }
         }
 
         // 截图动画
@@ -486,8 +492,7 @@ ApplicationWindow {
                 pressValid = true;
                 pressedX = mouseX
                 currentX = stackView.currentItem.x
-                prevItem = stackView.get(0)
-                console.log("stack view prev")
+                prevItem = stackView.get(stackView.depth - 2)
             }
             else {
                 mouse.accepted = false
@@ -526,11 +531,11 @@ ApplicationWindow {
         }
     }
 
-    Loading {
-        visible: !TcpCamera.isConnected
-        anchors.fill: parent
-        text: qsTr("Camera connecting...")
-    }
+//    Loading {
+//        visible: !TcpCamera.isConnected
+//        anchors.fill: parent
+//        text: qsTr("Camera connecting...")
+//    }
 
     // 消息注册
     Connections {

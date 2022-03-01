@@ -19,5 +19,11 @@
         <file>ImageListModel/VideoProgressbar.qml</file>
         <file>ScaleBar/ScaleBar.qml</file>
         <file>Setting/SwitchButton/SwitchButton.qml</file>
+        <file>Setting/WirelessPage.qml</file>
+        <file>Setting/InputDelegate.qml</file>
+        <file>Setting/JumpDelegate.qml</file>
+        <file>BackTitle/BackTitle.qml</file>
+        <file>Setting/SectionDelegate.qml</file>
+        <file>Setting/InfoDelegate.qml</file>
     </qresource>
 </RCC>

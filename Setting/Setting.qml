@@ -2,70 +2,25 @@ import QtQuick 2.14
 import QtQuick.Layouts 1.4
 import QtQuick.Controls 2.14
 
-import "./SwitchButton"
+import "../BackTitle"
 
 Rectangle {
-    id: mainSetting
     color: "black"
 
-    Rectangle {
+    BackTitle {
         id: title
         width: parent.width
         height: 60 + Config.topMargin
-        anchors.left: parent.left
-        anchors.top: parent.top
-        color: "#2f4f4f"
-
-        MouseArea {
-            anchors.fill: parent
-        }
-
-        Text {
-            id: btnReturn
-            width: parent.height - Config.topMargin
-            height: width
-            y: Config.topMargin
-
-            anchors.left: parent.left
-            font.family: "FontAwesome"
-            font.pixelSize: width * 0.85
-            text: "\uf104"
-            verticalAlignment: Text.AlignVCenter
-            horizontalAlignment: Text.AlignHCenter
-            color: btnReturnArea.pressed ? "#6f9f9f" : "white"
-            MouseArea {
-                id: btnReturnArea
-                anchors.fill: parent
-                onClicked: {
-                    stackView.pop()
-                }
-            }
-
-            Text {
-                anchors.left: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Setting")
-                color: "white"
-            }
-        }
+        titleText: qsTr("Setting")
     }
 
     Flickable {
-        id: flick
-//        anchors.fill: parent
         anchors.left: title.left
         anchors.top: title.bottom
         width: parent.width
         height: parent.height - title.height
         clip: true
-
         contentHeight: column.implicitHeight
-
-        property real itemWidth: width
-        property real itemHeight: 60
-
-        property real sectionHeight: 30
-
         bottomMargin: Config.bottomMargin
 
         enum ButtonId {
@@ -80,52 +35,44 @@ Rectangle {
         Column {
             id: column
             anchors.fill: parent
-
-            Loader {
-                sourceComponent: section
-                onLoaded: {
-                    item.text = qsTr("Wifi")
-                }
-            }
-
             spacing: -1
 
-            function turnToHotspot() {
-                if( Config.isMobile ) {
-                    PhoneApi.openHotspot()
+            property real itemWidth: width
+            property real itemHeight: 60
+            property real sectionHeight: 30
+
+            SectionDelegate {
+                width: parent.itemWidth
+                height: parent.sectionHeight
+                label: qsTr("Wireless")
+            }
+
+            JumpDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("Hotspot")
+                iconSource: "\uf064"
+                onClicked: {
+                    if( Config.isMobile ) {
+                        PhoneApi.openHotspot()
+                    }
                 }
             }
 
-            Loader {
-                sourceComponent: jumpItem
-                onLoaded: {
-                    item.label = qsTr("Hotspot")
-                    item.iconSource = "\uf1e0"
-                    item.clicked.connect(parent.turnToHotspot)
+            JumpDelegate {
+                width: parent.itemWidth
+                height: parent.itemHeight
+                label: qsTr("Wireless Setting")
+                iconSource: "\uf013"
+                onClicked: {
+                    stackView.push("qrc:/Setting/WirelessPage.qml")
                 }
             }
 
-            Loader {
-                sourceComponent: inputItem
-                onLoaded: {
-                    item.text = qsTr("SSID")
-                    item.value = Config.isMobile ? PhoneApi.hotspotSSID : ""
-                }
-            }
-
-            Loader {
-                sourceComponent: inputItem
-                onLoaded: {
-                    item.text = qsTr("Password")
-                    item.value = Config.isMobile ? PhoneApi.hotspotPassword : ""
-                }
-            }
-
-            Loader {
-                sourceComponent: section
-                onLoaded: {
-                    item.text = qsTr("Palette")
-                }
+            SectionDelegate {
+                width: parent.itemWidth
+                height: parent.sectionHeight
+                label: qsTr("Palette")
             }
 
             function onPaletteClicked(index) {
@@ -198,12 +145,11 @@ Rectangle {
                 }
             }
 
-            Loader {
-                active: Config.canReadTemperature
-                sourceComponent: section
-                onLoaded: {
-                    item.text = qsTr("Camera Param")
-                }
+            SectionDelegate {
+                width: parent.itemWidth
+                height: parent.sectionHeight
+                label: qsTr("Camera Param")
+                visible: Config.canReadTemperature
             }
 
             Loader {
@@ -307,11 +253,10 @@ Rectangle {
                 }
             }
 
-            Loader {
-                sourceComponent: section
-                onLoaded: {
-                    item.text = qsTr("Language")
-                }
+            SectionDelegate {
+                width: parent.itemWidth
+                height: parent.sectionHeight
+                label: qsTr("Language")
             }
 
             function onLanguageClicked(index) {
@@ -338,21 +283,17 @@ Rectangle {
                 }
             }
 
-            Loader {
-                sourceComponent: section
-                onLoaded: {
-                    item.text = qsTr("Product")
-                }
+            SectionDelegate {
+                width: parent.itemWidth
+                height: parent.sectionHeight
+                label: qsTr("Product")
             }
 
-            Loader {
-                id: cameraSN
-                property var pValue: TcpCamera.cameraSN
-                sourceComponent: infoItem
-                onLoaded: {
-                    item.text = qsTr("SN")
-                    item.isBottom = true
-                }
+            InfoDelegate {
+                width: parent.itemWidth
+                height: parent.itemHeight
+                label: qsTr("SN")
+                value: TcpCamera.cameraSN
             }
         }
 
@@ -366,31 +307,12 @@ Rectangle {
     }
 
     Component {
-        id: section
-        Rectangle {
-            property alias text: label.text
-            color: "#2f4f4f"
-            width: flick.width
-            height: flick.sectionHeight
-
-            Text {
-                id: label
-                color: "white"
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0 ? Config.leftMargin : 20
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
-
-    Component {
         id: selectItem
         AbstractButton {
             id: button
             property alias iconSource: icon.source
             property alias label: label.text
             property int index: 0
-            property bool isBottom: false
             property real leftRightMargin: 30
             signal selectClicked(var index)
 
@@ -400,8 +322,8 @@ Rectangle {
 
             onClicked: selectClicked(index)
 
-            width: flick.itemWidth
-            height: flick.itemHeight
+            width: column.itemWidth
+            height: column.itemHeight
 
             // 图片图标
             Image {
@@ -447,7 +369,6 @@ Rectangle {
                 anchors.left: label.left
                 anchors.bottom: parent.bottom
                 color: "#606060"
-                visible: !parent.isBottom
             }
         }
     }
@@ -458,7 +379,6 @@ Rectangle {
             property alias iconSource: icon.text
             property alias label: label.text
             property int index: 0
-            property bool isBottom: false
             property real leftRightMargin: 30
 
             background: Rectangle {
@@ -467,8 +387,8 @@ Rectangle {
 
             onClicked: console.log("clicked:", index)
 
-            width: flick.itemWidth
-            height: flick.itemHeight
+            width: column.itemWidth
+            height: column.itemHeight
 
             // 文字图标
             Rectangle {
@@ -507,7 +427,6 @@ Rectangle {
                 anchors.left: label.left
                 anchors.bottom: parent.bottom
                 color: "#606060"
-                visible: !parent.isBottom
             }
         }
     }
@@ -525,12 +444,11 @@ Rectangle {
 //            property alias to: slider.to
 //            property alias step: slider.stepSize
             property int floatLength: 1
-            property bool isBottom: false
             property real leftRightMargin: 30
 
             id: rect
-            width: flick.itemWidth
-            height: flick.itemHeight
+            width: column.itemWidth
+            height: column.itemHeight
             color: "transparent"
 
             // 文本
@@ -569,195 +487,6 @@ Rectangle {
                 anchors.left: label.left
                 anchors.bottom: parent.bottom
                 color: "#606060"
-                visible: !parent.isBottom
-            }
-        }
-    }
-
-    Component {
-        id: infoItem
-        Item {
-            property alias text: text.text
-            property var value: pValue
-            property real leftRightMargin: 30
-            property bool isBottom: false
-
-            width: flick.itemWidth
-            height: flick.itemHeight
-            Text {
-                id: text
-                color: "white"
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                id: value
-                color: "white"
-                anchors.right: parent.right
-                anchors.rightMargin: Config.rightMargin > 0
-                                    ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                text: parent.value
-            }
-
-            // 底部横条
-            Rectangle {
-                width: parent.width - text.x - value.anchors.rightMargin
-                height: 1
-                anchors.left: text.left
-                anchors.bottom: parent.bottom
-                color: "#606060"
-                visible: !parent.isBottom
-            }
-        }
-    }
-
-    Component {
-        id: inputItem
-        Item {
-            property alias text: text.text
-            property alias value: value.text
-            property real leftRightMargin: 30
-            property bool isBottom: false
-
-            width: flick.itemWidth
-            height: flick.itemHeight
-            Text {
-                id: text
-                color: "white"
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            TextInput {
-                id: value
-                width: parent.width * 0.5
-                height: parent.height
-                anchors.right: parent.right
-                anchors.rightMargin: parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                clip: true
-                color: "white"
-                verticalAlignment: TextInput.AlignVCenter
-                selectByMouse: true
-
-                onActiveFocusChanged: {
-                    if( activeFocus ) {
-                        cursorColor = "white"
-                    }
-                    else {
-                        cursorColor = "transparent"
-                    }
-                }
-
-                property color cursorColor: "transparent"
-                Behavior on cursorColor {
-                    ColorAnimation {
-                        duration: 500
-                        onRunningChanged: {
-                            if( !running && value.activeFocus ) {
-                                if( Qt.colorEqual(value.cursorColor, "white") ) {
-                                    value.cursorColor = "transparent"
-                                }
-                                else {
-                                    value.cursorColor = "white"
-                                }
-                            }
-                        }
-                    }
-                }
-                cursorDelegate: Rectangle {
-                    id: cursor
-                    width: 1
-                    height: parent.contentHeight - 1
-                    color: value.cursorColor
-                }
-            }
-
-            // 底部横条
-            Rectangle {
-                width: parent.width - text.anchors.leftMargin - value.anchors.rightMargin
-                height: 1
-                anchors.left: text.left
-                anchors.bottom: parent.bottom
-                color: "#606060"
-                visible: !parent.isBottom
-            }
-        }
-    }
-
-    Component {
-        id: jumpItem
-        AbstractButton {
-            property alias iconSource: icon.text
-            property alias label: label.text
-            property real leftRightMargin: 30
-            property bool isBottom: false
-
-            width: flick.itemWidth
-            height: flick.itemHeight
-
-            background: Rectangle {
-                color: pressed ? "#606060" : "transparent"
-            }
-
-            // 文字图标
-            Rectangle {
-                id: iconBackground
-                width: parent.width > parent.height ? parent.height * 0.75 : parent.width * 0.75
-                height: width
-                color: "#606060"
-                radius: width * 0.15
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                Text {
-                    id: icon
-                    anchors.centerIn: parent
-                    font.family: "FontAwesome"
-                    font.pixelSize: parent.width * 0.55
-                    color: "white"
-                }
-            }
-
-            Text {
-                id: label
-                color: "white"
-                anchors.left: iconBackground.right
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            // icon
-            Text {
-                id: rightIcon
-                anchors.right: parent.right
-                anchors.rightMargin: Config.rightMargin > 0
-                                    ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                font.family: "FontAwesome"
-                font.pixelSize: parent.leftRightMargin
-                text: "\uf105"
-                color: "white"
-            }
-
-            // 底部横条
-            Rectangle {
-                width: parent.width
-                       - label.x
-                       - rightIcon.anchors.rightMargin
-                height: 1
-                anchors.left: label.left
-                anchors.bottom: parent.bottom
-                color: "#606060"
-                visible: !parent.isBottom
             }
         }
     }

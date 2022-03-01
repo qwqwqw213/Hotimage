@@ -48,7 +48,6 @@ public:
     Q_INVOKABLE void setCameraParam(const qreal &emiss, const qreal &reflected,
                                     const qreal &ambient, const qreal &humidness,
                                     const qreal &correction, const int &distance);
-    Q_INVOKABLE void setHotspotInfo(const QString &ssid, const QString &password);
 
     Q_PROPERTY(int palette READ palette NOTIFY paletteChanged)
     int palette();
@@ -80,6 +79,13 @@ public:
     Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
     QString cameraSN();
 
+    Q_PROPERTY(QString localIp READ localIp NOTIFY deviceIpChanged)
+    QString localIp();
+    Q_PROPERTY(QString deviceIp READ deviceIp NOTIFY deviceIpChanged)
+    QString deviceIp();
+
+    Q_INVOKABLE bool setWirelessParam(const QString &deviceIp, const QString &ssid, const QString &password);
+
 private:
     friend class TcpCameraPrivate;
     QScopedPointer<TcpCameraPrivate> p;
@@ -96,6 +102,7 @@ Q_SIGNALS:
     void videoFrame(QImage);
     void cameraSNChanged();
     void cameraParamChanged();
+    void deviceIpChanged();
 };
 
 #endif // RECV_H

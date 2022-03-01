@@ -350,6 +350,14 @@ enum RecvPageType
             byte.replace(16, 4, qfloat2byte(t.humidness));
             byte.replace(20, 2, qint2byte(t.distance, 2));
             byte.replace(22, 4, qfloat2byte(t.correction));
+            int offset = 26;
+            byte.replace(offset, t.hotspot_ssid.length(), t.hotspot_ssid.c_str());
+            offset = offset + t.hotspot_ssid.length();
+            byte[offset] = ';';
+            offset = offset + 1;
+            byte.replace(offset, t.hotspot_password.length(), t.hotspot_password.c_str());
+            offset = offset + t.hotspot_password.length();
+            byte[offset] = ';';
             break;
         }
         case __palette: {
@@ -439,6 +447,23 @@ private:
                 float fix = byte2float(&buf[22]);
                 ctl.sendCorrection(fd, fix);
                 usleep(10000);
+
+                int start = 26;
+                size_t offset = str.find(';');
+                if( offset != std::string::npos
+                    && str.find(';', offset) != std::string::npos )
+                    {
+                    hotspot_ssid = str.substr(start, offset - start);
+                    offset += 1;
+                    hotspot_password = str.substr(offset, str.find(';', offset) - offset);
+                    std::cout << "- hotspot info -\n"
+                              << "          ssid: " << hotspot_ssid << "\n"
+                              << "      password: " << hotspot_password << "\n";
+                    if( msg_callback_func ) {
+                        msg_callback_func(HandShake::__hotspot_info, this);
+                    }
+
+                }
                 std::cout << "handshake succrss, init param:\n"
                           << "palette" << palette << "\n"
                           << "mode:" << mode << "\n"

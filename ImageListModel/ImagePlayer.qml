@@ -345,6 +345,7 @@ Item {
         id: toolbar
         anchors.fill: parent
         z: 5
+        opacity: parent.childOpacity
 
         Behavior on opacity {
             OpacityAnimator { duration: 200 }
