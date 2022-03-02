@@ -279,6 +279,7 @@ void ImageListModel::removeSelection()
                 i ++;
             }
         }
+        emit listCountChanged();
 
         p->removeCount = 0;
         p->removeStart = p->list.size();
@@ -307,7 +308,7 @@ void ImageListModel::add(const QString &path)
 
 //    p->list.append(std::make_tuple(name, file, 0, type));
     endInsertRows();
-    emit addNewFile();
+    emit listCountChanged();
 }
 
 ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)

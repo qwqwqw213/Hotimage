@@ -42,10 +42,10 @@ public:
     Q_PROPERTY(QString name READ name NOTIFY currentIndexChanged)
     QString name();
 
-    Q_PROPERTY(int lastType  READ lastType NOTIFY addNewFile)
+    Q_PROPERTY(int lastType  READ lastType NOTIFY listCountChanged)
     int lastType();
 
-    Q_PROPERTY(QString lastImagePath READ lastImagePath NOTIFY addNewFile)
+    Q_PROPERTY(QString lastImagePath READ lastImagePath NOTIFY listCountChanged)
     QString lastImagePath();
 
     Q_PROPERTY(int selectionStatus READ selectionStatus WRITE setSelectionStatus NOTIFY selectionStatusChanged)
@@ -64,7 +64,7 @@ private:
     QScopedPointer<ImageListModelPrivate> p;
 
 Q_SIGNALS:
-    void addNewFile();
+    void listCountChanged();
     void searchFinished();
     void currentIndexChanged();
     void selectionStatusChanged();

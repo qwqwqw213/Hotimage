@@ -71,6 +71,7 @@ Rectangle {
                 topPadding: parent.leftRightMargin
                 color: "white"
                 wrapMode: Text.Wrap
+                lineHeight: 1.5
                 text: qsTr("If you want camera device connect to phone hotspot.")
                       + qsTr("\n1. fill in hotspot ssid and password, press \"Save\" button.")
                       + qsTr("\n2. open phone system setting, turn on hotspot switch.")
@@ -98,6 +99,7 @@ Rectangle {
                 topPadding: parent.leftRightMargin
                 color: "white"
                 wrapMode: Text.Wrap
+                lineHeight: 1.5
                 text: qsTr("If camera device not connect. you can manual input the device ip and press \"Save\" button, will try connect input ip")
             }
 

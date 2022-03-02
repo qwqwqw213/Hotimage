@@ -251,6 +251,18 @@ ApplicationWindow {
                 }
             }
 
+//            opacity: 0
+//            Behavior on opacity {
+//                OpacityAnimator {
+//                    duration: 200
+//                    onRunningChanged: {
+//                        if( !running ) {
+
+//                        }
+//                    }
+//                }
+//            }
+
             function start() {
                 captureAnimationView.visible = true
                 captureAnimationView.opacity = 1.0
@@ -269,7 +281,10 @@ ApplicationWindow {
 
             property real safeWidth: (width - Config.rightMargin) * 0.8
             property real safeHeight: (height - Config.bottomMargin) * 0.8
-            property real buttonSize: mainView.landscape ? safeWidth * 0.75 : safeHeight * 0.75
+            property real buttonSize: mainView.landscape ?
+                                          safeWidth * 0.75
+                                        : safeHeight * 0.75
+            Component.onCompleted: console.log(safeWidth, safeHeight, buttonSize)
 
             // 截图按钮
             Rectangle {
@@ -365,14 +380,6 @@ ApplicationWindow {
                     }
                     onClicked: {
                         stackView.push(imageListView)
-//                        imageListView.visible = true
-                    }
-                }
-
-                Connections {
-                    target: ImageModel
-                    onAddNewFile: {
-                        btnPhoto.scale = 0.95
                     }
                 }
             }

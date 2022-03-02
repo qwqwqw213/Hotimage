@@ -58,10 +58,13 @@ public:
 
     bool hasFrame;
 
-    time_t timer0;
-    time_t timer1;
+//    time_t timer0;
+//    time_t timer1;
     bool exit;
     double fps;
+
+    qint64 lastTimeStamp;
+    int fpsCount;
 
     uint32_t frameCount;
 
@@ -118,40 +121,6 @@ TcpCamera::TcpCamera(QObject *parent)
     : QObject(parent)
     , p(new TcpCameraPrivate(this))
 {
-//    QNetworkConfigurationManager ncm;
-//    QList<QNetworkConfiguration> nc;
-//    nc = ncm.allConfigurations();
-//    for(int i = 0; i < nc.size(); i ++) {
-//        if( nc.at(i).bearerType() == QNetworkConfiguration::BearerWLAN ) {
-//            qDebug() << nc.at(i).type() << nc.at(i).name() << nc.at(i).identifier();
-
-//            QHostInfo info = QHostInfo::fromName(nc.at(i).identifier());
-//            foreach (QHostAddress addr, info.addresses()) {
-//                qDebug() << nc.at(i).name() << "host ip::" << addr.toString();
-//            }
-//        }
-//    }
-
-//    QList<QNetworkInterface> interfaces = QNetworkInterface::allInterfaces();
-//    for (int i = 0; i < interfaces.count(); i++)
-//    {
-//      QList<QNetworkAddressEntry> entries = interfaces.at(i).addressEntries();
-//      for (int j = 0; j < entries.count(); j++)
-//      {
-//          if (entries.at(j).ip().protocol() == QAbstractSocket::IPv4Protocol)
-//          {
-//              qDebug() << entries.at(j).ip().toString();
-//          }
-//      }
-//    }
-
-//    QList<QHostAddress> list=QNetworkInterface::allAddresses();
-//    foreach (QHostAddress address,list)
-//    {
-//        if(address.protocol()==QAbstractSocket::IPv4Protocol)
-//            qDebug() << address.toString();
-//    }
-
 }
 
 TcpCamera::~TcpCamera()
@@ -189,6 +158,8 @@ void TcpCamera::open()
         return;
     }
     p->frameCount = 0;
+    p->lastTimeStamp = 0;
+    p->fpsCount = 0;
     p->thread->start();
 }
 
@@ -368,12 +339,13 @@ bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, c
     if( !p->isValidIpv4Addres(deviceIp) ) {
         return false;
     }
+
     p->cfg.set.hotspot_ssid = ssid.toStdString();
     p->cfg.set.hotspot_password = password.toStdString();
 
     if( isConnected() ) {
         p->deviceIP = deviceIp;
-        if( ssid.isEmpty() && password.isEmpty() ) {
+        if( !ssid.isEmpty() && !password.isEmpty() ) {
             p->cfg.set.type = HandShake::__hotspot_info;
             QByteArray byte = p->handshake.pack(p->cfg.set);
             emit p->write(byte);
@@ -681,7 +653,6 @@ void TcpCameraPrivate::keyPressed(const int &key)
     }
 }
 
-static int debugflag = 0;
 void TcpCameraPrivate::onReadyRead()
 {
     unpackMutex.lock();
@@ -698,34 +669,20 @@ void TcpCameraPrivate::onReadyRead()
         }
         else {
             buf.remove(0, res);
-//            image = QImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET, QImage::Format_RGB888);
-//            provider->setEmptyRgbImage(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
 
             frameSize = convert().frameSize(cfg.cam.format, cfg.cam.w, cfg.cam.h);
-//            emit f->msg(QString("handshake success\n"
-//                             "camera width: %1 camera height: %2\n"
-//                             "pixel format: %3")
-//                     .arg(cfg.cam.w).arg(cfg.cam.h).arg(cfg.cam.format));
 
-            qDebug() << QThread::currentThreadId()
-                     << "handshake success" << Qt::endl
-                     << "camera size:" << cfg.cam.w << "*" << cfg.cam.h << Qt::endl
-                     << "frame size:" << frameSize << Qt::endl
-                     << "total size:" << frameSize + PAGE_TAIL_SIZE << Qt::endl
-                     << "format:" << cfg.cam.format;
+            qDebug() << QThread::currentThreadId() << "handshake success" << Qt::endl
+                     << "   camera size:" << cfg.cam.w << "*" << cfg.cam.h << Qt::endl
+                     << "    frame size:" << frameSize << Qt::endl
+                     << "    total size:" << frameSize + PAGE_TAIL_SIZE << Qt::endl
+                     << "        format:" << cfg.cam.format;
 
             cfg.set.type = HandShake::__handshake;
             QByteArray byte = handshake.pack(cfg.set);
-            qDebug() << "write byte size:" << byte.size();
-            int size = socket->write(byte.data(), byte.size());
+            socket->write(byte.data(), byte.size());
             socket->waitForBytesWritten();
-            qDebug() << "write success size:" << size;
 
-//            std::string str = handshake.s_pack(cfg.set);
-//            int size = socket->write(str.c_str(), str.size());
-//            qDebug() << "write size:" << size << str.size();
-
-//            openUnpack();
             cameraSN = QString("");
 #ifdef TEMPERATURE_SDK
             if( temperatureData == NULL ) {
@@ -745,10 +702,6 @@ void TcpCameraPrivate::onReadyRead()
             // 包丢失
             // 重新校验包
             qDebug() << "invalid pack, get buf size:" << buf.size() << "complete buf size:" << data_size << tail;
-            if( debugflag < 2 ) {
-                debugflag ++;
-                qDebug() << buf;
-            }
 
             int i = 0;
             int flag = 0;
@@ -794,6 +747,18 @@ void TcpCameraPrivate::onReadyRead()
         }
 
         frameCount ++;
+        fpsCount ++;
+        if( lastTimeStamp == 0 ) {
+            lastTimeStamp = QDateTime::currentMSecsSinceEpoch();
+        }
+        else {
+            qint64 curTimeStamp = QDateTime::currentMSecsSinceEpoch();
+            if( (curTimeStamp - lastTimeStamp) >= 1000 ) {
+                lastTimeStamp = 0;
+                fps = fpsCount;
+                fpsCount = 0;
+            }
+        }
 
         // 按键处理
         /*
@@ -899,34 +864,22 @@ void TcpCameraPrivate::onReadyRead()
                           temperatureData,
                           RANGE_MODE,
                           OUTPUT_MODE);
-
-        if( (frameCount % 100) == 0 )
-        {
-//            qDebug("centerTmp:%.2f, maxTmp:%.2f, minTmp:%.2f, avgTmp:%.2f\n"
-//                   "emiss:%.2f, refltmp:%.2f, airtmp:%.2f, humi:%.2f, distance:%d, fix:%.2f\n"
-//                   "shufferTemp:%.2f, coreTemp:%.2f",
-//                    temperatureData[0],
-//                    temperatureData[3],
-//                    temperatureData[6],
-//                    temperatureData[9],
-//                    emiss, Refltmp, Airtmp, humi, distance, correction,
-//                    floatShutTemper, floatCoreTemper);
-        }
 #endif
         if( !QString(sn).isEmpty() && cameraSN.isEmpty() ) {
             cameraSN = QString(sn);
             emit f->cameraSNChanged();
         }
 
-        timer0 = timer1;
-        timer1 = clock();
+//        timer0 = timer1;
+//        timer1 = clock();
 //        uint8_t *bit = provider->data();
 
         QImage *image = provider->image(cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
         uint8_t *bit = image->bits();
 
 
-        fps = CLOCKS_PER_SEC / (double)(timer1 - timer0);
+//        fps = CLOCKS_PER_SEC / (double)(timer1 - timer0);
+
         if( cfg.cam.format == __yuyv ) {
             convert().yuv422_to_rgb(reinterpret_cast<uint8_t *>(buf.data()), bit,
                                     cfg.cam.w, cfg.cam.h - IMAGE_Y_OFFSET);
@@ -1055,12 +1008,12 @@ void TcpCameraPrivate::readSetting()
 
     qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
     qDebug() << "- camera param -" << Qt::endl
-             << "            emiss:" << cfg.set.emiss << Qt::endl
-             << "        reflected:" << cfg.set.reflected << Qt::endl
-             << "          ambient:" << cfg.set.ambient << Qt::endl
-             << "        humidness:" << cfg.set.humidness << Qt::endl
-             << "       correction:" << cfg.set.correction << Qt::endl
-             << "         distance:" << cfg.set.distance;
+             << "      emiss:" << cfg.set.emiss << Qt::endl
+             << "  reflected:" << cfg.set.reflected << Qt::endl
+             << "    ambient:" << cfg.set.ambient << Qt::endl
+             << "  humidness:" << cfg.set.humidness << Qt::endl
+             << " correction:" << cfg.set.correction << Qt::endl
+             << "   distance:" << cfg.set.distance;
 //    emit f->paletteChanged();
 
     delete s;

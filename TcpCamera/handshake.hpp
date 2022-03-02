@@ -452,27 +452,25 @@ private:
                 size_t offset = str.find(';');
                 if( offset != std::string::npos
                     && str.find(';', offset) != std::string::npos )
-                    {
+                {
                     hotspot_ssid = str.substr(start, offset - start);
                     offset += 1;
                     hotspot_password = str.substr(offset, str.find(';', offset) - offset);
-                    std::cout << "- hotspot info -\n"
-                              << "          ssid: " << hotspot_ssid << "\n"
-                              << "      password: " << hotspot_password << "\n";
-                    if( msg_callback_func ) {
-                        msg_callback_func(HandShake::__hotspot_info, this);
-                    }
-
                 }
-                std::cout << "handshake succrss, init param:\n"
-                          << "palette" << palette << "\n"
-                          << "mode:" << mode << "\n"
-                          << "emiss:" << emiss << "\n"
-                          << "refltmp:" << refltmp << "\n"
-                          << "airtmp:" << airtmp << "\n"
-                          << "humi:" << humi << "\n"
-                          << "fix:" << fix << "\n"
-                          << "distance:" << distance << "\n";
+                std::cout << "- handshake succrss, init param -\n"
+                          << "   palette: " << palette << "\n"
+                          << "      mode: " << mode << "\n"
+                          << "     emiss: " << emiss << "\n"
+                          << "   refltmp: " << refltmp << "\n"
+                          << "    airtmp: " << airtmp << "\n"
+                          << "      humi: " << humi << "\n"
+                          << "       fix: " << fix << "\n"
+                          << "  distance: " << distance << "\n"
+                          << "      ssid: " << hotspot_ssid << "\n"
+                          << "  password: " << hotspot_password << "\n";
+                if( msg_callback_func ) {
+                    msg_callback_func(HandShake::__hotspot_info, this);
+                }
             }
                 break;
             case HandShake::__shuffer: {
