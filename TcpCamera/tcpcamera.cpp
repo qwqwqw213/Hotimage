@@ -353,6 +353,16 @@ QString TcpCamera::deviceIp()
     return p->deviceIP;
 }
 
+QString TcpCamera::hotspotSSID()
+{
+    return QString::fromStdString(p->cfg.set.hotspot_ssid);
+}
+
+QString TcpCamera::hotspotPassword()
+{
+    return QString::fromStdString(p->cfg.set.hotspot_password);
+}
+
 bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, const QString &password)
 {
     if( !p->isValidIpv4Addres(deviceIp) ) {
@@ -363,14 +373,17 @@ bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, c
 
     if( isConnected() ) {
         p->deviceIP = deviceIp;
-        p->cfg.set.type = HandShake::__hotspot_info;
-        QByteArray byte = p->handshake.pack(p->cfg.set);
-        emit p->write(byte);
+        if( ssid.isEmpty() && password.isEmpty() ) {
+            p->cfg.set.type = HandShake::__hotspot_info;
+            QByteArray byte = p->handshake.pack(p->cfg.set);
+            emit p->write(byte);
+        }
     }
     else {
         p->searching = -1;
         emit p->research(deviceIp);
     }
+    emit wirelessParamChanged();
     return true;
 }
 
@@ -584,7 +597,7 @@ void TcpCameraPrivate::searchDevice()
             }
 
             qDebug() << "connect success, local ip:" << localIP;
-            emit f->deviceIpChanged();
+            emit f->wirelessParamChanged();
             return;
         }
     }
@@ -619,7 +632,7 @@ void TcpCameraPrivate::searchDevice()
                 socket->waitForConnected(50);
                 if( socket->state() == QAbstractSocket::ConnectedState ) {
                     deviceIP = ip;
-                    emit f->deviceIpChanged();
+                    emit f->wirelessParamChanged();
                     break;
                 }
                 index ++;

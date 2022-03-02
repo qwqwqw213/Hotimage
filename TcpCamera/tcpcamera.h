@@ -79,11 +79,14 @@ public:
     Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
     QString cameraSN();
 
-    Q_PROPERTY(QString localIp READ localIp NOTIFY deviceIpChanged)
+    Q_PROPERTY(QString localIp READ localIp NOTIFY wirelessParamChanged)
     QString localIp();
-    Q_PROPERTY(QString deviceIp READ deviceIp NOTIFY deviceIpChanged)
+    Q_PROPERTY(QString deviceIp READ deviceIp NOTIFY wirelessParamChanged)
     QString deviceIp();
-
+    Q_PROPERTY(QString hotspotSSID READ hotspotSSID NOTIFY wirelessParamChanged)
+    QString hotspotSSID();
+    Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY wirelessParamChanged)
+    QString hotspotPassword();
     Q_INVOKABLE bool setWirelessParam(const QString &deviceIp, const QString &ssid, const QString &password);
 
 private:
@@ -102,7 +105,7 @@ Q_SIGNALS:
     void videoFrame(QImage);
     void cameraSNChanged();
     void cameraParamChanged();
-    void deviceIpChanged();
+    void wirelessParamChanged();
 };
 
 #endif // RECV_H

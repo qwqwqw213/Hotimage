@@ -13,7 +13,7 @@ Rectangle {
         titleText: qsTr("Wireless Setting")
         buttonText: qsTr("Save")
         onButtonClicked: {
-            var flag = TcpCamera.setWirelessParam(deviceIp.value, "", "")
+            var flag = TcpCamera.setWirelessParam(deviceIp.value, ssid.value, password.value)
             if( !flag ) {
                 messagebox.text = qsTr("Invalid IPv4 format")
             }
@@ -52,6 +52,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("SSID")
+                value: TcpCamera.hotspotSSID
             }
 
             InputDelegate {
@@ -59,6 +60,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("Password")
+                value: TcpCamera.hotspotPassword
             }
 
             Text {

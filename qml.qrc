@@ -25,5 +25,6 @@
         <file>BackTitle/BackTitle.qml</file>
         <file>Setting/SectionDelegate.qml</file>
         <file>Setting/InfoDelegate.qml</file>
+        <file>Setting/SelectDelegate.qml</file>
     </qresource>
 </RCC>

@@ -7,12 +7,6 @@ import Qt.labs.folderlistmodel 2.14
 Item {
     id: imagePlayer
 
-    onVisibleChanged: {
-        if( visible === false ) {
-            toolbar.opacity = 1
-        }
-    }
-
     function hideTitle() {
         if( imagePlayer.visible ) {
             toolbar.opacity = 0
@@ -224,11 +218,13 @@ Item {
                     imagePlayer.visible = true
                     imagePlayer.isShow = true
                     childOpacity = 1
+                    toolbar.opacity = 1
                 }
                 else
                 {
                     photoScan.visible = false
                     childOpacity = 0
+                    toolbar.opacity = 0
                 }
             }
 
@@ -345,7 +341,6 @@ Item {
         id: toolbar
         anchors.fill: parent
         z: 5
-        opacity: parent.childOpacity
 
         Behavior on opacity {
             OpacityAnimator { duration: 200 }

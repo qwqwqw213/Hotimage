@@ -75,74 +75,54 @@ Rectangle {
                 label: qsTr("Palette")
             }
 
-            function onPaletteClicked(index) {
-                TcpCamera.setPalette(index)
+
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("WhiteHot")
+                iconSource: "qrc:/sources/whitehot.jpg"
+                onClicked: TcpCamera.setPalette(0)
             }
 
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("WhiteHot")
-                    item.index = 0
-                    item.iconSource = "qrc:/sources/whitehot.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
+
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("BlackHot")
+                iconSource: "qrc:/sources/blackhot.jpg"
+                onClicked: TcpCamera.setPalette(1)
             }
 
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("BlackHot")
-                    item.index = 1
-                    item.iconSource = "qrc:/sources/blackhot.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("Iron")
+                iconSource: "qrc:/sources/iron.jpg"
+                onClicked: TcpCamera.setPalette(2)
             }
 
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("Iron")
-                    item.index = 2
-                    item.iconSource = "qrc:/sources/iron.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("HCR")
+                iconSource: "qrc:/sources/HCR.jpg"
+                onClicked: TcpCamera.setPalette(3)
             }
 
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("HCR")
-                    item.index = 3
-                    item.iconSource = "qrc:/sources/HCR.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("Rainbow")
+                iconSource: "qrc:/sources/rainbow.jpg"
+                onClicked: TcpCamera.setPalette(4)
             }
 
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("Rainbow")
-                    item.index = 4
-                    item.iconSource = "qrc:/sources/rainbow.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
-            }
-
-            Loader {
-                property int currentIndex: TcpCamera.palette
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = qsTr("IronGray")
-                    item.index = 5
-                    item.iconSource = "qrc:/sources/irongray.jpg"
-                    item.selectClicked.connect(column.onPaletteClicked)
-                }
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("IronGray")
+                iconSource: "qrc:/sources/irongray.jpg"
+                onClicked: TcpCamera.setPalette(5)
             }
 
             SectionDelegate {
@@ -259,28 +239,18 @@ Rectangle {
                 label: qsTr("Language")
             }
 
-            function onLanguageClicked(index) {
-                Config.setLanguage(index)
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: qsTr("简体中文")
+                onClicked: Config.setLanguage(1)
             }
 
-            Loader {
-                property int currentIndex: Config.language
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = "简体中文"
-                    item.index = 1
-                    item.selectClicked.connect(column.onLanguageClicked)
-                }
-            }
-
-            Loader {
-                property int currentIndex: Config.language
-                sourceComponent: selectItem
-                onLoaded: {
-                    item.label = "English"
-                    item.index = 0
-                    item.selectClicked.connect(column.onLanguageClicked)
-                }
+            SelectDelegate {
+                width: parent.width
+                height: parent.itemHeight
+                label: "English"
+                onClicked: Config.setLanguage(0)
             }
 
             SectionDelegate {
@@ -302,73 +272,6 @@ Rectangle {
                 implicitWidth: 5
                 color: "#b0505050"
                 radius: implicitWidth / 2
-            }
-        }
-    }
-
-    Component {
-        id: selectItem
-        AbstractButton {
-            id: button
-            property alias iconSource: icon.source
-            property alias label: label.text
-            property int index: 0
-            property real leftRightMargin: 30
-            signal selectClicked(var index)
-
-            background: Rectangle {
-                color: pressed ? "#606060" : "transparent"
-            }
-
-            onClicked: selectClicked(index)
-
-            width: column.itemWidth
-            height: column.itemHeight
-
-            // 图片图标
-            Image {
-                id: icon
-                asynchronous: true
-                width: parent.width > parent.height ? parent.height * 0.75 : parent.width * 0.75
-                height: width
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            // 文本
-            Text {
-                id: label
-                color: "white"
-                anchors.left: icon.status !== Image.Null ?
-                                  icon.right : parent.left
-                anchors.leftMargin: parent.leftRightMargin
-                anchors.verticalCenter: icon.verticalCenter
-            }
-
-            // 选中图标
-            Text {
-                id: selectIcon
-                anchors.right: parent.right
-                anchors.rightMargin: Config.rightMargin > 0
-                                    ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                font.family: "FontAwesome"
-                font.pixelSize: parent.leftRightMargin
-                text: "\uf192"
-                color: currentIndex === parent.index ?
-                           "#ffffff" : "#505050"
-            }
-
-
-            // 底部横条
-            Rectangle {
-                width: parent.width - label.x - (parent.width - (selectIcon.x + selectIcon.width))
-                height: 1
-                anchors.left: label.left
-                anchors.bottom: parent.bottom
-                color: "#606060"
             }
         }
     }
