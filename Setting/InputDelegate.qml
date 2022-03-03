@@ -16,21 +16,26 @@ AbstractButton {
     Text {
         id: label
         color: "white"
+        width: parent.width * 0.3 - Config.leftMargin - parent.leftRightMargin
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.leftMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
     }
 
     TextInput {
         id: value
+//        width: parent.width
+//               - parent.leftRightMargin * 2
+//               - (Config.leftMargin + Config.rightMargin)
+//               - parent.width * 0.3
         width: parent.width
-               - parent.leftRightMargin * 2
-               - (Config.leftMargin + Config.rightMargin)
-               - parent.width * 0.3
+               - (label.width + label.anchors.leftMargin)
+               - (btnDelete.width + btnDelete.anchors.rightMargin)
+               - 20
         height: parent.height
-        anchors.right: parent.right
-        anchors.rightMargin: parent.leftRightMargin
+        anchors.left: label.right
+        anchors.leftMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         clip: true
         color: "white"
@@ -71,9 +76,37 @@ AbstractButton {
         }
     }
 
+    // 删除按钮
+    Text {
+        id: btnDelete
+        anchors.right: parent.right
+        anchors.rightMargin: Config.rightMargin > 0
+                            ? Config.rightMargin : parent.leftRightMargin
+        width: value.contentHeight * 1.5
+        height: width
+        anchors.verticalCenter: parent.verticalCenter
+        font.family: "FontAwesome"
+        font.pixelSize: height
+        text: "\uf056"
+        color: btnDeleteArea.pressed ?
+                   "#ffffff" : "#505050"
+        verticalAlignment: Qt.AlignVCenter
+        horizontalAlignment: Qt.AlignHCenter
+
+        MouseArea {
+            id: btnDeleteArea
+            anchors.fill: parent
+            focus: true
+            onClicked: {
+                console.log("delete clicked:", value.text)
+                value.text = ""
+            }
+        }
+    }
+
     // 底部横条
     Rectangle {
-        width: parent.width - label.anchors.leftMargin - value.anchors.rightMargin
+        width: parent.width - label.anchors.leftMargin - btnDelete.anchors.rightMargin
         height: 1
         anchors.left: label.left
         anchors.bottom: parent.bottom

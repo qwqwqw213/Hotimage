@@ -81,6 +81,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("WhiteHot")
                 iconSource: "qrc:/sources/whitehot.jpg"
+                selection: TcpCamera.palette === 0 ? true : false
                 onClicked: TcpCamera.setPalette(0)
             }
 
@@ -90,6 +91,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("BlackHot")
                 iconSource: "qrc:/sources/blackhot.jpg"
+                selection: TcpCamera.palette === 1 ? true : false
                 onClicked: TcpCamera.setPalette(1)
             }
 
@@ -98,6 +100,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("Iron")
                 iconSource: "qrc:/sources/iron.jpg"
+                selection: TcpCamera.palette === 2 ? true : false
                 onClicked: TcpCamera.setPalette(2)
             }
 
@@ -106,6 +109,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("HCR")
                 iconSource: "qrc:/sources/HCR.jpg"
+                selection: TcpCamera.palette === 3 ? true : false
                 onClicked: TcpCamera.setPalette(3)
             }
 
@@ -114,6 +118,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("Rainbow")
                 iconSource: "qrc:/sources/rainbow.jpg"
+                selection: TcpCamera.palette === 4 ? true : false
                 onClicked: TcpCamera.setPalette(4)
             }
 
@@ -122,6 +127,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("IronGray")
                 iconSource: "qrc:/sources/irongray.jpg"
+                selection: TcpCamera.palette === 5 ? true : false
                 onClicked: TcpCamera.setPalette(5)
             }
 
@@ -243,6 +249,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("简体中文")
+                selection: Config.language === 1 ? true : false
                 onClicked: Config.setLanguage(1)
             }
 
@@ -250,6 +257,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: "English"
+                selection: Config.language === 0 ? true : false
                 onClicked: Config.setLanguage(0)
             }
 

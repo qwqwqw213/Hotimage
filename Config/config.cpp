@@ -284,7 +284,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
-    p->tcpCamera->open();
+//    p->tcpCamera->open();
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 

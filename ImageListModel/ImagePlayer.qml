@@ -2,10 +2,16 @@ import QtQuick 2.14
 import QtQuick.Controls 2.12
 import Qt.labs.folderlistmodel 2.14
 
-//import Custom.ImagePaintView 1.1
+import "../BackTitle"
 
 Item {
     id: imagePlayer
+
+    onVisibleChanged: {
+        if( stackViewMouseArea ) {
+            stackViewMouseArea.enabled = !visible
+        }
+    }
 
     function hideTitle() {
         if( imagePlayer.visible ) {
@@ -14,6 +20,7 @@ Item {
     }
 
     function autoTitle() {
+        console.log("auto title")
         if( toolbar.opacity > 0 ) {
             toolbar.opacity = 0
         }
@@ -259,6 +266,9 @@ Item {
         anchors.fill: parent
         color: "black"
         opacity: childOpacity
+        MouseArea {
+            anchors.fill: parent
+        }
     }
 
     ListView {
@@ -483,20 +493,33 @@ Item {
     }
 
     Loader {
-        id: videoViewLoader
+        id: videoTool
         property real progressBarOpacity: 1
         active: VideoPlayer.playing > 0 ? true : false
-        anchors.centerIn: parent
-        sourceComponent: videoView
+        anchors.fill: parent
+        sourceComponent: component
+        z: 5
 
         Component {
-            id: videoView
-            Image {
-                width: flick.contentWidth - 10
-                height: flick.contentHeight - 10
-                source: VideoPlayer.playIndex === index ? VideoPlayer.frameUrl : ""
-                anchors.centerIn: parent
-                fillMode: Image.PreserveAspectFit
+            id: component
+            Item {
+                Behavior on opacity {
+                    OpacityAnimator {
+                        duration: 150
+                    }
+                }
+                anchors.fill: parent
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if( parent.opacity > 0 ) {
+                            parent.opacity = 0
+                        }
+                        else {
+                            parent.opacity = 1
+                        }
+                    }
+                }
 
                 // 视频顶部按钮
                 Rectangle {
@@ -508,7 +531,6 @@ Item {
                     anchors.topMargin: 10
                     radius: 10
                     color: "#D0505050"
-                    opacity: videoViewLoader.progressBarOpacity
 
                     Text {
                         id: btnVideoQuitIcon
@@ -546,7 +568,6 @@ Item {
                     height: Config.isLandscape ? 60 : 120
                     x: (parent.width - width) / 2.0
                     y: parent.height - height - 10
-                    opacity: videoViewLoader.progressBarOpacity
                 }
             }
         }

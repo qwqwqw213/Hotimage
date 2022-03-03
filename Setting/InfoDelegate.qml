@@ -11,7 +11,7 @@ Item {
         color: "white"
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.leftMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -20,7 +20,7 @@ Item {
         color: "white"
         anchors.right: parent.right
         anchors.rightMargin: Config.rightMargin > 0
-                            ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.rightMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         text: parent.value
     }

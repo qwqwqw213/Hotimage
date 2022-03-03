@@ -100,7 +100,7 @@ Item {
                         font.family: "FontAwesome"
                         font.pixelSize: parent.width * 0.35
                         text: "\uf144"
-                        color: ImageModel.selectionStatus ? "white" : (mouseArea.pressed ? "#a0a0a0" : "white")
+                        color: "white"
                     }
 
                     // 选择标识

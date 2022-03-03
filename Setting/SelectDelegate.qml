@@ -20,7 +20,7 @@ AbstractButton {
         height: width
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.leftMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -39,13 +39,18 @@ AbstractButton {
         id: selectIcon
         anchors.right: parent.right
         anchors.rightMargin: Config.rightMargin > 0
-                            ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.rightMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         font.family: "FontAwesome"
         font.pixelSize: parent.leftRightMargin
         text: "\uf192"
         color: selection ?
                    "#ffffff" : "#505050"
+        Behavior on color {
+            ColorAnimation {
+                duration: 150
+            }
+        }
     }
 
 

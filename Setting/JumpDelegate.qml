@@ -19,7 +19,7 @@ AbstractButton {
         radius: width * 0.15
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.leftMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         Text {
             id: icon
@@ -34,8 +34,7 @@ AbstractButton {
         id: label
         color: "white"
         anchors.left: iconBackground.right
-        anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
+        anchors.leftMargin: parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -44,7 +43,7 @@ AbstractButton {
         id: rightIcon
         anchors.right: parent.right
         anchors.rightMargin: Config.rightMargin > 0
-                            ? Config.rightMargin + parent.leftRightMargin : parent.leftRightMargin
+                            ? Config.rightMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         font.family: "FontAwesome"
         font.pixelSize: parent.leftRightMargin

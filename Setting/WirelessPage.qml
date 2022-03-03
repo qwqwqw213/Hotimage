@@ -73,8 +73,10 @@ Rectangle {
                 wrapMode: Text.Wrap
                 lineHeight: 1.5
                 text: qsTr("If you want camera device connect to phone hotspot.")
-                      + qsTr("\n1. fill in hotspot ssid and password, press \"Save\" button.")
-                      + qsTr("\n2. open phone system setting, turn on hotspot switch.")
+                      + qsTr("\n1. connected camera device")
+                      + qsTr("\n2. fill in hotspot ssid and password, press \"Save\" button.")
+                      + qsTr("\n3. open phone system setting, turn on hotspot switch.")
+                      + qsTr("\nif hotspot changed ssid or password, need reconnect device and save new ssid or password again")
             }
 
             SectionDelegate {
