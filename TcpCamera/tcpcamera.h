@@ -87,7 +87,7 @@ public:
     QString hotspotSSID();
     Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY wirelessParamChanged)
     QString hotspotPassword();
-    Q_INVOKABLE bool setWirelessParam(const QString &deviceIp, const QString &ssid, const QString &password);
+    Q_INVOKABLE bool setWirelessParam(const QString &devIp, const QString &ssid, const QString &password);
 
 private:
     friend class TcpCameraPrivate;

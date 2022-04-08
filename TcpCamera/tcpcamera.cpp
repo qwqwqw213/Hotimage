@@ -329,9 +329,9 @@ QString TcpCamera::hotspotPassword()
     return QString::fromStdString(p->cfg.set.hotspot_password);
 }
 
-bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, const QString &password)
+bool TcpCamera::setWirelessParam(const QString &devIp, const QString &ssid, const QString &password)
 {
-    if( !p->isValidIpv4Addres(deviceIp) ) {
+    if( !p->isValidIpv4Addres(devIp) ) {
         return false;
     }
 
@@ -339,7 +339,7 @@ bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, c
     p->cfg.set.hotspot_password = password.toStdString();
 
     if( isConnected() ) {
-        p->deviceIP = deviceIp;
+        p->deviceIP = devIp;
         if( !ssid.isEmpty() && !password.isEmpty() ) {
             p->cfg.set.type = HandShake::__hotspot_info;
             QByteArray byte = p->handshake.pack(p->cfg.set);
@@ -348,7 +348,7 @@ bool TcpCamera::setWirelessParam(const QString &deviceIp, const QString &ssid, c
     }
     else {
         p->searching = -1;
-        emit p->research(deviceIp);
+        emit p->research(devIp);
     }
     emit wirelessParamChanged();
     return true;
@@ -415,6 +415,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     thread = new QThread;
     QObject::connect(thread, &QThread::started, [=](){
         exit = 0;
+        searching = 0;
         buf.clear();
         timer = new QTimer;
         timer->setInterval(5000);
@@ -479,9 +480,8 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             }
             qDebug() << "research device ip:" << devIp;
             if( socket->state() != QTcpSocket::ConnectedState ) {
-                deviceIP = devIp;
                 searching = 1;
-                searchDevice();
+                searchDevice(devIp);
             }
             else {
                 qDebug() << "research fail, socket connected";
@@ -505,7 +505,20 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 #ifdef Q_OS_WIN
         searchDevice(SERVER_IP);
 #else
-        searchDevice();
+//        qDebug() << "search ip:" << deviceIP;
+//        searchDevice(deviceIP);
+
+        while (!exit && (socket->state() != QTcpSocket::ConnectedState)) {
+            if( !isValidIpv4Addres(deviceIP) ) {
+                qDebug() << "invalid device ip:" << deviceIP;
+                break;
+            }
+
+            socket->connectToHost(deviceIP, cfg.port);
+            socket->waitForConnected(3000);
+            qDebug() << "connect host:" << deviceIP << cfg.port;
+        }
+
 #endif
     });
 
@@ -579,7 +592,7 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
     // 初次尝试连接上次已连接的设备IP
     if( !deviceIP.isEmpty() ) {
         socket->connectToHost(deviceIP, cfg.port);
-        socket->waitForConnected(1000);
+        socket->waitForConnected(3000);
         if( socket->state() == QAbstractSocket::ConnectedState ) {
             const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
             for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
@@ -620,9 +633,9 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
                     continue;
                 }
 
-//                qDebug() << "connect ip:" << ip << "port:" << cfg.port << "local:" << localIP << "search ip:" << searchIp;
+                qDebug() << "connect ip:" << ip << "port:" << cfg.port << "local:" << localIP << "search ip:" << searchIp;
                 socket->connectToHost(ip, cfg.port);
-                socket->waitForConnected(50);
+                socket->waitForConnected(500);
                 if( socket->state() == QAbstractSocket::ConnectedState ) {
                     deviceIP = ip;
                     emit f->wirelessParamChanged();
@@ -955,7 +968,7 @@ void TcpCameraPrivate::readSetting()
 #endif
     QSettings *s = new QSettings(path, QSettings::IniFormat);
 
-    deviceIP = s->value("Socket/DeviceIP", "").toString();
+    deviceIP = s->value("Socket/DeviceIP", "192.168.1.1").toString();
 
     cfg.ip = SERVER_IP;
     cfg.port = SERVER_PORT;
