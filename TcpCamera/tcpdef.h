@@ -20,15 +20,15 @@
 
 #endif
 
-#define SERVER_IP       "192.168.1.1"
+#define SERVER_IP       "192.168.20.22"
 #define SERVER_PORT     27015
 
 typedef struct
 {
     QString ip;
     int port;
-    t_handshake_page cam;
     t_setting_page set;
+    t_header header;
 } tcp_config;
 
 typedef struct

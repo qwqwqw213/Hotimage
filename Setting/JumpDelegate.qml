@@ -24,7 +24,7 @@ AbstractButton {
         Text {
             id: icon
             anchors.centerIn: parent
-            font.family: "FontAwesome"
+            font.family: Config.fontLight
             font.pixelSize: parent.width * 0.55
             color: "white"
         }
@@ -45,7 +45,7 @@ AbstractButton {
         anchors.rightMargin: Config.rightMargin > 0
                             ? Config.rightMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
-        font.family: "FontAwesome"
+        font.family: Config.fontLight
         font.pixelSize: parent.leftRightMargin
         text: "\uf105"
         color: "white"

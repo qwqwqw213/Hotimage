@@ -8,25 +8,24 @@ Popup {
     property real ph: parent.height
 
     x: (pw - width) / 2
-//    y: (height + 20) * opacity - height
-    y: 0 - height
+    y: opacity / 1 * (20 + Config.topMargin)
 
-    width: label.width + 20
+    width: label.width + 40
     height: label.height + 20
 
-    opacity: (y + height) / (height + 20)
+    opacity: 0
     background: Rectangle {
         color: "#D0505050"
-        radius: 5
+        radius: 10
     }
 
-    Behavior on y {
-        enabled: popup.opening
+    Behavior on opacity {
+        enabled: popup.showing
         NumberAnimation {
             duration: 200
             onRunningChanged: {
                 if( !running ) {
-                    if( y > 0 ) {
+                    if( opacity > 0 ) {
                         hideTimer.start()
                     }
                     else {
@@ -37,39 +36,21 @@ Popup {
         }
     }
 
-//    Behavior on opacity {
-//        NumberAnimation {
-//            duration: 200
-//            onRunningChanged: {
-//                if( !running ) {
-//                    if( opacity > 0 ) {
-//                        hideTimer.start()
-//                    }
-//                    else {
-//                        popup.close()
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     Timer {
         id: hideTimer
         interval: 3000
         onTriggered: {
-//            popup.opacity = 0
-            popup.y = 0 - popup.height
+            popup.opacity = 0
         }
     }
 
-    property bool opening: false
+    property bool showing: false
     onOpened: {
-        opening = true;
-//        opacity = 1;
-        popup.y = 20
+        showing = true;
+        opacity = 1;
     }
     onClosed: {
-        opening = false
+        showing = false
         label.text = ""
     }
 
@@ -78,24 +59,30 @@ Popup {
         anchors.centerIn: parent
         color: "white"
         wrapMode: Text.Wrap
+        font.pointSize: 15
 
         function resize() {
-            if( (label.contentWidth - 40) > popup.pw ) {
-                label.width = popup.pw - 40
+            if( (label.contentWidth - 80) > popup.pw ) {
+                label.width = popup.pw - 80
             }
         }
 
         onTextChanged: {
-            if( text === "" ) {
+            if( popup.showing ) {
+                hideTimer.restart()
+            }
+        }
+
+        onContentWidthChanged: {
+            if( label.contentWidth < 1 ) {
                 return
             }
 
-            if( !popup.opening ) {
-                resize()
+            resize()
+            if( !popup.showing ) {
                 popup.open()
             }
             else {
-                resize()
                 hideTimer.restart()
             }
         }

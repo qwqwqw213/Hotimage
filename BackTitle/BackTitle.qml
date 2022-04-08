@@ -22,8 +22,8 @@ Rectangle {
         y: Config.topMargin
 
         anchors.left: parent.left
-        font.family: "FontAwesome"
-        font.pixelSize: width * 0.85
+        font.family: Config.fontRegular
+        font.pixelSize: width * 0.75
         text: "\uf104"
         verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignHCenter

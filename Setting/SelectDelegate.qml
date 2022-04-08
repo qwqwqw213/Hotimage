@@ -8,6 +8,11 @@ AbstractButton {
     property real leftRightMargin: 30
     property bool selection: false
 
+    property string choiceIcon: "\uf192"
+    property string choiceIconFamily: Config.fontRegular
+
+    width: parent.width
+
     background: Rectangle {
         color: pressed ? "#606060" : "transparent"
     }
@@ -41,9 +46,9 @@ AbstractButton {
         anchors.rightMargin: Config.rightMargin > 0
                             ? Config.rightMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
-        font.family: "FontAwesome"
+        font.family: choiceIconFamily
         font.pixelSize: parent.leftRightMargin
-        text: "\uf192"
+        text: choiceIcon
         color: selection ?
                    "#ffffff" : "#505050"
         Behavior on color {

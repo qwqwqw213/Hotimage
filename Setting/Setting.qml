@@ -80,7 +80,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("WhiteHot")
-                iconSource: "qrc:/sources/whitehot.jpg"
+                iconSource: "qrc:/resource/whitehot.jpg"
                 selection: TcpCamera.palette === 0 ? true : false
                 onClicked: TcpCamera.setPalette(0)
             }
@@ -90,7 +90,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("BlackHot")
-                iconSource: "qrc:/sources/blackhot.jpg"
+                iconSource: "qrc:/resource/blackhot.jpg"
                 selection: TcpCamera.palette === 1 ? true : false
                 onClicked: TcpCamera.setPalette(1)
             }
@@ -99,7 +99,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("Iron")
-                iconSource: "qrc:/sources/iron.jpg"
+                iconSource: "qrc:/resource/iron.jpg"
                 selection: TcpCamera.palette === 2 ? true : false
                 onClicked: TcpCamera.setPalette(2)
             }
@@ -108,7 +108,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("HCR")
-                iconSource: "qrc:/sources/HCR.jpg"
+                iconSource: "qrc:/resource/HCR.jpg"
                 selection: TcpCamera.palette === 3 ? true : false
                 onClicked: TcpCamera.setPalette(3)
             }
@@ -117,7 +117,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("Rainbow")
-                iconSource: "qrc:/sources/rainbow.jpg"
+                iconSource: "qrc:/resource/rainbow.jpg"
                 selection: TcpCamera.palette === 4 ? true : false
                 onClicked: TcpCamera.setPalette(4)
             }
@@ -126,7 +126,7 @@ Rectangle {
                 width: parent.width
                 height: parent.itemHeight
                 label: qsTr("IronGray")
-                iconSource: "qrc:/sources/irongray.jpg"
+                iconSource: "qrc:/resource/irongray.jpg"
                 selection: TcpCamera.palette === 5 ? true : false
                 onClicked: TcpCamera.setPalette(5)
             }
@@ -315,7 +315,7 @@ Rectangle {
                 Text {
                     id: icon
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontLight
                     font.pixelSize: parent.width * 0.55
                     color: "white"
                 }

@@ -14,7 +14,7 @@ public:
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
     QString url();
-    QString addQueue(const QString &path);
+    QString addQueue(const QString &path, QString &videoTotalTime);
 
 private:
     friend class VideoScanImagePrivate;

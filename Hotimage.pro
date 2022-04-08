@@ -1,6 +1,7 @@
 QT += gui quick quickcontrols2 network
 
-CONFIG += c++11
+CONFIG += c++11 \
+          resources_big
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
@@ -42,6 +43,7 @@ HEADERS += \
     Function/Wireless/wireless.h \
     ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
+    TcpCamera/HandShakeDef.h \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
     TcpCamera/tcpcamera.h \ \

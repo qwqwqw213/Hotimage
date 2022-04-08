@@ -1,6 +1,8 @@
 import QtQuick 2.14
 import QtQuick.Controls 2.14
 
+import "../BackTitle"
+
 Item {
     id: imageListView
     clip: true
@@ -94,13 +96,22 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     cache: false
 
+//                    Text {
+//                        visible: fileType === 1
+//                        anchors.centerIn: parent
+//                        font.family: Config.fontLight
+//                        font.pixelSize: parent.width * 0.35
+//                        text: "\uf144"
+//                        color: "white"
+//                    }
                     Text {
-                        visible: fileType === 1
-                        anchors.centerIn: parent
-                        font.family: "FontAwesome"
-                        font.pixelSize: parent.width * 0.35
-                        text: "\uf144"
                         color: "white"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 10
+                        font.pixelSize: 15
+                        text: videoTotalTime
                     }
 
                     // 选择标识
@@ -109,7 +120,7 @@ Item {
                         anchors.rightMargin: 5
                         anchors.top: parent.top
                         anchors.topMargin: 5
-                        font.family: "FontAwesome"
+                        font.family: Config.fontLight
                         font.pixelSize: 30
                         text: selection ? "\uf192" : "\uf10c"
                         color: selection ? "#6f9f9f" : "white"
@@ -155,76 +166,92 @@ Item {
         }
 
         // title
-        Rectangle {
+        BackTitle {
             id: title
-
-            property real leftRightMargin: 30
-
             width: parent.width
             height: 60 + Config.topMargin
             anchors.left: parent.left
             anchors.top: parent.top
-            color: "#2f4f4f"
+            titleText: qsTr("Picture")
 
-            MouseArea {
-                anchors.fill: parent
-            }
-
-            Text {
-                id: btnReturn
-                width: parent.height - Config.topMargin
-                height: width
-                y: Config.topMargin
-
-                anchors.left: parent.left
-                font.family: "FontAwesome"
-                font.pixelSize: width * 0.85
-                text: "\uf104"
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                color: btnReturnArea.pressed ? "#6f9f9f" : "white"
-                MouseArea {
-                    id: btnReturnArea
-                    anchors.fill: parent
-                    onClicked: {
-                        stackView.pop()
-                    }
-                }
-
-                Text {
-                    anchors.left: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: qsTr("Photo")
-                    color: "white"
-                }
-            }
-
-            // 选择按钮
-            AbstractButton {
-                id: btnChoice
-                width: btnChoiceText.contentWidth + 20
-                height: btnChoiceText.contentHeight + 20
-                y: (parent.height - Config.topMargin - height) / 2 + Config.topMargin
-                anchors.right: parent.right
-                anchors.rightMargin: parent.leftRightMargin
-
-                background: Rectangle {
-                    radius: height / 2
-                    color: btnChoice.pressed ? "#1f3f3f" : "#3f5f5f"
-                }
-                Text {
-                    id: btnChoiceText
-                    anchors.centerIn: parent
-                    color: "white"
-                    text: ImageModel.selectionStatus ?
-                              qsTr("Cancel") : qsTr("Choice")
-                }
-                onClicked: {
-                    ImageModel.selectionStatus = !ImageModel.selectionStatus
-                    bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
-                }
+            buttonText: ImageModel.selectionStatus ?
+                            qsTr("Cancel") : qsTr("Choice")
+            onButtonClicked: {
+                ImageModel.selectionStatus = !ImageModel.selectionStatus
+                bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
             }
         }
+
+//        Rectangle {
+//            id: title
+
+//            property real leftRightMargin: 30
+
+//            width: parent.width
+//            height: 60 + Config.topMargin
+//            anchors.left: parent.left
+//            anchors.top: parent.top
+//            color: "#2f4f4f"
+
+//            MouseArea {
+//                anchors.fill: parent
+//            }
+
+//            Text {
+//                id: btnReturn
+//                width: parent.height - Config.topMargin
+//                height: width
+//                y: Config.topMargin
+
+//                anchors.left: parent.left
+//                font.family: Config.fontLight
+//                font.pixelSize: width * 0.85
+//                text: "\uf104"
+//                verticalAlignment: Text.AlignVCenter
+//                horizontalAlignment: Text.AlignHCenter
+//                color: btnReturnArea.pressed ? "#6f9f9f" : "white"
+//                MouseArea {
+//                    id: btnReturnArea
+//                    anchors.fill: parent
+//                    onClicked: {
+//                        stackView.pop()
+//                    }
+//                }
+
+//                Text {
+//                    anchors.left: parent.right
+//                    anchors.verticalCenter: parent.verticalCenter
+//                    text: qsTr("Photo")
+//                    color: "white"
+//                }
+//            }
+
+//            // 选择按钮
+//            AbstractButton {
+//                id: btnChoice
+//                width: btnChoiceText.contentWidth + 20
+//                height: btnChoiceText.contentHeight + 20
+//                y: (parent.height - Config.topMargin - height) / 2 + Config.topMargin
+//                anchors.right: parent.right
+//                anchors.rightMargin: parent.leftRightMargin
+
+//                background: Rectangle {
+//                    radius: height / 2
+//                    color: btnChoice.pressed ? "#1f3f3f" : "#3f5f5f"
+//                }
+//                Text {
+//                    id: btnChoiceText
+//                    anchors.centerIn: parent
+//                    color: "white"
+//                    text: ImageModel.selectionStatus ?
+//                              qsTr("Cancel") : qsTr("Choice")
+//                }
+//                onClicked: {
+//                    ImageModel.selectionStatus = !ImageModel.selectionStatus
+//                    bottom.posY = ImageModel.selectionStatus ? 0 : 0 - bottom.height
+//                }
+//            }
+//        }
 
         // bottom
         Rectangle {
@@ -251,9 +278,9 @@ Item {
                 anchors.rightMargin: 5
                 Text {
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontRegular
                     font.pixelSize: parent.width * 0.65
-                    text: "\uf1f8"
+                    text: "\uf2ed"
                     color: btnDeleteArea.pressed ? "#6f9f9f" : "white"
                 }
                 MouseArea {

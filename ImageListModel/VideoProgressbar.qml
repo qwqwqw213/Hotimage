@@ -34,7 +34,7 @@ Item {
             Text {
                 id: btnPause
                 text: VideoPlayer.playing === 1 ? "\uf04c" : "\uf04b"
-                font.family: "FontAwesome"
+                font.family: Config.fontLight
                 font.pixelSize: 30
                 anchors.centerIn: Config.isLandscape ?
                                       parent : undefined

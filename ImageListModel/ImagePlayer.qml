@@ -7,6 +7,13 @@ import "../BackTitle"
 Item {
     id: imagePlayer
 
+    MouseArea {
+        anchors.fill: parent
+        onClicked: {}
+        onPressed: {}
+        onReleased: {}
+    }
+
     onVisibleChanged: {
         if( stackViewMouseArea ) {
             stackViewMouseArea.enabled = !visible
@@ -20,11 +27,11 @@ Item {
     }
 
     function autoTitle() {
-        console.log("auto title")
         if( toolbar.opacity > 0 ) {
             toolbar.opacity = 0
         }
         else {
+            toolbar.visible = true
             toolbar.opacity = 1
         }
     }
@@ -352,6 +359,12 @@ Item {
         anchors.fill: parent
         z: 5
 
+        onOpacityChanged: {
+            if( opacity < 1 ) {
+                visible = false;
+            }
+        }
+
         Behavior on opacity {
             OpacityAnimator { duration: 200 }
         }
@@ -375,7 +388,7 @@ Item {
                 y: Config.topMargin
 
                 anchors.left: parent.left
-                font.family: "FontAwesome"
+                font.family: Config.fontLight
                 font.pixelSize: width * 0.85
                 text: "\uf104"
                 verticalAlignment: Text.AlignVCenter
@@ -469,7 +482,7 @@ Item {
                         Text {
                             visible: fileType === 1
                             anchors.centerIn: parent
-                            font.family: "FontAwesome"
+                            font.family: Config.fontLight
                             font.pixelSize: parent.width * 0.35
                             text: "\uf144"
                             color: "white"
@@ -534,7 +547,7 @@ Item {
 
                     Text {
                         id: btnVideoQuitIcon
-                        font.family: "FontAwesome"
+                        font.family: Config.fontLight
                         font.pixelSize: parent.height * 0.75
                         color: btnVideoQuitArea.pressed ? "#f0f0f0" : "white"
                         text: "\uf00d"

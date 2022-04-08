@@ -28,11 +28,12 @@ Item {
         contentHeight: wrapper.height
 
         onContentXChanged: {
-          imagePlayer.hideTitle()
+            imagePlayer.hideTitle()
         }
 
         onContentYChanged: {
-          imagePlayer.hideTitle()
+            imagePlayer.hideTitle()
+            console.log(contentY, image.y)
         }
 
         PinchArea {
@@ -101,7 +102,7 @@ Item {
                                  (VideoPlayer.playing > 0 ? (VideoPlayer.playIndex === index ? false : true) : true)
                                : false
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontRegular
                     font.pixelSize: parent.width > parent.height ? parent.width * 0.15 : parent.height * 0.15
                     text: "\uf144"
                     color: btnVideoPlayArea.pressed ? "#a0a0a0" : "white"
@@ -110,6 +111,7 @@ Item {
                         id: btnVideoPlayArea
                         anchors.fill: parent
                         onClicked: {
+                            console.log("play")
                             if( VideoPlayer.playing < 1 ) {
                                 console.log("video play index:", index)
                                 imagePlayer.hideTitle()
@@ -119,6 +121,7 @@ Item {
                     }
                 }
             }
+
 
             MouseArea {
                 Timer {
@@ -151,6 +154,10 @@ Item {
                         }
                     }
                 }
+
+                onPressed: {}
+                onPositionChanged: {}
+                onReleased: {}
 
                 anchors.fill: parent
                 onDoubleClicked: {
@@ -196,6 +203,7 @@ Item {
                     timer.start();
                 }
             }
+
 
             ParallelAnimation {
                 id: resizeAnimation

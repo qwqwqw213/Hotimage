@@ -40,6 +40,8 @@ int main(int argc, char *argv[])
         engine.load(url);
 
         exitCode = app.exec();
+
+        config->release();
     } while(exitCode == REBOOT_CODE);
 
     return exitCode;

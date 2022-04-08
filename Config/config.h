@@ -69,6 +69,19 @@ public:
     Q_PROPERTY(int bottomMargin READ bottomMargin CONSTANT)
     int bottomMargin();
 
+    Q_PROPERTY(QString fontLight READ fontLight CONSTANT)
+    QString fontLight();
+    Q_PROPERTY(QString fontSolid READ fontSolid CONSTANT)
+    QString fontSolid();
+    Q_PROPERTY(QString fontRegular READ fontRegular CONSTANT)
+    QString fontRegular();
+    Q_PROPERTY(QString fontThin READ fontThin CONSTANT)
+    QString fontThin();
+    Q_PROPERTY(QString fontBrandsRegular READ fontBrandsRegular CONSTANT)
+    QString fontBrandsRegular();
+    Q_PROPERTY(QString fontDuotoneSolid READ fontDuotoneSolid CONSTANT)
+    QString fontDuotoneSolid();
+
     Q_PROPERTY(bool canReadTemperature READ canReadTemperature CONSTANT)
     bool canReadTemperature();
     Q_PROPERTY(bool isMobile READ isMobile CONSTANT)

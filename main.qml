@@ -95,7 +95,7 @@ ApplicationWindow {
                 Text {
                     id: icon
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontLight
                     font.pixelSize: parent.width * 0.8
                     text: "\uf2cb"
                     color: TcpCamera.showTemp ? "#dc143c" : "#696969"
@@ -122,9 +122,9 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontRegular
                     font.pixelSize: parent.width * 0.8
-                    text: "\uf021"
+                    text: "\uf01e"
                     color: btnShutterArea.pressed ? "#a0a0a0" : "white"
                     rotation: window.oldRotation
                 }
@@ -149,7 +149,7 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontLight
                     font.pixelSize: parent.width * 0.8
                     text: "\uf013"
                     color: btnSettingArea.pressed ? "#a0a0a0" : "white"
@@ -192,11 +192,21 @@ ApplicationWindow {
                     anchors.leftMargin: 10
                     anchors.top: parent.top
                     anchors.topMargin: 10
-                    font.family: "FontAwesome"
+                    font.family: Config.fontSolid
                     font.pixelSize: 30
-                    text: "\uf03d" + " " + TcpCamera.recordTime
+                    text: "\uf03d"
                     color: "red"
                     visible: TcpCamera.encoding
+
+                    // 录像时间
+                    Text {
+                        anchors.left: parent.right
+                        anchors.leftMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.pixelSize: parent.contentHeight
+                        text: TcpCamera.recordTime
+                        color: parent.color
+                    }
 
                     SequentialAnimation on color {
                         loops: Animation.Infinite
@@ -348,14 +358,14 @@ ApplicationWindow {
                         border.width: 1
                     }
 
-                    Text {
-                        visible: ImageModel.lastType === 1
-                        anchors.centerIn: parent
-                        font.family: "FontAwesome"
-                        font.pixelSize: parent.width * 0.5
-                        text: "\uf144"
-                        color: "white"
-                    }
+//                    Text {
+//                        visible: ImageModel.lastType === 1
+//                        anchors.centerIn: parent
+//                        font.family: Config.fontLight
+//                        font.pixelSize: parent.width * 0.5
+//                        text: "\uf144"
+//                        color: "white"
+//                    }
                 }
 
                 MouseArea {
@@ -384,7 +394,7 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    font.family: "FontAwesome"
+                    font.family: Config.fontLight
                     font.pixelSize: btnRecord.width * 0.9
                     text: "\uf03d"
                     color: TcpCamera.encoding ? "red" : (btnRecordArea.pressed ? "#a0a0a0" : "white")
@@ -395,7 +405,12 @@ ApplicationWindow {
                     id: btnRecordArea
                     anchors.fill: parent
                     onClicked: {
-                        TcpCamera.openRecord()
+                        if( TcpCamera.encoding ) {
+                            TcpCamera.closeRecord()
+                        }
+                        else {
+                            TcpCamera.openRecord()
+                        }
                     }
                 }
             }

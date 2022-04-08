@@ -69,12 +69,13 @@ public:
     void saveSetting();
 
     QTranslator *ts;
-    QFontDatabase fd;
 
     int leftMargin;
     int rightMargin;
     int topMargin;
     int bottomMargin;
+
+    QStringList fontFamilies;
 
 private:
     Config *f;
@@ -136,16 +137,34 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     }
 
     // 字库加载
-
-    int fontIndex = p->fd.addApplicationFont(":/font/SourceHanSansCN-Normal.otf");
-    if( fontIndex >= 0 ) {
+    p->fontFamilies.clear();
+    int id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Brands-Regular-400.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Duotone-Solid-900.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Light-300.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Regular-400.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Solid-900.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Thin-100.otf");
+    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    id = QFontDatabase::addApplicationFont(":/resource/font/SourceHanSansCN-Normal.otf");
+    if( id >= 0 ) {
         QFont font = a->font();
-        QString family = QFontDatabase::applicationFontFamilies(fontIndex).at(0);
+        QString family = QFontDatabase::applicationFontFamilies(id).at(0);
         font.setFamily(family);
         qDebug() << "set font family:" << family;
         a->setFont(font);
     }
-    p->fd.addApplicationFont(":/font/fontawesome-webfont.ttf");
+
+    qDebug() << "- font awesome -";
+    for(const auto &font : p->fontFamilies) {
+        qDebug() << font;
+    }
+    qDebug() << "font families size:" << p->fontFamilies.size();
+    qDebug() << "- font awesome -";
 
     p->screen = QGuiApplication::primaryScreen();
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
@@ -174,7 +193,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     });
 
     QObject::connect(a, static_cast<void (QGuiApplication::*)(Qt::ApplicationState)>(&QGuiApplication::applicationStateChanged),
-                     [=](Qt::ApplicationState state){
+                     this, [=](Qt::ApplicationState state){
         qDebug() << "app state changed:" << state;
 #ifndef Q_OS_WIN32
         switch(state) {
@@ -200,10 +219,33 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
         }
             break;
+        case Qt::ApplicationInactive: {
+
+        }
+            break;
         default: break;
         }
+#else
+        switch (state) {
+        case Qt::ApplicationActive: {
+            if( !p->tcpCamera.isNull() ) {
+                if( !p->tcpCamera->isOpen() ) {
+                    p->tcpCamera->open();
+                }
+            }
+        }
+            break;
+        default: {
+            if( !p->tcpCamera.isNull() ) {
+                if( p->tcpCamera->isOpen() ) {
+                    p->tcpCamera->close();
+                }
+            }
+        }
+            break;
+        }
 #endif
-    });
+    }, Qt::QueuedConnection);
 
     QRect r = p->screen->availableGeometry();
 #ifndef Q_OS_WIN32
@@ -284,7 +326,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
                      p->imageModel.data(), &ImageListModel::add);
-//    p->tcpCamera->open();
+    p->tcpCamera->open();
 
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
@@ -382,6 +424,36 @@ int Config::topMargin()
 int Config::bottomMargin()
 {
     return p->bottomMargin;
+}
+
+QString Config::fontLight()
+{
+    return p->fontFamilies.at(2);
+}
+
+QString Config::fontSolid()
+{
+    return p->fontFamilies.at(4);
+}
+
+QString Config::fontRegular()
+{
+    return p->fontFamilies.at(3);
+}
+
+QString Config::fontThin()
+{
+    return p->fontFamilies.at(5);
+}
+
+QString Config::fontBrandsRegular()
+{
+    return p->fontFamilies.at(0);
+}
+
+QString Config::fontDuotoneSolid()
+{
+    return p->fontFamilies.at(1);
 }
 
 bool Config::canReadTemperature()

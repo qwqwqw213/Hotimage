@@ -1,14 +1,14 @@
 #ifndef __HANDSHAKE_H__
 #define __HANDSHAKE_H__
 
-#define HANDSHAKE_PAGE_SIZE             6
-#define PAGE_HEAD                       0x30
-#define PAGE_TAIL_SIZE                  5
-#define DECODE_PAGE_SIZE                1490
+#define PACK_HEAD                       0x30
+#define HANDSHAKE_PACK_SIZE             1490
 
 #define CAM_OUTPUT_NUC16_MODE           0x04
 #define CAM_OUTPUT_YUYV_MODE            0x05
 
+
+#include "HandShakeDef.h"
 
 #ifndef ANDROID_APP
 
@@ -165,88 +165,202 @@ typedef struct
 } t_setting_page;
 #endif
 
-enum PixelFormat
-{
-    __yuyv = 0,
-    __yuv420,
-};
-
-typedef struct
-{
-    int w;
-    int h;
-    PixelFormat format;
-} t_handshake_page;
-
 typedef void (*HandShakeCallback)(const int &msg, void *content);
 
 class HandShake
 {
 public:
-enum RecvPageType
-    {
+    enum PackType {
         __handshake = 0x31,
         __shuffer,
         __palette,
         __config,
         __mode,
         __hotspot_info,
+        __disconnect,
     };
+
+    enum RequestType {
+        __req_none = 0,
+        __req_frame,
+        __req_disconnect,
+    };
+
     HandShake() { connected = false; }
     ~HandShake() { }
 
-    bool isConnected() { return connected; }
-
 #ifndef ANDROID_APP
-    void wait() { isWait = true; }
     void reset(Socket *_s, const int &_fd, HandShakeCallback func) {
         s = _s;
         fd = _fd;
-        isWait = false;
-        connected = false;
-        canRecv = false;
+        request = __req_none;
         msg_callback_func = func;
         if( !t.joinable() )
         {
             exit = false;
             t = std::thread([=](){
-            char *buf;
-            while (!exit)
-            {
-                if( !isWait && (s != NULL) && canRecv )
+                char *buf;
+                while (!exit)
                 {
-                    if( s->Recv(buf, DECODE_PAGE_SIZE) ) {
+                    if( s->Recv(buf, HANDSHAKE_PACK_SIZE) ) {
                         decode(buf);
                     }
+                    else {
+                        usleep(1000 * 1000);
+                    }
                 }
-            }
-        });
+                std::cout << "handshake thread release \n";
+            });
         }
     }
+    int hasRequest() {
+        if( request > __req_none ) {
+            int _req = request;
+            request = __req_none;
+            return _req;
+        }
+        return __req_none;
+    }
     void release() {
+        connected = false;
         exit = true;
-        t.join();
+        if( t.joinable() ) {
+            t.join();
+        }
     }
 
-    void openRecv() { canRecv = true; }
+    int decode(const char *buf) {
+        if( buf )
+        {
+            std::string str(buf, HANDSHAKE_PACK_SIZE);
+            // std::cout << "decode page: " << str << ", size:" << str.size() << "\n";
+            if( buf[0] != PACK_HEAD ) {
+                // std::cout << "invalid page: " << str << "\n";
+                // std::cout << "invalid page: " << (int)buf[0] << " , " << (int)buf[1] << "\n";
+                return __req_none;
+            }
+            switch(buf[1])
+            {
+            case HandShake::__handshake: {
+                if( !connected )
+                {
+                    connected = true;
 
-    void disconnect() { canRecv = false; connected = false; }
+                    int palette = buf[2];
+                    int mode = buf[3];
+                    ctl.v4l2Control(fd, 0x8000 | mode);
+                    usleep(10000);
+                    if( mode == 0x05 ) {
+                        ctl.v4l2Control(fd, CAM_PALETTE | palette);
+                    }
 
-    // 板子发送握手包
-    // 长度 6
-    std::string sendHandShake(const t_handshake_page &t) {
-        std::string byte;
-        byte += PAGE_HEAD;
-        byte += int2byte(t.w, 2);
-        byte += int2byte(t.h, 2);
-        byte += (char)t.format;
-        return byte;
+                    float emiss = byte2float(&buf[4]);
+                    ctl.sendEmissivity(fd, emiss);
+                    usleep(10000);
+                    float refltmp = byte2float(&buf[8]);
+                    ctl.sendReflection(fd, refltmp);
+                    usleep(10000);
+                    float airtmp = byte2float(&buf[12]);
+                    ctl.sendAmb(fd, airtmp);
+                    usleep(10000);
+                    float humi = byte2float(&buf[16]);
+                    ctl.sendHumidity(fd, humi);
+                    usleep(10000);
+                    unsigned short distance = byte2int(&buf[20], 2);
+                    ctl.sendDistance(fd, distance);
+                    usleep(10000);
+                    float fix = byte2float(&buf[22]);
+                    ctl.sendCorrection(fd, fix);
+                    usleep(10000);
+
+                    int start = 26;
+                    size_t offset = str.find(';');
+                    if( offset != std::string::npos
+                        && str.find(';', offset) != std::string::npos )
+                    {
+                        hotspot_ssid = str.substr(start, offset - start);
+                        offset += 1;
+                        hotspot_password = str.substr(offset, str.find(';', offset) - offset);
+                    }
+                    std::cout << "- handshake succrss, init param -\n"
+                            << "   palette: " << palette << "\n"
+                            << "      mode: " << mode << "\n"
+                            << "     emiss: " << emiss << "\n"
+                            << "   refltmp: " << refltmp << "\n"
+                            << "    airtmp: " << airtmp << "\n"
+                            << "      humi: " << humi << "\n"
+                            << "       fix: " << fix << "\n"
+                            << "  distance: " << distance << "\n"
+                            << "      ssid: " << hotspot_ssid << "\n"
+                            << "  password: " << hotspot_password << "\n";
+                }
+                request = __req_frame;
+            }
+                break;
+            case HandShake::__shuffer: {
+                ctl.v4l2Control(fd, CAM_SHUTTER);
+            }
+                break;
+            case HandShake::__palette: {
+                ctl.v4l2Control(fd, CAM_PALETTE | buf[2]);
+            }
+                break;
+            case HandShake::__config: {
+                float emiss = byte2float(&buf[2]);
+                ctl.sendEmissivity(fd, emiss);
+                float refltmp = byte2float(&buf[6]);
+                ctl.sendReflection(fd, refltmp);
+                float airtmp = byte2float(&buf[10]);
+                ctl.sendAmb(fd, airtmp);
+                float humi = byte2float(&buf[14]);
+                ctl.sendHumidity(fd, humi);
+                unsigned short distance = byte2int(&buf[18], 2);
+                ctl.sendDistance(fd, distance);
+                float fix = byte2float(&buf[20]);
+                ctl.sendCorrection(fd, fix);
+                std::cout << "set param:\n"
+                          << "emiss:" << emiss << "\n"
+                          << "refltmp:" << refltmp << "\n"
+                          << "airtmp:" << airtmp << "\n"
+                          << "humi:" << humi << "\n"
+                          << "fix:" << fix << "\n"
+                          << "distance:" << distance << "\n";
+            }
+                break;
+            case HandShake::__hotspot_info: {
+                int start = 2;
+                size_t offset = str.find(';');
+                if( offset != std::string::npos
+                    && str.find(';', offset) != std::string::npos )
+                {
+                        hotspot_ssid = str.substr(start, offset - start);
+                        offset += 1;
+                        hotspot_password = str.substr(offset, str.find(';', offset) - offset);
+                        std::cout << "- hotspot info -\n"
+                                  << "          ssid: " << hotspot_ssid << "\n"
+                                  << "      password: " << hotspot_password << "\n";
+                        if( msg_callback_func ) {
+                            msg_callback_func(HandShake::__hotspot_info, this);
+                        }
+
+                }
+                else {
+                    std::cout << "cannot find hotspot info, socket data error \n";
+                }
+            }
+                break;
+            case HandShake::__disconnect: {
+                request = __req_disconnect;
+            }
+                break;
+            default: break;
+            }
+        }
+        return request;
     }
 
     std::string hotspotSSID() { return hotspot_ssid; }
     std::string hotspotPassword() { return hotspot_password; }
-#else
-    void disconnect() { connected = false; }
 #endif
 
     // 高位在前
@@ -317,28 +431,10 @@ enum RecvPageType
         return byte;
     }
 
-    int recvHandShake(const char *byte, const int &size, t_handshake_page *page) {
-        if( size < HANDSHAKE_PAGE_SIZE ) {
-            return 0;
-        }
-
-        if( byte[0] != PAGE_HEAD ) {
-            // 无效包头
-            // pop front byte
-            return -1;
-        }
-
-        page->w = byte2int(&byte[1], 2);
-        page->h = byte2int(&byte[3], 2);
-        page->format = (PixelFormat)byte[5];
-        connected = true;
-        return HANDSHAKE_PAGE_SIZE;
-    }
-
     QByteArray pack(const t_setting_page &t) {
         QByteArray byte;
-        byte.resize(DECODE_PAGE_SIZE);
-        byte[0] = PAGE_HEAD;
+        byte.resize(HANDSHAKE_PACK_SIZE);
+        byte[0] = PACK_HEAD;
         byte[1] = t.type;
         switch (t.type) {
         case __handshake: {
@@ -403,133 +499,10 @@ private:
     int fd;
     bool isWait;
     XthermControl ctl;
-    bool canRecv;
     std::string hotspot_ssid;
     std::string hotspot_password;
     HandShakeCallback msg_callback_func;
-
-    void decode(const char *buf) {
-        if( buf )
-        {
-            std::string str(buf, DECODE_PAGE_SIZE);
-            std::cout << "decode page: " << str << ", size:" << str.size() << "\n";
-            if( buf[0] != PAGE_HEAD ) {
-                std::cout << "invalid page\n";
-                return;
-            }
-            switch(buf[1])
-            {
-            case HandShake::__handshake: {
-                connected = true;
-                int palette = buf[2];
-                int mode = buf[3];
-                ctl.v4l2Control(fd, 0x8000 | mode);
-                usleep(10000);
-                if( mode == 0x05 ) {
-                    ctl.v4l2Control(fd, CAM_PALETTE | palette);
-                }
-
-                float emiss = byte2float(&buf[4]);
-                ctl.sendEmissivity(fd, emiss);
-                usleep(10000);
-                float refltmp = byte2float(&buf[8]);
-                ctl.sendReflection(fd, refltmp);
-                usleep(10000);
-                float airtmp = byte2float(&buf[12]);
-                ctl.sendAmb(fd, airtmp);
-                usleep(10000);
-                float humi = byte2float(&buf[16]);
-                ctl.sendHumidity(fd, humi);
-                usleep(10000);
-                unsigned short distance = byte2int(&buf[20], 2);
-                ctl.sendDistance(fd, distance);
-                usleep(10000);
-                float fix = byte2float(&buf[22]);
-                ctl.sendCorrection(fd, fix);
-                usleep(10000);
-
-                int start = 26;
-                size_t offset = str.find(';');
-                if( offset != std::string::npos
-                    && str.find(';', offset) != std::string::npos )
-                {
-                    hotspot_ssid = str.substr(start, offset - start);
-                    offset += 1;
-                    hotspot_password = str.substr(offset, str.find(';', offset) - offset);
-                }
-                std::cout << "- handshake succrss, init param -\n"
-                          << "   palette: " << palette << "\n"
-                          << "      mode: " << mode << "\n"
-                          << "     emiss: " << emiss << "\n"
-                          << "   refltmp: " << refltmp << "\n"
-                          << "    airtmp: " << airtmp << "\n"
-                          << "      humi: " << humi << "\n"
-                          << "       fix: " << fix << "\n"
-                          << "  distance: " << distance << "\n"
-                          << "      ssid: " << hotspot_ssid << "\n"
-                          << "  password: " << hotspot_password << "\n";
-                if( msg_callback_func ) {
-                    msg_callback_func(HandShake::__hotspot_info, this);
-                }
-            }
-                break;
-            case HandShake::__shuffer: {
-                ctl.v4l2Control(fd, CAM_SHUTTER);
-            }
-                break;
-            case HandShake::__palette: {
-                ctl.v4l2Control(fd, CAM_PALETTE | buf[2]);
-            }
-                break;
-            case HandShake::__config: {
-                float emiss = byte2float(&buf[2]);
-                ctl.sendEmissivity(fd, emiss);
-                float refltmp = byte2float(&buf[6]);
-                ctl.sendReflection(fd, refltmp);
-                float airtmp = byte2float(&buf[10]);
-                ctl.sendAmb(fd, airtmp);
-                float humi = byte2float(&buf[14]);
-                ctl.sendHumidity(fd, humi);
-                unsigned short distance = byte2int(&buf[18], 2);
-                ctl.sendDistance(fd, distance);
-                float fix = byte2float(&buf[20]);
-                ctl.sendCorrection(fd, fix);
-                std::cout << "set param:\n"
-                          << "emiss:" << emiss << "\n"
-                          << "refltmp:" << refltmp << "\n"
-                          << "airtmp:" << airtmp << "\n"
-                          << "humi:" << humi << "\n"
-                          << "fix:" << fix << "\n"
-                          << "distance:" << distance << "\n";
-            }
-                break;
-            case HandShake::__hotspot_info: {
-                int start = 2;
-                size_t offset = str.find(';');
-                if( offset != std::string::npos
-                    && str.find(';', offset) != std::string::npos )
-                {
-                        hotspot_ssid = str.substr(start, offset - start);
-                        offset += 1;
-                        hotspot_password = str.substr(offset, str.find(';', offset) - offset);
-                        std::cout << "- hotspot info -\n"
-                                  << "          ssid: " << hotspot_ssid << "\n"
-                                  << "      password: " << hotspot_password << "\n";
-                        if( msg_callback_func ) {
-                            msg_callback_func(HandShake::__hotspot_info, this);
-                        }
-
-                }
-                else {
-                    std::cout << "cannot find hotspot info, socket data error \n";
-                }
-            }
-                break;
-            default: break;
-            }
-
-        }
-    }
+    int request;
 #endif
 };
 

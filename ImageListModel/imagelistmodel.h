@@ -18,7 +18,8 @@ public:
         __path,
         __selection,
         __file_type,
-        __file_path
+        __file_path,
+        __video_total_time,
     };
     enum FileType
     {

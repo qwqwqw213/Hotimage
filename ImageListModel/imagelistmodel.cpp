@@ -13,7 +13,7 @@ public:
     explicit ImageListModelPrivate(ImageListModel *parent);
     ~ImageListModelPrivate();
 
-    typedef std::tuple<QString, QString, int, int, QString> Image;
+    typedef std::tuple<QString, QString, int, int, QString, QString> Image;
     QVector<Image> list;
 
     std::thread searchThread;
@@ -83,15 +83,16 @@ void ImageListModel::search(const QString &path)
             }
             int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
             QString qmlPath;
+            QString videoTotalTime("");
             if( type == __video ) {
 //                qDebug() << file;
-                qmlPath = p->videoScan->addQueue(file);
+                qmlPath = p->videoScan->addQueue(file, videoTotalTime);
             }
             else {
                 qmlPath = QString::fromUtf8(QString("file:///" + file).toUtf8());
             }
 
-            p->list.append(std::make_tuple(name, qmlPath, 0, type, file));
+            p->list.append(std::make_tuple(name, qmlPath, 0, type, file, videoTotalTime));
             count ++;
         }
         emit searchFinished();
@@ -115,6 +116,7 @@ QVariant ImageListModel::data(const QModelIndex &index, int role) const
         case __selection: { return std::get<2>(d); }
         case __file_type: { return std::get<3>(d); }
         case __file_path: { return std::get<4>(d); }
+        case __video_total_time: { return std::get<5>(d); }
         default: break;
         }
     }
@@ -148,6 +150,7 @@ bool ImageListModel::setData(const QModelIndex &index, const QVariant &value, in
         } break;
         case __file_type: { std::get<3>(d) = value.toInt(); } break;
         case __file_path: { std::get<4>(d) = value.toString(); } break;
+        case __video_total_time: { std::get<5>(d) = value.toString(); } break;
         default: { return false; }
         }
         p->list.replace(row, d);
@@ -168,6 +171,7 @@ QHash<int, QByteArray> ImageListModel::roleNames() const
     hash[__selection] = "selection";
     hash[__file_type] = "fileType";
     hash[__file_path] = "filePath";
+    hash[__video_total_time] = "videoTotalTime";
     return hash;
 }
 
@@ -297,13 +301,13 @@ void ImageListModel::add(const QString &path)
     QString name = path.right(path.length() - path.lastIndexOf('/') - 1);
     QString file = QString::fromUtf8(QString("file:///" + path).toUtf8());
     int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
-
+    QString videoTotalTime("");
     if( type == __video ) {
-        QString scanPath = p->videoScan->addQueue(path);
-        p->list.append(std::make_tuple(name, scanPath, 0, type, path));
+        QString scanPath = p->videoScan->addQueue(path, videoTotalTime);
+        p->list.append(std::make_tuple(name, scanPath, 0, type, path, videoTotalTime));
     }
     else {
-        p->list.append(std::make_tuple(name, file, 0, type, path));
+        p->list.append(std::make_tuple(name, file, 0, type, path, videoTotalTime));
     }
 
 //    p->list.append(std::make_tuple(name, file, 0, type));

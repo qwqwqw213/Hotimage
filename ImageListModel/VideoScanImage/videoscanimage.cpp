@@ -9,6 +9,7 @@ extern "C"{
 
 #include "QDebug"
 #include "QQueue"
+#include "QPainter"
 
 class VideoScanImagePrivate
 {
@@ -28,6 +29,8 @@ public:
     AVFrame *frame;
     AVFrame *rgbFrame;
     SwsContext *sws;
+
+    void drawTime(QImage *img, const int &sec);
 
 private:
     VideoScanImage *f;
@@ -70,7 +73,7 @@ QString VideoScanImage::url()
     return p->rawUrl;
 }
 
-QString VideoScanImage::addQueue(const QString &path)
+QString VideoScanImage::addQueue(const QString &path, QString &videoTotalTime)
 {
 //    qDebug() << "video path:" << path;
     QString scanPath = p->qmlUrl + QString::number(p->imageQueue.size());
@@ -82,6 +85,7 @@ QString VideoScanImage::addQueue(const QString &path)
     AVStream *stream = NULL;
     AVPacket packet;
 
+    int sec = 0;
     QImage img = QImage();
 
     int res = avformat_open_input(&p->fmtCnt, url, NULL, NULL);
@@ -101,6 +105,7 @@ QString VideoScanImage::addQueue(const QString &path)
             p->stream = stream;
             p->codecCnt = stream->codec;
             videoIndex = i;
+            sec = p->fmtCnt->duration / 1000000.0;
             break;
         }
     }
@@ -144,8 +149,8 @@ QString VideoScanImage::addQueue(const QString &path)
     }
 
     img = QImage(*p->rgbFrame->data,
-                        p->rgbFrame->width, p->rgbFrame->height,
-                        QImage::Format_RGB888);
+                 p->rgbFrame->width, p->rgbFrame->height,
+                 QImage::Format_RGB888);
 
     av_init_packet(&packet);
     while (true)
@@ -193,11 +198,23 @@ FINISHED:
         p->sws = NULL;
     }
 
-
     if( img.isNull() ) {
         qDebug() << "get video scan error";
         return QString("");
     }
+
+    if( sec < 3600 ) {
+        videoTotalTime = QString("%1:%2")
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+    else {
+        videoTotalTime = QString("%1:%2:%3")
+                .arg(sec / 3600, 2, 10, QLatin1Char('0'))
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+
     p->imageQueue.enqueue(img);
 //    qDebug() << "video scan url:" << scanPath;
     return scanPath;
@@ -223,5 +240,37 @@ VideoScanImagePrivate::VideoScanImagePrivate(VideoScanImage *parent, const QStri
 
 VideoScanImagePrivate::~VideoScanImagePrivate()
 {
+    imageQueue.clear();
+}
 
+void VideoScanImagePrivate::drawTime(QImage *img, const int &sec)
+{
+    QPainter pr(img);
+
+    QString str;
+    if( sec < 3600 ) {
+        str = QString("%1:%2")
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+    else {
+        str = QString("%1:%2:%3")
+                .arg(sec / 3600, 2, 10, QLatin1Char('0'))
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+
+    QFontMetrics metrics(pr.font());
+    int fontW = metrics.horizontalAdvance(str);
+    int fontH = metrics.height();
+
+    pr.setPen(Qt::white);
+//    pr.drawText(img->width() - fontW - 20, img->height() - fontH - 20,
+//                fontW + 10, fontH + 10,
+//                Qt::AlignCenter,
+//                str);
+    pr.drawText(10, 10,
+                fontW + 10, fontH + 10,
+                Qt::AlignCenter,
+                str);
 }

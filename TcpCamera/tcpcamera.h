@@ -32,7 +32,6 @@ public:
     void open();
 //    void open(tcp_config *s);
     void close();
-    void exit();
 
     double fps();
 
@@ -72,6 +71,7 @@ public:
     Q_PROPERTY(bool encoding READ encoding NOTIFY encodingChanged)
     bool encoding();
     Q_INVOKABLE void openRecord();
+    Q_INVOKABLE void closeRecord();
 
     Q_PROPERTY(QString recordTime READ recordTime NOTIFY recordTimeChanged)
     QString recordTime();
