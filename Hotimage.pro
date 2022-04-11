@@ -47,6 +47,7 @@ HEADERS += \
     TcpCamera/tcpdef.h \
     TcpCamera/handshake.hpp \
     TcpCamera/tcpcamera.h \ \
+    TcpCamera/tcpsearcher.hpp \
     VideoPlayer/videoplayer.h
 
 DEFINES += ANDROID_APP

@@ -7,11 +7,14 @@ import "../BackTitle"
 Rectangle {
     color: "black"
 
+    property real leftRightMargin: 30
+
     BackTitle {
         id: title
         width: parent.width
         height: 60 + Config.topMargin
         titleText: qsTr("Setting")
+        buttonText: qsTr("Save")
     }
 
     Flickable {
@@ -37,47 +40,116 @@ Rectangle {
             anchors.fill: parent
             spacing: -1
 
-            property real itemWidth: width
             property real itemHeight: 60
-            property real sectionHeight: 30
 
             SectionDelegate {
-                width: parent.itemWidth
-                height: parent.sectionHeight
-                label: qsTr("Wireless")
+                height: parent.itemHeight / 2
+                label: qsTr("Hotspot")
             }
 
-            JumpDelegate {
-                width: parent.width
+            InputDelegate {
+                id: ssid
                 height: parent.itemHeight
-                label: qsTr("Hotspot")
-                iconSource: "\uf064"
+                label: qsTr("SSID")
+                value: TcpCamera.hotspotSSID
+            }
+
+            InputDelegate {
+                id: password
+                height: parent.itemHeight
+                label: qsTr("Password")
+                value: TcpCamera.hotspotPassword
+            }
+
+            SwcDelegate {
+                height: parent.itemHeight
+                label: qsTr("Hostpot mode")
+                onOffStatus: TcpCamera.hotspotMode
                 onClicked: {
-                    if( Config.isMobile ) {
-                        PhoneApi.openHotspot()
+                    if( TcpCamera.isConnected ) {
+                        TcpCamera.setHotspotParam(ssid.value, password.value)
+                    }
+                    else {
+                        messagebox.text = qsTr("Not connect camera device wi-fi")
                     }
                 }
             }
 
-            JumpDelegate {
-                width: parent.itemWidth
-                height: parent.itemHeight
-                label: qsTr("Wireless Setting")
-                iconSource: "\uf013"
-                onClicked: {
-                    stackView.push("qrc:/Setting/WirelessPage.qml")
-                }
+            Text {
+                width: parent.width - leftRightMargin * 2
+                height: contentHeight + leftRightMargin * 2
+                anchors.left: parent.left
+                anchors.leftMargin: leftRightMargin
+                topPadding: leftRightMargin
+                color: "white"
+                wrapMode: Text.Wrap
+                lineHeight: 1.5
+                text: qsTr("If you want camera device connect to phone hotspot.")
+                      + qsTr("\n1. connect camera device wi-fi")
+                      + qsTr("\n2. fill in hotspot ssid and password, turn on \"Hotspot mode\"")
+                      + qsTr("\n3. open phone system setting, turn on hotspot")
+                      + qsTr("\nif hotspot info changed, need reconnect device and reset ssid and password")
             }
 
             SectionDelegate {
-                width: parent.itemWidth
-                height: parent.sectionHeight
+                height: parent.itemHeight / 2
+                label: qsTr("Wireless")
+            }
+
+            InputDelegate {
+                height: parent.itemHeight
+                label: qsTr("Device IP")
+                checkLabel: qsTr("conn")
+                onCheckClicked: {
+                    TcpCamera.manualConnect(value)
+                }
+            }
+
+            InfoDelegate {
+                height: parent.itemHeight
+                label: qsTr("Local IP")
+                value: TcpCamera.localIp
+            }
+
+            Text {
+                width: parent.width - leftRightMargin * 2
+                height: contentHeight + leftRightMargin * 2
+                anchors.left: parent.left
+                anchors.leftMargin: leftRightMargin
+                topPadding: leftRightMargin
+                color: "white"
+                wrapMode: Text.Wrap
+                lineHeight: 1.5
+                text: qsTr("Manual connect camera device, camera device default ip 192.168.1.1")
+            }
+
+//            JumpDelegate {
+//                height: parent.itemHeight
+//                label: qsTr("Hotspot")
+//                iconSource: "\uf064"
+//                onClicked: {
+//                    if( Config.isMobile ) {
+//                        PhoneApi.openHotspot()
+//                    }
+//                }
+//            }
+
+//            JumpDelegate {
+//                height: parent.itemHeight
+//                label: qsTr("Wireless Setting")
+//                iconSource: "\uf013"
+//                onClicked: {
+//                    stackView.push("qrc:/Setting/WirelessPage.qml")
+//                }
+//            }
+
+            SectionDelegate {
+                height: parent.itemHeight / 2
                 label: qsTr("Palette")
             }
 
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("WhiteHot")
                 iconSource: "qrc:/resource/whitehot.jpg"
@@ -87,7 +159,6 @@ Rectangle {
 
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("BlackHot")
                 iconSource: "qrc:/resource/blackhot.jpg"
@@ -96,7 +167,6 @@ Rectangle {
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("Iron")
                 iconSource: "qrc:/resource/iron.jpg"
@@ -105,7 +175,6 @@ Rectangle {
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("HCR")
                 iconSource: "qrc:/resource/HCR.jpg"
@@ -114,7 +183,6 @@ Rectangle {
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("Rainbow")
                 iconSource: "qrc:/resource/rainbow.jpg"
@@ -123,7 +191,6 @@ Rectangle {
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("IronGray")
                 iconSource: "qrc:/resource/irongray.jpg"
@@ -132,8 +199,7 @@ Rectangle {
             }
 
             SectionDelegate {
-                width: parent.itemWidth
-                height: parent.sectionHeight
+                height: parent.itemHeight / 2
                 label: qsTr("Camera Param")
                 visible: Config.canReadTemperature
             }
@@ -228,25 +294,12 @@ Rectangle {
                                          distanceSlider.item.value)
             }
 
-            Loader {
-                id: btnSave
-                active: Config.canReadTemperature
-                sourceComponent: iconButton
-                onLoaded: {
-                    item.iconSource = "\uf085"
-                    item.label = qsTr("Save")
-                    item.clicked.connect(column.onSaveClicked)
-                }
-            }
-
             SectionDelegate {
-                width: parent.itemWidth
-                height: parent.sectionHeight
+                height: parent.itemHeight / 2
                 label: qsTr("Language")
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: qsTr("简体中文")
                 selection: Config.language === 1 ? true : false
@@ -254,7 +307,6 @@ Rectangle {
             }
 
             SelectDelegate {
-                width: parent.width
                 height: parent.itemHeight
                 label: "English"
                 selection: Config.language === 0 ? true : false
@@ -262,13 +314,11 @@ Rectangle {
             }
 
             SectionDelegate {
-                width: parent.itemWidth
-                height: parent.sectionHeight
+                height: parent.itemHeight / 2
                 label: qsTr("Product")
             }
 
             InfoDelegate {
-                width: parent.itemWidth
                 height: parent.itemHeight
                 label: qsTr("SN")
                 value: TcpCamera.cameraSN
@@ -280,64 +330,6 @@ Rectangle {
                 implicitWidth: 5
                 color: "#b0505050"
                 radius: implicitWidth / 2
-            }
-        }
-    }
-
-    Component {
-        id: iconButton
-        AbstractButton {
-            property alias iconSource: icon.text
-            property alias label: label.text
-            property int index: 0
-            property real leftRightMargin: 30
-
-            background: Rectangle {
-                color: pressed ? "#606060" : "transparent"
-            }
-
-            onClicked: console.log("clicked:", index)
-
-            width: column.itemWidth
-            height: column.itemHeight
-
-            // 文字图标
-            Rectangle {
-                id: iconBackground
-                width: parent.width > parent.height ? parent.height * 0.75 : parent.width * 0.75
-                height: width
-                color: "#606060"
-                radius: width * 0.15
-                anchors.left: parent.left
-                anchors.leftMargin: Config.leftMargin > 0
-                                    ? Config.leftMargin + parent.leftRightMargin : parent.leftRightMargin
-                anchors.verticalCenter: parent.verticalCenter
-                Text {
-                    id: icon
-                    anchors.centerIn: parent
-                    font.family: Config.fontLight
-                    font.pixelSize: parent.width * 0.55
-                    color: "white"
-                }
-            }
-
-            // 文本
-            Text {
-                id: label
-                color: "white"
-                anchors.left: iconBackground.status !== Image.Null ?
-                                  iconBackground.right : parent.left
-                anchors.leftMargin: parent.leftRightMargin
-                anchors.verticalCenter: iconBackground.verticalCenter
-            }
-
-            // 底部横条
-            Rectangle {
-                width: parent.width - iconBackground.width - parent.leftRightMargin * 2
-                height: 1
-                anchors.left: label.left
-                anchors.bottom: parent.bottom
-                color: "#606060"
             }
         }
     }
@@ -358,7 +350,7 @@ Rectangle {
             property real leftRightMargin: 30
 
             id: rect
-            width: column.itemWidth
+            width: column.width
             height: column.itemHeight
             color: "transparent"
 

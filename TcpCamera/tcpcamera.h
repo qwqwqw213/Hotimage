@@ -28,6 +28,14 @@ public:
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectStatusChanged)
     bool isConnected();
+    Q_PROPERTY(QString localIp READ localIp NOTIFY connectStatusChanged)
+    QString localIp();
+    Q_PROPERTY(QString deviceIp READ deviceIp NOTIFY connectStatusChanged)
+    QString deviceIp();
+
+    Q_PROPERTY(bool manaulConnectState READ manaulConnectState NOTIFY manualConnectStateChanged)
+    bool manaulConnectState();
+    Q_INVOKABLE void manualConnect(const QString &devIp);
 
     void open();
 //    void open(tcp_config *s);
@@ -79,15 +87,13 @@ public:
     Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
     QString cameraSN();
 
-    Q_PROPERTY(QString localIp READ localIp NOTIFY wirelessParamChanged)
-    QString localIp();
-    Q_PROPERTY(QString deviceIp READ deviceIp NOTIFY wirelessParamChanged)
-    QString deviceIp();
-    Q_PROPERTY(QString hotspotSSID READ hotspotSSID NOTIFY wirelessParamChanged)
+    Q_PROPERTY(bool hotspotMode READ hotspotMode NOTIFY hotspotParamChanged)
+    bool hotspotMode();
+    Q_PROPERTY(QString hotspotSSID READ hotspotSSID NOTIFY hotspotParamChanged)
     QString hotspotSSID();
-    Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY wirelessParamChanged)
+    Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY hotspotParamChanged)
     QString hotspotPassword();
-    Q_INVOKABLE bool setWirelessParam(const QString &devIp, const QString &ssid, const QString &password);
+    Q_INVOKABLE bool setHotspotParam(const QString &ssid, const QString &password);
 
 private:
     friend class TcpCameraPrivate;
@@ -105,7 +111,8 @@ Q_SIGNALS:
     void videoFrame(QImage);
     void cameraSNChanged();
     void cameraParamChanged();
-    void wirelessParamChanged();
+    void manualConnectStateChanged();
+    void hotspotParamChanged();
 };
 
 #endif // RECV_H

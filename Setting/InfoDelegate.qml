@@ -6,6 +6,8 @@ Item {
     property alias value: value.text
     property real leftRightMargin: 30
 
+    width: parent.width
+
     Text {
         id: label
         color: "white"

@@ -88,7 +88,14 @@ public:
 
     QMutex unpackMutex;
 
+    enum SearchState
+    {
+        __search_exit = -1,
+        __search_device,
+        __manual_conn,
+    };
     int searching;
+    void connectDevice(const QString &dev);
     void searchDevice(const QString &devIp = QString(""));
 
     bool showTemp;
@@ -104,12 +111,14 @@ public:
 
     QString cameraSN;
 
+    int isHotspotMode(const uint8_t &n, const uint8_t &o);
+
 private:
     TcpCamera *f;
 
 Q_SIGNALS:
     void write(const QByteArray &byte);
-    void research(const QString &devIp);
+    void manualConnect(const QString &devIP);
 
 private Q_SLOTS:
     void onReadyRead();
@@ -120,6 +129,12 @@ TcpCamera::TcpCamera(QObject *parent)
     : QObject(parent)
     , p(new TcpCameraPrivate(this))
 {
+//    const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
+//    for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
+//        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
+//             qDebug() << localhost << address.toString();
+//        }
+//    }
 }
 
 TcpCamera::~TcpCamera()
@@ -149,6 +164,37 @@ bool TcpCamera::isOpen()
 bool TcpCamera::isConnected()
 {
     return isOpen() ? p->hasFrame : false;
+}
+
+QString TcpCamera::localIp()
+{
+    return p->localIP;
+}
+
+QString TcpCamera::deviceIp()
+{
+    return p->deviceIP;
+}
+
+bool TcpCamera::manaulConnectState()
+{
+    return (p->searching == TcpCameraPrivate::__manual_conn);
+}
+
+void TcpCamera::manualConnect(const QString &devIp)
+{
+    if( isConnected() ) {
+        emit msg(tr("Is connected state"));
+        return;
+    }
+    if( !p->isValidIpv4Addres(devIp) ) {
+        emit msg(tr("Invalid IP"));
+        return;
+    }
+
+    p->searching = TcpCameraPrivate::__manual_conn;
+    emit manualConnectStateChanged();
+    emit p->manualConnect(devIp);
 }
 
 void TcpCamera::open()
@@ -309,14 +355,9 @@ QString TcpCamera::cameraSN()
     return p->cameraSN;
 }
 
-QString TcpCamera::localIp()
+bool TcpCamera::hotspotMode()
 {
-    return p->localIP;
-}
-
-QString TcpCamera::deviceIp()
-{
-    return p->deviceIP;
+    return p->cfg.set.hotspotMode;
 }
 
 QString TcpCamera::hotspotSSID()
@@ -329,28 +370,25 @@ QString TcpCamera::hotspotPassword()
     return QString::fromStdString(p->cfg.set.hotspot_password);
 }
 
-bool TcpCamera::setWirelessParam(const QString &devIp, const QString &ssid, const QString &password)
+/*
+ *  热点模式流程
+ *  手机设置热点ssid password后
+ *  打开热点模式
+ *  发送热点信息到路由器
+ *  路由器接收后，更新热点模式(hotspot_mode 标志位)
+ *  在通过画面帧获取到新的hotspot_mode 标志位
+ *  确认路由器是否打开热点模式
+ *  打开热点模式后, 则开始搜索ip
+ */
+bool TcpCamera::setHotspotParam(const QString &ssid, const QString &password)
 {
-    if( !p->isValidIpv4Addres(devIp) ) {
-        return false;
+    if( !ssid.isEmpty() && !password.isEmpty() ) {
+        p->cfg.set.hotspot_ssid = ssid.toStdString();
+        p->cfg.set.hotspot_password = password.toStdString();
+        p->cfg.set.type = HandShake::__hotspot_info;
+        QByteArray byte = p->handshake.pack(p->cfg.set);
+        emit p->write(byte);
     }
-
-    p->cfg.set.hotspot_ssid = ssid.toStdString();
-    p->cfg.set.hotspot_password = password.toStdString();
-
-    if( isConnected() ) {
-        p->deviceIP = devIp;
-        if( !ssid.isEmpty() && !password.isEmpty() ) {
-            p->cfg.set.type = HandShake::__hotspot_info;
-            QByteArray byte = p->handshake.pack(p->cfg.set);
-            emit p->write(byte);
-        }
-    }
-    else {
-        p->searching = -1;
-        emit p->research(devIp);
-    }
-    emit wirelessParamChanged();
     return true;
 }
 
@@ -415,7 +453,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     thread = new QThread;
     QObject::connect(thread, &QThread::started, [=](){
         exit = 0;
-        searching = 0;
         buf.clear();
         timer = new QTimer;
         timer->setInterval(5000);
@@ -440,6 +477,9 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             }
         }, Qt::QueuedConnection);
         QObject::connect(socket, &QTcpSocket::disconnected, this, [=](){
+            // 断开连接处理
+            // 如果为热点模式, 重新搜索路由器ip
+            // 非热点模式, 连接设定的路由器ip
             hasFrame = false;
             cameraSN = QString("");
             if( socket != nullptr ) {
@@ -451,7 +491,6 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
                 // 此信号有可能为上次接收, 此时socket已重新连接
                 if( socket->state() != QTcpSocket::ConnectedState ) {
-                    searching = 1;
                     searchDevice();
                 }
             }
@@ -469,23 +508,14 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             }
         }, Qt::QueuedConnection);
 
-        QObject::connect(this, static_cast<void (TcpCameraPrivate::*)(const QString &)>(&TcpCameraPrivate::research),
+        QObject::connect(this, static_cast<void (TcpCameraPrivate::*)(const QString &)>(&TcpCameraPrivate::manualConnect),
                          this, [=](const QString &devIp){
             if( socket == nullptr ) {
                 return ;
             }
 
-            while ((searching == -1) && (exit != 1)) {
-                QThread::msleep(15);
-            }
-            qDebug() << "research device ip:" << devIp;
-            if( socket->state() != QTcpSocket::ConnectedState ) {
-                searching = 1;
-                searchDevice(devIp);
-            }
-            else {
-                qDebug() << "research fail, socket connected";
-            }
+            qDebug() << "reconnect device ip:" << devIp;
+            connectDevice(devIp);
         }, Qt::QueuedConnection);
 
         QObject::connect(timer, &QTimer::timeout, [=](){
@@ -501,25 +531,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 
         qDebug() << QThread::currentThreadId() << "socket start connect";
 
-        searching = 1;
-#ifdef Q_OS_WIN
-        searchDevice(SERVER_IP);
-#else
-//        qDebug() << "search ip:" << deviceIP;
-//        searchDevice(deviceIP);
-
-        while (!exit && (socket->state() != QTcpSocket::ConnectedState)) {
-            if( !isValidIpv4Addres(deviceIP) ) {
-                qDebug() << "invalid device ip:" << deviceIP;
-                break;
-            }
-
-            socket->connectToHost(deviceIP, cfg.port);
-            socket->waitForConnected(3000);
-            qDebug() << "connect host:" << deviceIP << cfg.port;
-        }
-
-#endif
+        searchDevice();
     });
 
     QObject::connect(thread, &QThread::finished, [=](){
@@ -531,7 +543,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             qDebug() << "send disconnect:" << flag;
         }
 
-        searching = 0;
+        searching = __search_exit;
 
         timer->stop();
         timer->deleteLater();
@@ -586,8 +598,39 @@ TcpCameraPrivate::~TcpCameraPrivate()
     saveSetting();
 }
 
+void TcpCameraPrivate::connectDevice(const QString &dev)
+{
+    if( dev.isEmpty() ) {
+        qDebug() << "ERROR: connect device ip is empty";
+        return;
+    }
+
+    int time = 0;
+    while ((exit != 1) && (socket != nullptr) && (time < 30)) {
+        socket->connectToHost(dev, cfg.port);
+        socket->waitForConnected(3000);
+        if( socket->state() == QTcpSocket::ConnectedState ) {
+            deviceIP = dev;
+            emit f->msg("Manual connect success");
+            break;
+        }
+        time ++;
+    }
+    searching = __search_exit;
+
+    if( socket->state() != QTcpSocket::ConnectedState ) {
+        emit f->msg("Manual connect fail");
+        searchDevice();
+    }
+    else {
+        emit f->msg("Connect success");
+    }
+    emit f->manualConnectStateChanged();
+}
+
 void TcpCameraPrivate::searchDevice(const QString &devIp)
 {
+    localIP = QString("");
     hasFrame = false;
     // 初次尝试连接上次已连接的设备IP
     if( !deviceIP.isEmpty() ) {
@@ -602,15 +645,13 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
             }
 
             qDebug() << "connect prev success, device ip:" << deviceIP << ", local ip:" << localIP;
-            emit f->wirelessParamChanged();
             return;
         }
     }
 
-    while ((exit != 1) && (searching == 1))
+    searching = __search_device;
+    while ((exit != 1) && (searching == __search_device))
     {
-        localIP.clear();
-        deviceIP.clear();
         const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
         for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
             if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
@@ -625,7 +666,7 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
         {
             QString ip_front = searchIp.left(searchIp.lastIndexOf('.') + 1);
             int index = 1;
-            while ((searching == 1) && socket && (exit != 1))
+            while ((searching == __search_device) && (socket != nullptr) && (exit != 1))
             {
                 QString ip = ip_front + QString::number(index);
                 if( ip == localIP ) {
@@ -638,7 +679,6 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
                 socket->waitForConnected(500);
                 if( socket->state() == QAbstractSocket::ConnectedState ) {
                     deviceIP = ip;
-                    emit f->wirelessParamChanged();
                     break;
                 }
                 index ++;
@@ -652,12 +692,12 @@ void TcpCameraPrivate::searchDevice(const QString &devIp)
             QThread::msleep(1500);
         }
 
-        searching = 0;
         if( !deviceIP.isNull() ) {
             qDebug() << "connect success, device ip:" << deviceIP;
             break;
         }
     }
+    searching = __search_exit;
 }
 
 void TcpCameraPrivate::keyPressed(const int &key)
@@ -677,6 +717,22 @@ void TcpCameraPrivate::keyPressed(const int &key)
     }
 }
 
+// hotspot mode
+// 状态改变返回 0 or 1
+// 0: off, 1: on
+// 无状态改变返回 -1
+int TcpCameraPrivate::isHotspotMode(const uint8_t &n, const uint8_t &o)
+{
+    int value = (n >> 1) & 0x01;
+    if( ((o >> 1) & 0x01) != value ) {
+        if( value == 1 ) {
+            return 1;
+        }
+        return 0;
+    }
+    return -1;
+}
+
 void TcpCameraPrivate::onReadyRead()
 {
     unpackMutex.lock();
@@ -688,11 +744,12 @@ void TcpCameraPrivate::onReadyRead()
         return;
     }
 
-    memcpy(&cfg.header, buf.data(), headerSize);
-    int totalSize = cfg.header.bufferLength + headerSize;
+    t_header header;
+    memcpy(&header, buf.data(), headerSize);
+    int totalSize = header.bufferLength + headerSize;
     if( buf.size() >= totalSize )
     {
-        if( !cfg.header.isValidHeader() )
+        if( !header.isValidHeader() )
         {
             // 包丢失
             // 重新校验包
@@ -708,7 +765,7 @@ void TcpCameraPrivate::onReadyRead()
                 if( first == 'T' )
                 {
                     QByteArray head = buf.mid(i, headerSize);
-                    if( cfg.header.isValidHeader(head.data()) )
+                    if( header.isValidHeader(head.data()) )
                     {
                         qDebug() << "remove invalid data, size:" << i;
                         unpackMutex.lock();
@@ -736,6 +793,9 @@ void TcpCameraPrivate::onReadyRead()
         }
         else
         {
+            int state = isHotspotMode(header.value, cfg.header.value);
+            memcpy(&cfg.header, &header, sizeof (t_header));
+
 #ifdef TEMPERATURE_SDK
             if( temperatureData == NULL ) {
                 temperatureData = (float*)calloc(cfg.header.width * (cfg.header.height - IMAGE_Y_OFFSET) + 10, sizeof(float));
@@ -949,18 +1009,18 @@ void TcpCameraPrivate::onReadyRead()
 
 
             emit f->videoFrameChanged();
+
+            // 热点模式被打开
+            if( (state >= 0) && (cfg.set.hotspotMode != state) ) {
+                cfg.set.hotspotMode = state;
+                emit f->hotspotParamChanged();
+            }
         }
     }
 }
 
 void TcpCameraPrivate::readSetting()
 {
-    // 初始化 参数
-    deviceIP.clear();
-    localIP.clear();
-    searching = 0;
-
-
 #ifndef Q_OS_WIN32
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/cameraparam.ini");
 #else
@@ -983,6 +1043,7 @@ void TcpCameraPrivate::readSetting()
 
     showTemp = s->value("Normal/showtemp", false).toBool();
 
+    cfg.set.hotspotMode = s->value("Hotspot/mode", false).toBool();
     cfg.set.hotspot_ssid = s->value("Hotspot/ssid", "").toString().toStdString();
     cfg.set.hotspot_password = s->value("Hotspot/password", "").toString().toStdString();
 
@@ -1023,6 +1084,7 @@ void TcpCameraPrivate::saveSetting()
 
     s->setValue("Normal/showtemp", showTemp);
 
+    s->setValue("Hotspot/mode", cfg.set.hotspotMode);
     s->setValue("Hotspot/ssid", QString::fromStdString(cfg.set.hotspot_ssid));
     s->setValue("Hotspot/password", QString::fromStdString(cfg.set.hotspot_password));
 

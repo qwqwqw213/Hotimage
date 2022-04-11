@@ -160,6 +160,10 @@ typedef struct
     unsigned short distance;
     float correction;
 
+    // 0 连接路由器wi-fi
+    // 1 路由器连接热点
+    bool hotspotMode;
+
     std::string hotspot_ssid;
     std::string hotspot_password;
 } t_setting_page;
@@ -272,8 +276,8 @@ public:
                     float fix = byte2float(&buf[22]);
                     ctl.sendCorrection(fd, fix);
                     usleep(10000);
-
-                    int start = 26;
+                    hotspot_mode = buf[26];
+                    int start = 27;
                     size_t offset = str.find(';');
                     if( offset != std::string::npos
                         && str.find(';', offset) != std::string::npos )
@@ -283,16 +287,17 @@ public:
                         hotspot_password = str.substr(offset, str.find(';', offset) - offset);
                     }
                     std::cout << "- handshake succrss, init param -\n"
-                            << "   palette: " << palette << "\n"
-                            << "      mode: " << mode << "\n"
-                            << "     emiss: " << emiss << "\n"
-                            << "   refltmp: " << refltmp << "\n"
-                            << "    airtmp: " << airtmp << "\n"
-                            << "      humi: " << humi << "\n"
-                            << "       fix: " << fix << "\n"
-                            << "  distance: " << distance << "\n"
-                            << "      ssid: " << hotspot_ssid << "\n"
-                            << "  password: " << hotspot_password << "\n";
+                            << "      palette: " << palette << "\n"
+                            << "         mode: " << mode << "\n"
+                            << "        emiss: " << emiss << "\n"
+                            << "      refltmp: " << refltmp << "\n"
+                            << "       airtmp: " << airtmp << "\n"
+                            << "         humi: " << humi << "\n"
+                            << "          fix: " << fix << "\n"
+                            << "     distance: " << distance << "\n"
+                            << " hotspot mode: " << hotspot_mode << "\n"
+                            << "         ssid: " << hotspot_ssid << "\n"
+                            << "     password: " << hotspot_password << "\n";
                 }
                 request = __req_frame;
             }
@@ -328,20 +333,21 @@ public:
             }
                 break;
             case HandShake::__hotspot_info: {
-                int start = 2;
+                hotspot_mode = buf[2];
+                int start = 3;
                 size_t offset = str.find(';');
                 if( offset != std::string::npos
                     && str.find(';', offset) != std::string::npos )
                 {
-                        hotspot_ssid = str.substr(start, offset - start);
-                        offset += 1;
-                        hotspot_password = str.substr(offset, str.find(';', offset) - offset);
-                        std::cout << "- hotspot info -\n"
-                                  << "          ssid: " << hotspot_ssid << "\n"
-                                  << "      password: " << hotspot_password << "\n";
-                        if( msg_callback_func ) {
-                            msg_callback_func(HandShake::__hotspot_info, this);
-                        }
+                    hotspot_ssid = str.substr(start, offset - start);
+                    offset += 1;
+                    hotspot_password = str.substr(offset, str.find(';', offset) - offset);
+                    std::cout << "- hotspot info -\n"
+                                << "          ssid: " << hotspot_ssid << "\n"
+                                << "      password: " << hotspot_password << "\n";
+                    if( msg_callback_func ) {
+                        msg_callback_func(HandShake::__hotspot_info, this);
+                    }
 
                 }
                 else {
@@ -359,6 +365,7 @@ public:
         return request;
     }
 
+    uint8_t hotspotMode() { return hotspot_mode; }
     std::string hotspotSSID() { return hotspot_ssid; }
     std::string hotspotPassword() { return hotspot_password; }
 #endif
@@ -446,7 +453,8 @@ public:
             byte.replace(16, 4, qfloat2byte(t.humidness));
             byte.replace(20, 2, qint2byte(t.distance, 2));
             byte.replace(22, 4, qfloat2byte(t.correction));
-            int offset = 26;
+            byte[26] = t.hotspotMode;
+            int offset = 27;
             byte.replace(offset, t.hotspot_ssid.length(), t.hotspot_ssid.c_str());
             offset = offset + t.hotspot_ssid.length();
             byte[offset] = ';';
@@ -474,7 +482,8 @@ public:
         }
             break;
         case __hotspot_info: {
-            int offset = 2;
+            byte[2] = (!t.hotspotMode) & 0x01;
+            int offset = 3;
             byte.replace(offset, t.hotspot_ssid.length(), t.hotspot_ssid.c_str());
             offset = offset + t.hotspot_ssid.length();
             byte[offset] = ';';
@@ -499,6 +508,7 @@ private:
     int fd;
     bool isWait;
     XthermControl ctl;
+    uint8_t hotspot_mode;
     std::string hotspot_ssid;
     std::string hotspot_password;
     HandShakeCallback msg_callback_func;

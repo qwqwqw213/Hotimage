@@ -6,16 +6,12 @@ AbstractButton {
     property alias value: value.text
     property alias checkLabel: btnCheckText.text
 
-    property real leftRightMargin: 20
+    property real leftRightMargin: 30
     property real itemHeight: height * 0.65
 
     property string deleteFamily: Config.fontSolid
     property string deleteIcon: "\uf056"
     property alias readOnly: value.readOnly
-
-    property bool onlyNumber: false
-    property int numBottom: 30
-    property int numTop: 65535
 
     signal checkClicked
 
@@ -33,14 +29,13 @@ AbstractButton {
     Text {
         id: label
         color: "white"
-        width: parent.width * 0.25 - anchors.leftMargin
+        width: parent.width * 0.2 - anchors.leftMargin
         height: parent.itemHeight
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
                             ? Config.leftMargin : parent.leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         verticalAlignment: Qt.AlignVCenter
-        clip: true
 
 //        Rectangle {
 //            anchors.fill: parent
@@ -76,19 +71,6 @@ AbstractButton {
         verticalAlignment: TextInput.AlignVCenter
         rightPadding: btnDelete.width + 20
 
-        validator: onlyNumber ? intValidator : null
-
-        inputMethodHints: onlyNumber ? Qt.ImhDigitsOnly | Qt.ImhFormattedNumbersOnly : Qt.ImhNone
-
-        onTextEdited: {
-            if( onlyNumber ) {
-                var num = Number(text)
-                if( num < numBottom ) {
-                    text = numBottom
-                }
-            }
-        }
-
         // 删除按钮
         MouseArea {
             visible: !readOnly
@@ -98,9 +80,8 @@ AbstractButton {
             anchors.right: parent.right
             anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            focus: false
             onClicked: {
-                value.text = onlyNumber ? numBottom : ""
+                value.text = ""
             }
 
 //            Rectangle {
@@ -152,11 +133,5 @@ AbstractButton {
         anchors.left: label.left
         anchors.bottom: parent.bottom
         color: "#606060"
-    }
-
-    IntValidator {
-        id: intValidator
-        top: numTop
-        bottom: numBottom
     }
 }

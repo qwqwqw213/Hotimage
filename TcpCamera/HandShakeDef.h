@@ -8,7 +8,10 @@ typedef struct
     unsigned short width;
     unsigned short height;
     unsigned char pixelFormat;
-    unsigned char keyValue;
+    // 0: off, 1: on
+    // bit 1: key
+    // bit 2: hotspot mode
+    unsigned char value;
 
     bool isValidHeader() {
         if( this->marker[0] == 'T'

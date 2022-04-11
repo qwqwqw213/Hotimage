@@ -34,7 +34,7 @@ AbstractButton {
         height: parent.itemHeight
         anchors.left: parent.left
         anchors.leftMargin: Config.leftMargin > 0
-                            ? Config.leftMargin : parent.leftRightMargin
+                            ? Config.leftMargin : leftRightMargin
         anchors.verticalCenter: parent.verticalCenter
         verticalAlignment: Qt.AlignVCenter
 
