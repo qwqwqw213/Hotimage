@@ -1,38 +1,25 @@
 #include "imageprovider.h"
 
 #include "QDebug"
-#include "QThread"
-#include "QQueue"
-#include "QMutex"
 
-class ImageProviderPrivate
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+ImageProvider::ImageProvider(const bool &realtime)
+    : QQuickImageProvider(QQmlImageProviderBase::Image)
+#else
+ImageProvider::ImageProvider(const bool &realtime)
+    : QObject(nullptr)
+    , QQuickImageProvider(QQmlImageProviderBase::Image)
+#endif
 {
-public:
-    ImageProviderPrivate(ImageProvider *parent, const QString &url);
-    ~ImageProviderPrivate();
+    m_realtime = realtime;
+    m_url.clear();
 
-    quint64 index;
-    QString rawUrl;
-    QString qmlUrl;
-
-//    QQueue<QImage> queue;
-//    QMutex mutex;
-
-    QImage image;
-
-private:
-    ImageProvider *f;
-};
-
-ImageProvider::ImageProvider(const QString &url)
-    : QQuickImageProvider(QQuickImageProvider::Image)
-    , p(new ImageProviderPrivate(this, url))
-{
-
+    m_image = QImage();
 }
 
 ImageProvider::~ImageProvider()
 {
+    qDebug() << "image provider release";
 }
 
 QImage ImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
@@ -40,15 +27,11 @@ QImage ImageProvider::requestImage(const QString &id, QSize *size, const QSize &
     Q_UNUSED(id)
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
-    p->index ++;
-//    if( !p->queue.isEmpty() ) {
-//        p->mutex.lock();
-//        QImage img = p->queue.dequeue();
-//        p->mutex.unlock();
-//        qDebug() << p->queue.size();
-//        return img;
-//    }
-    return p->image;
+//    qDebug() << "request:" << m_image.isNull() << m_image.width() << m_image.height();
+    if( m_queue.size() < 1 ) {
+        return m_image;
+    }
+    return m_queue.dequeue();
 }
 
 QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
@@ -56,69 +39,51 @@ QPixmap ImageProvider::requestPixmap(const QString &id, QSize *size, const QSize
     Q_UNUSED(id)
     Q_UNUSED(size)
     Q_UNUSED(requestedSize)
-    p->index ++;
-//    if( !p->queue.isEmpty() ) {
-//        p->mutex.lock();
-//        QImage img = p->queue.dequeue();
-//        p->mutex.unlock();
-//        return QPixmap::fromImage(img);
-//    }
-    return QPixmap::fromImage(p->image);
+    return QPixmap();
 }
 
-//void ImageProvider::addQueue(QImage image)
-//{
-//    p->mutex.lock();
-//    p->queue.enqueue(image);
-//    p->mutex.unlock();
-//}
-
-//void ImageProvider::clear()
-//{
-//    p->queue.clear();
-//}
-
-QImage *ImageProvider::image(const int &w, const int &h)
+void ImageProvider::append(QImage &img)
 {
-    if( p->image.isNull() ) {
-        p->image = QImage(w, h, QImage::Format_RGB888);
+    if( !hasUrl() ) {
+        return;
     }
-    return &p->image;
-}
+    if( img.isNull() ) {
+        qDebug() << "ERROR: provider append null image";
+        return;
+    }
 
-QImage ImageProvider::image()
-{
-    return p->image;
-}
-
-void ImageProvider::release()
-{
-    p->image = QImage();
+    if( m_realtime ) {
+        m_image.swap(img);
+    }
+    else {
+        QImage i;
+        i.swap(img);
+        m_queue.enqueue(i);
+    }
+    emit imageEnqueue();
 }
 
 QString ImageProvider::url()
 {
-    return p->rawUrl;
+    return m_url + QString::number(QDateTime::currentMSecsSinceEpoch());
 }
 
-QString ImageProvider::qmlUrl()
+bool ImageProvider::setUrl(QQmlApplicationEngine *e, const QString &path)
 {
-    return p->qmlUrl + QString::number(p->index);
+    if( m_url.isEmpty() && e != nullptr ) {
+        e->addImageProvider(path, this);
+        m_url = QString("image://%1/").arg(path);
+        return true;
+    }
+    return false;
 }
 
-ImageProviderPrivate::ImageProviderPrivate(ImageProvider *parent, const QString &url)
-{
-    f = parent;
-
-    index = 0;
-    rawUrl = url;
-    qmlUrl = QString("image://%1/").arg(url);
-
-    image = QImage();
-//    queue.clear();
+bool ImageProvider::hasUrl() {
+    return !m_url.isEmpty();
 }
 
-ImageProviderPrivate::~ImageProviderPrivate()
+bool ImageProvider::canRead()
 {
-//    queue.clear();
+//    return (m_queue.size() > 0);
+    return !m_image.isNull();
 }

@@ -34,6 +34,8 @@ public:
     ConfigPrivate(Config *parent);
     ~ConfigPrivate();
 
+    QQmlApplicationEngine *e;
+
     int width;
     int height;
 
@@ -65,6 +67,7 @@ public:
 
     bool isLandscape;
 
+    QSettings *setting;
     void readSetting();
     void saveSetting();
 
@@ -110,6 +113,7 @@ Config * Config::instance()
 int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 {
     configSelf = this;
+    p->e = e;
     // 读配置文件
     p->readSetting();
 
@@ -226,24 +230,24 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
         default: break;
         }
 #else
-        switch (state) {
-        case Qt::ApplicationActive: {
-            if( !p->tcpCamera.isNull() ) {
-                if( !p->tcpCamera->isOpen() ) {
-                    p->tcpCamera->open();
-                }
-            }
-        }
-            break;
-        default: {
-            if( !p->tcpCamera.isNull() ) {
-                if( p->tcpCamera->isOpen() ) {
-                    p->tcpCamera->close();
-                }
-            }
-        }
-            break;
-        }
+//        switch (state) {
+//        case Qt::ApplicationActive: {
+//            if( !p->tcpCamera.isNull() ) {
+//                if( !p->tcpCamera->isOpen() ) {
+//                    p->tcpCamera->open();
+//                }
+//            }
+//        }
+//            break;
+//        default: {
+//            if( !p->tcpCamera.isNull() ) {
+//                if( p->tcpCamera->isOpen() ) {
+//                    p->tcpCamera->close();
+//                }
+//            }
+//        }
+//            break;
+//        }
 #endif
     }, Qt::QueuedConnection);
 
@@ -284,6 +288,15 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     p->androidInterface.reset(new AndroidInterface);
     cnt->setContextProperty("PhoneApi", p->androidInterface.data());
     p->androidInterface->requestPhotoWritePermission();
+    QObject::connect(p->androidInterface.data(), &AndroidInterface::cameraConnect,
+                     [=](const int &fd, const QString &deviceName){
+        qDebug() << "usb camera:" << deviceName << ", fd:" << fd;
+        p->tcpCamera->openUsbCamera(fd);
+    });
+    QObject::connect(p->androidInterface.data(), &AndroidInterface::cameraDisconnect,
+                     [=](const int &fd){
+        p->tcpCamera->closeUsbCamera();
+    });
 
     qreal ratio = p->screen->devicePixelRatio();
     p->leftMargin = p->androidInterface->safeAeraLeft() / ratio;
@@ -320,8 +333,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
-    ImageProvider *provider = p->tcpCamera->provider();
-    e->addImageProvider(provider->url(), provider);
+    p->tcpCamera->setFrameUrl(e, "TcpCamera");
     cnt->setContextProperty("TcpCamera", p->tcpCamera.data());
 
     QObject::connect(p->tcpCamera.data(), static_cast<void (TcpCamera::*)(const QString &)>(&TcpCamera::captureFinished),
@@ -341,6 +353,23 @@ QString Config::documentsPath()
 QString Config::imageGalleryPath()
 {
     return p->imageGalleryPath;
+}
+
+QVariant Config::readSetting(const QString &key, const QVariant &normal)
+{
+    if( p->setting ) {
+        return p->setting->value(key, normal);
+    }
+    return QVariant();
+}
+
+void Config::insertSetting(const QVector<SettingParam> &param)
+{
+    if( p->setting ) {
+        for(const auto &i : param) {
+            p->setting->setValue(i.key, i.value);
+        }
+    }
 }
 
 int Config::width()
@@ -474,6 +503,12 @@ bool Config::isMobile()
 #endif
 }
 
+void Config::saveSetting()
+{
+    p->tcpCamera->saveSetting();
+    p->saveSetting();
+}
+
 ConfigPrivate::ConfigPrivate(Config *parent)
 {
     f = parent;
@@ -566,7 +601,11 @@ ConfigPrivate::~ConfigPrivate()
     gyroscope->deleteLater();
 #endif
 
+    tcpCamera->saveSetting();
     saveSetting();
+    setting->sync();
+    delete setting;
+    setting = NULL;
 }
 
 void ConfigPrivate::readSetting()
@@ -579,9 +618,9 @@ void ConfigPrivate::readSetting()
     QString path = documentsPath + QString("setting.ini");
 
     qDebug() << "read setting path:" << path << ", file exists:" << QFileInfo::exists(path);
-    QSettings *s = new QSettings(path, QSettings::IniFormat);
+    setting = new QSettings(path, QSettings::IniFormat);
 
-    language = s->value("Normal/Language", 0).toInt();
+    language = setting->value("Normal/Language", 0).toInt();
     imageGalleryPath = documentsPath + QString("Hotimage/");
     if( !QFileInfo::exists(imageGalleryPath) ) {
         QDir dir;
@@ -590,23 +629,12 @@ void ConfigPrivate::readSetting()
         qDebug() << "image gallery path exists:" << QFileInfo::exists(imageGalleryPath)
                  << ", image gallery path:" << imageGalleryPath;
     }
-
-    delete s;
-    s = NULL;
 }
 
 void ConfigPrivate::saveSetting()
 {
-    QString path = documentsPath + QString("setting.ini");
-    QSettings *s = new QSettings(path, QSettings::IniFormat);
-
-    s->setValue("Normal/Language", language);
-
-    s->sync();
-    delete s;
-    s = NULL;
-
-    qDebug() << "save setting path:" << path;
+    qDebug() << "save setting path:" << setting->fileName();
+    setting->setValue("Normal/Language", language);
 }
 
 Config * Config::configSelf = nullptr;

@@ -88,6 +88,25 @@ JNIEXPORT void JNICALL Java_org_qtproject_example_function_AndroidMessage(JNIEnv
     }
 }
 
+JNIEXPORT void JNICALL Java_org_qtproject_example_function_UsbConnect(JNIEnv *env,
+                                                                      jobject /*obj*/,
+                                                                      int fd, jstring devName)
+{
+    QString deviceName(env->GetStringUTFChars(devName, 0));
+    if( ISVALID(g_Android) ) {
+        emit g_Android->cameraConnect(fd, deviceName);
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_qtproject_example_function_UsbDisconnect(JNIEnv /*env*/,
+                                                                         jobject /*obj*/,
+                                                                         int fd)
+{
+    if( ISVALID(g_Android) ) {
+        emit g_Android->cameraDisconnect(fd);
+    }
+}
+
 #ifdef __cplusplus
 }
 #endif

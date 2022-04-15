@@ -35,9 +35,18 @@ import android.content.IntentFilter;
 import android.app.Instrumentation;
 import android.content.ComponentName;
 
+import android.content.BroadcastReceiver;
+import android.hardware.usb.UsbManager;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.util.Log;
+import java.util.HashMap;
+import android.app.PendingIntent;
+import java.util.Iterator;
 
 public class function extends QtActivity {
 
+    private static final String TAG = "MainActivity";
     public static function m_self;
 
     private Context context;
@@ -216,6 +225,85 @@ public class function extends QtActivity {
     }
     */
 
+    // usb
+    public native static void UsbConnect(int fd, String devName);
+    public native static void UsbDisconnect(int fd);
+    private UsbManager mUsbManager;
+    private UsbDeviceConnection mUsbConnection;
+
+    private PendingIntent mPermissionIntent;
+    private static final String ACTION_USB_PERMISSION =
+        "com.android.example.USB_PERMISSION";
+    private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if( ACTION_USB_PERMISSION.equals(action) ) {
+                synchronized (this) {
+                    UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        if(device != null){
+                          //call method to set up device communication
+                          System.out.println("java -> usb insert");
+                       }
+                    }
+                    else {
+                        Log.d(TAG, "permission denied for device " + device);
+                    }
+                }
+            }
+            else if( UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action) ) {
+                // 设备插入
+                final UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                updateUsbDevice(device);
+            }
+            else if( UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action) ) {
+                // 设备解除
+                final UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (device != null) {
+                    System.out.println("java -> usb remove: " + device.getVendorId() + device.getProductId() + device.getProductName());
+                    UsbDisconnect(mUsbConnection.getFileDescriptor());
+                    mUsbConnection = null;
+                }
+                else {
+                    System.out.println("java -> ACTION_USB_DEVICE_DETACHED device is null");
+                }
+            }
+        }
+    };
+
+    public void uvc() {
+        System.out.println("java -> uvc init");
+
+        mUsbManager = (UsbManager)context.getSystemService(Context.USB_SERVICE);
+        mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
+
+        IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        registerReceiver(mUsbReceiver, filter);
+
+        HashMap<String, UsbDevice> list = mUsbManager.getDeviceList();
+        Iterator<UsbDevice> deviceIterator = list.values().iterator();
+        while(deviceIterator.hasNext()){
+            UsbDevice device = deviceIterator.next();
+            System.out.println("java -> inserted usb: " + device.getVendorId() + device.getProductId() + device.getProductName());
+            updateUsbDevice(device);
+        }
+    }
+
+    public void updateUsbDevice(UsbDevice dev) {
+        if( dev != null ) {
+            if( !mUsbManager.hasPermission(dev) ) {
+                System.out.println("java -> request device permission");
+                mUsbManager.requestPermission(dev, mPermissionIntent);
+            }
+            mUsbConnection = mUsbManager.openDevice(dev);
+            int fd = mUsbConnection.getFileDescriptor();
+            UsbConnect(fd, dev.getProductName());
+        }
+    }
+    // usb
+
 //    private static OrientationEventListener m_OrientationListener;
 
 //    public native static void orientationChanged(int orientation);
@@ -279,6 +367,9 @@ public class function extends QtActivity {
 
         // wifi manager
         initHotspot();
+
+        // usb
+        uvc();
 
         /*
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
@@ -365,6 +456,7 @@ public class function extends QtActivity {
     protected void onDestroy() {
         System.out.println("java destroy");
         super.onDestroy();
+        unregisterReceiver(mUsbReceiver);
 //        m_OrientationListener.disable();
     }
 

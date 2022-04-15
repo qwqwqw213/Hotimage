@@ -15,6 +15,9 @@ Rectangle {
         height: 60 + Config.topMargin
         titleText: qsTr("Setting")
         buttonText: qsTr("Save")
+        onButtonClicked: {
+            Config.saveSetting()
+        }
     }
 
     Flickable {
@@ -70,7 +73,9 @@ Rectangle {
                         TcpCamera.setHotspotParam(ssid.value, password.value)
                     }
                     else {
-                        messagebox.text = qsTr("Not connect camera device wi-fi")
+                        messagebox.text = qsTr("Device not connect")
+                        ssid.value = ""
+                        password.value = ""
                     }
                 }
             }
@@ -100,6 +105,7 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("Device IP")
                 checkLabel: qsTr("conn")
+                value: TcpCamera.deviceIp
                 onCheckClicked: {
                     TcpCamera.manualConnect(value)
                 }

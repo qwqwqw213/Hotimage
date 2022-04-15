@@ -3,7 +3,6 @@
         <file>main.qml</file>
         <file>ImageListModel/ImageListView.qml</file>
         <file>ImageListModel/ImagePlayer.qml</file>
-        <file>ImageListModel/AlbumScanDelegate.qml</file>
         <file>Setting/Setting.qml</file>
         <file>Loading/Loading.qml</file>
         <file>MessageBox/MessageBox.qml</file>
@@ -32,5 +31,6 @@
         <file>resource/rainbow.jpg</file>
         <file>resource/whitehot.jpg</file>
         <file>Setting/SwcDelegate.qml</file>
+        <file>ImageListModel/ImageDelegate.qml</file>
     </qresource>
 </RCC>

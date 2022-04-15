@@ -2,9 +2,7 @@
 #define RECV_H
 
 #include "tcpdef.h"
-#include "ImageProvider/imageprovider.h"
-
-#include <QObject>
+#include "providercamera.hpp"
 
 #include "QPixmap"
 #include "QImage"
@@ -14,7 +12,7 @@
 #include "QQuickImageProvider"
 
 class TcpCameraPrivate;
-class TcpCamera : public QObject
+class TcpCamera : public ProviderCamera
 {
     Q_OBJECT
 
@@ -24,7 +22,9 @@ public:
 
     static TcpCamera *instance();
 
-    bool isOpen();
+    bool isOpen() override;
+    int width() override;
+    int height() override;
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectStatusChanged)
     bool isConnected();
@@ -44,11 +44,6 @@ public:
     double fps();
 
     Q_INVOKABLE void capture();
-
-    ImageProvider *provider();
-
-    Q_PROPERTY(QString videoFrameUrl READ videoFrameUrl NOTIFY videoFrameChanged)
-    QString videoFrameUrl();
 
     Q_INVOKABLE void shutter();
     Q_INVOKABLE void setPalette(const int &index);
@@ -95,6 +90,13 @@ public:
     QString hotspotPassword();
     Q_INVOKABLE bool setHotspotParam(const QString &ssid, const QString &password);
 
+    void saveSetting();
+
+    Q_PROPERTY(bool isUsbCamera READ isUsbCamera NOTIFY usbCameraStatusChanged)
+    bool isUsbCamera();
+    void openUsbCamera(const int &fd);
+    void closeUsbCamera();
+
 private:
     friend class TcpCameraPrivate;
     QScopedPointer<TcpCameraPrivate> p;
@@ -113,6 +115,9 @@ Q_SIGNALS:
     void cameraParamChanged();
     void manualConnectStateChanged();
     void hotspotParamChanged();
+
+    // usb camera
+    void usbCameraStatusChanged();
 };
 
 #endif // RECV_H

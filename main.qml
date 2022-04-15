@@ -181,9 +181,7 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 width: parent.height * scaleBar.value
                 height: parent.width * scaleBar.value
-//                source: mainView.videoPlay ?
-//                            (TcpCamera.isConnected ? TcpCamera.videoFrameUrl : "") : ""
-                source: TcpCamera.isConnected ? TcpCamera.videoFrameUrl : ""
+                source: TcpCamera.canReadUrl ? TcpCamera.frameUrl : ""
                 rotation: 90
 
                 // 录像标志
@@ -236,7 +234,7 @@ ApplicationWindow {
             }
 
             Loading {
-                visible: !TcpCamera.isConnected
+                visible: TcpCamera.isConnected ? false : TcpCamera.isUsbCamera
                 anchors.fill: parent
                 text: qsTr("Camera connecting...")
             }
@@ -428,6 +426,13 @@ ApplicationWindow {
 //        y: parent.height
     }
 
+    onClosing: {
+        if( stackView.depth > 1 ) {
+            close.accepted = false
+            stackView.pop();
+        }
+    }
+
 
     StackView {
         id: stackView
@@ -437,14 +442,6 @@ ApplicationWindow {
         property real hideX: 0 - width * 0.3
 
         focus: true
-        Keys.onReleased: {
-            if( event.key === Qt.Key_Back ) {
-                if( stackView.depth > 1 ) {
-                    stackView.pop()
-                    event.accepted = true
-                }
-            }
-        }
 
         pushEnter: Transition {
             XAnimator {
@@ -542,17 +539,10 @@ ApplicationWindow {
         }
     }
 
-//    Loading {
-//        visible: !TcpCamera.isConnected
-//        anchors.fill: parent
-//        text: qsTr("Camera connecting...")
-//    }
-
     // 消息注册
     Connections {
         target: TcpCamera
         onMsg: {
-//            console.log(str)
             messagebox.text = str
         }
 
@@ -561,9 +551,7 @@ ApplicationWindow {
         }
 
         onConnectStatusChanged: {
-//            if( stackView.depth > 1 && !TcpCamera.isConnected ) {
-//                stackView.pop()
-//            }
+
         }
     }
 

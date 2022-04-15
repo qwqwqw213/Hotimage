@@ -17,7 +17,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
-        Function/Wireless/wireless.cpp \
         ImageListModel/VideoScanImage/videoscanimage.cpp \
         ImageListModel/imagelistmodel.cpp \
         TcpCamera/tcpcamera.cpp \
@@ -40,7 +39,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
-    Function/Wireless/wireless.h \
+    Function/providercamera.hpp \
+    Function/queue.hpp \
     ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
     TcpCamera/HandShakeDef.h \
@@ -153,8 +153,8 @@ DEPENDPATH += $$PWD/libs/ios
 
 android {
 
-DEFINES  += \
-    TEMPERATURE_SDK
+#DEFINES  += \
+#    TEMPERATURE_SDK
 
 QT += \
     androidextras \
@@ -174,6 +174,64 @@ SOURCES += \
     AndroidInterface/androidinterface.cpp \
     Function/VideoProcess/videoprocess.cpp
 
+############## usb lib  ##############
+HEADERS += \
+        UVCamera/libusb/libusb/libusb.h \
+        UVCamera/libusb/libusb/libusbi.h \
+        UVCamera/libusb/libusb/os/events_posix.h \
+        UVCamera/libusb/libusb/os/linux_usbfs.h \
+        UVCamera/libusb/libusb/os/threads_posix.h \
+        UVCamera/libusb/libusb/version.h \
+        UVCamera/libusb/libusb/version_nano.h \
+        UVCamera/androidUSBImp.hpp \
+        UVCamera/uvcamera.h
+
+SOURCES += \
+        UVCamera/libusb/libusb/core.c \
+        UVCamera/libusb/libusb/descriptor.c \
+        UVCamera/libusb/libusb/hotplug.c \
+        UVCamera/libusb/libusb/io.c \
+        UVCamera/libusb/libusb/os/events_posix.c \
+        UVCamera/libusb/libusb/os/linux_netlink.c \
+        UVCamera/libusb/libusb/os/linux_usbfs.c \
+        UVCamera/libusb/libusb/os/threads_posix.c \
+        UVCamera/libusb/libusb/strerror.c \
+        UVCamera/libusb/libusb/sync.c \
+        UVCamera/libuvc/src/ctrl-gen.c \
+        UVCamera/libuvc/src/ctrl.c \
+        UVCamera/libuvc/src/device.c \
+        UVCamera/libuvc/src/diag.c \
+        UVCamera/libuvc/src/frame.c \
+        UVCamera/libuvc/src/init.c \
+        UVCamera/libuvc/src/misc.c \
+        UVCamera/libuvc/src/stream.c \
+        UVCamera/uvcamera.cpp
+
+INCLUDEPATH += $$PWD/UVCamera/libusb
+DEPENDPATH += $$PWD/UVCamera/libusb
+
+INCLUDEPATH += $$PWD/UVCamera/libusb/libusb
+DEPENDPATH += $$PWD/UVCamera/libusb/libusb
+
+INCLUDEPATH += $$PWD/UVCamera/libusb/android
+DEPENDPATH += $$PWD/UVCamera/libusb/android
+
+INCLUDEPATH += $$PWD/UVCamera/libusb/os
+DEPENDPATH += $$PWD/UVCamera/libusb/os
+
+INCLUDEPATH += $$PWD/UVCamera/libuvc
+DEPENDPATH += $$PWD/UVCamera/libuvc
+
+INCLUDEPATH += $$PWD/UVCamera/libuvc/src
+DEPENDPATH += $$PWD/UVCamera/libuvc/src
+
+INCLUDEPATH += $$PWD/UVCamera/libuvc/include
+DEPENDPATH += $$PWD/UVCamera/libuvc/include
+
+INCLUDEPATH += $$PWD/UVCamera/libuvc/include/libuvc
+DEPENDPATH += $$PWD/UVCamera/libuvc/include/libuvc
+############## usb lib  ##############
+
 DISTFILES += \
     android/AndroidManifest.xml \
     android/build.gradle \
@@ -181,7 +239,8 @@ DISTFILES += \
     android/gradle/wrapper/gradle-wrapper.properties \
     android/gradlew \
     android/gradlew.bat \
-    android/res/values/libs.xml
+    android/res/values/libs.xml \
+    android/res/xml/device_filter.xml
 
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 
@@ -208,7 +267,10 @@ ANDROID_EXTRA_LIBS = \
     $$PWD/libs/android/$$ANDROID_ABIS/libavformat.so \
     $$PWD/libs/android/$$ANDROID_ABIS/libavutil.so \
     $$PWD/libs/android/$$ANDROID_ABIS/libswresample.so \
-    $$PWD/libs/android/$$ANDROID_ABIS/libswscale.so
+    $$PWD/libs/android/$$ANDROID_ABIS/libswscale.so \
+    $$PWD/UVCamera/lib/$$ANDROID_ABIS/libuvc.so \
+    $$PWD/UVCamera/lib/$$ANDROID_ABIS/libjpeg-turbo1500.so \
+    $$PWD/UVCamera/lib/$$ANDROID_ABIS/libusb100.so
 
 
 INCLUDEPATH += $$PWD/libs/android

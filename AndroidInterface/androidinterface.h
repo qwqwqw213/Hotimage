@@ -64,6 +64,9 @@ Q_SIGNALS:
     void requestPermissionFail();
 
     void updateHotspotInfo();
+
+    void cameraConnect(const int &, const QString &);
+    void cameraDisconnect(const int &);
 };
 
 #endif // ANDROIDINTERFACE_H

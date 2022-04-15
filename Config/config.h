@@ -13,6 +13,11 @@ class Config;
 
 #define REBOOT_CODE             (-1)
 
+typedef struct {
+    QString  key;
+    QVariant value;
+} SettingParam;
+
 class ConfigPrivate;
 class Config : public QObject
 {
@@ -36,6 +41,8 @@ public:
 
     QString documentsPath();
     QString imageGalleryPath();
+    QVariant readSetting(const QString &key, const QVariant &normal);
+    void insertSetting(const QVector<SettingParam> &param);
 
     // 添加CONSTANT关键字
     // 屏蔽QML depends on non-NOTIFYable properties 警告
@@ -86,6 +93,8 @@ public:
     bool canReadTemperature();
     Q_PROPERTY(bool isMobile READ isMobile CONSTANT)
     bool isMobile();
+
+    Q_INVOKABLE void saveSetting();
 
 Q_SIGNALS:
     void rotationChanged();
