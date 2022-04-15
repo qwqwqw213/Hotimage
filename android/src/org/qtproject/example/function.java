@@ -368,9 +368,6 @@ public class function extends QtActivity {
         // wifi manager
         initHotspot();
 
-        // usb
-        uvc();
-
         /*
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         //获取Sensor

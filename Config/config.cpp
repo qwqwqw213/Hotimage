@@ -209,9 +209,6 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
             }
 #ifdef Q_OS_IOS
 #elif defined (Q_OS_ANDROID)
-            if( !p->androidInterface.isNull() ) {
-                p->androidInterface->updateSetting();
-            }
 #endif
         }
             break;
@@ -343,6 +340,13 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 //    qmlRegisterType<ImagePaintView>("Custom.ImagePaintView", 1, 1,"ImagePaintView");
 
     return 1;
+}
+
+void Config::started()
+{
+#ifdef Q_OS_ANDROID
+    p->androidInterface->openService();
+#endif
 }
 
 QString Config::documentsPath()

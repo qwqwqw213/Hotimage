@@ -234,7 +234,7 @@ ApplicationWindow {
             }
 
             Loading {
-                visible: TcpCamera.isConnected ? false : TcpCamera.isUsbCamera
+                visible: !TcpCamera.canReadUrl
                 anchors.fill: parent
                 text: qsTr("Camera connecting...")
             }
@@ -559,4 +559,6 @@ ApplicationWindow {
         id: messagebox
         z: 100
     }
+
+    Component.onCompleted: Config.started()
 }

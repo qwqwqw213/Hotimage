@@ -25,7 +25,7 @@ public:
         return android_self;
     }
 
-    void updateSetting();
+    void openService();
 
     enum RotationScreen
     {

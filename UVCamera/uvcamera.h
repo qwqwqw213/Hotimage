@@ -13,14 +13,15 @@ public:
     ~UVCamera();
 
     bool isOpen() override;
-    void open(const int &_fd, const int &_w, const int &_h,
-              frame_callback func = nullptr,
-              const int &_fps = 25, const CameraPixelFormat &_format = __pix_yuyv);
+    void open(const int &_fd, const CameraPixelFormat &_format = __pix_yuyv,
+              frame_callback func = nullptr, void *content = nullptr);
     void close();
     int currentFd();
 
     int width() override;
     int height() override;
+
+    int zoomAbsolute(const uint16_t &value);
 
 private:
     friend class UVCameraPrivate;

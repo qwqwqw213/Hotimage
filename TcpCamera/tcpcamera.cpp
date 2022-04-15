@@ -152,12 +152,12 @@ bool TcpCamera::isOpen()
 
 int TcpCamera::width()
 {
-    return p->cfg.header.width;
+    return p->uvc.isNull() ? p->cfg.header.width : p->uvc->width();
 }
 
 int TcpCamera::height()
 {
-    return p->cfg.header.height - IMAGE_Y_OFFSET;
+    return p->uvc.isNull() ? p->cfg.header.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
 }
 
 bool TcpCamera::isConnected()
@@ -385,7 +385,7 @@ void TcpCamera::saveSetting()
 
 bool TcpCamera::isUsbCamera()
 {
-    return (p->uvc.isNull() ? false : p->uvc->isOpen());
+    return !p->uvc.isNull();
 }
 
 void TcpCamera::openUsbCamera(const int &fd)
@@ -393,13 +393,8 @@ void TcpCamera::openUsbCamera(const int &fd)
     closeUsbCamera();
     p->uvc.reset(new UVCamera);
     QObject::connect(p->uvc.data(), &UVCamera::updateCameraState, this, &TcpCamera::usbCameraStatusChanged);
-    p->cfg.header.width = 256;
-    p->cfg.header.height = 196;
-    p->uvc->open(fd,
-                 p->cfg.header.width, p->cfg.header.height,
-                 TcpCameraPrivate::UvcCallback,
-                 25,
-                 __pix_yuyv);
+    p->uvc->open(fd, __pix_yuyv,
+                 TcpCameraPrivate::UvcCallback, p.data());
 }
 
 void TcpCamera::closeUsbCamera()
@@ -1022,9 +1017,14 @@ void TcpCameraPrivate::capture()
 
 void TcpCameraPrivate::shutter()
 {
-    cfg.set.type = HandShake::__shuffer;
-    QByteArray byte = handshake.pack(cfg.set);
-    emit write(byte);
+    if( uvc.isNull() ) {
+        cfg.set.type = HandShake::__shuffer;
+        QByteArray byte = handshake.pack(cfg.set);
+        emit write(byte);
+    }
+    else {
+        uvc->zoomAbsolute(0x8000);
+    }
 }
 
 void TcpCameraPrivate::setPalette(const int &index)
@@ -1087,6 +1087,7 @@ bool TcpCameraPrivate::isValidIpv4Addres(const QString &ip)
 #ifdef Q_OS_ANDROID
 void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, const int &height, const int &bufferLength)
 {
+
     TcpCameraPrivate *cam = static_cast<TcpCameraPrivate *>(content);
 
     QImage *rgb = cam->f->rgb();

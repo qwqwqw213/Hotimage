@@ -142,10 +142,9 @@ AndroidInterface::~AndroidInterface()
 
 }
 
-void AndroidInterface::updateSetting()
+void AndroidInterface::openService()
 {
-    qDebug() << "hotspot status:" << hotspotOpen();
-    emit updateHotspotInfo();
+    p->mainActivity.callMethod<void>("uvc");
 }
 
 void AndroidInterface::setRotationScreen(const int &index)

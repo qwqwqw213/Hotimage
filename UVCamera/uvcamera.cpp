@@ -32,6 +32,7 @@ public:
 
     PixelOperations pixel;
     frame_callback callback_function;
+    void *content;
 
 
 private:
@@ -55,20 +56,17 @@ bool UVCamera::isOpen()
     return !p->exit_thread;
 }
 
-void UVCamera::open(const int &_fd, const int &_w, const int &_h,
-          frame_callback func,
-          const int &_fps, const CameraPixelFormat &_format)
+void UVCamera::open(const int &_fd, const CameraPixelFormat &_format,
+          frame_callback func, void *content)
 {
     if( isOpen() ) {
         return;
     }
     p->fd = _fd;
-    p->width = _w;
-    p->height = _h;
     if( func ) {
         p->callback_function = func;
+        p->content = content;
     }
-    p->fps = _fps;
     p->format = p->formatConvert(_format);
     p->thread->start();
 }
@@ -100,65 +98,92 @@ int UVCamera::height()
     return p->height;
 }
 
+int UVCamera::zoomAbsolute(const uint16_t &value)
+{
+    if( p->hander ) {
+        return p->hander->ZoomAbsolute(value);
+    }
+    return -1;
+}
+
 UVCameraPrivate::UVCameraPrivate(UVCamera *parent)
 {
     f = parent;
 
     hander = nullptr;
     callback_function = nullptr;
+    content = nullptr;
 
     exit_thread = true;
     thread = new QThread;
     QObject::connect(thread, &QThread::started, [=](){
-        hander = new UvcHandler(fd);
-        int ret = hander->UvcSetProperty(width, height, fps, format);
-        qDebug() << "UvcSetProperty ret:" << ret << width << height << fps << format;
-        if( ret == UVC_SUCCESS )
-        {
-            ret = hander->UvcRequestStart();
-            if( ret == UVC_SUCCESS )
-            {
-                exit_thread = false;
-                f->updateCameraState();
-                while (!exit_thread) {
-                    std::tuple<Uvcframe*, int> t = hander->UvcGetFrame(100 * 1000);
-                    Uvcframe *data = std::get<0>(t);
-                    int err = std::get<1>(t);
-                    if( data == NULL ) {
-                        qDebug() << "uvc invaild data" << err << fd;
-                        QThread::msleep(1000);
-                        continue;
-                    }
-                    if( data->data_bytes < (data->width * data->height * 2) ) {
-                        continue;
-                    }
+        try {
+            hander = new UvcHandler(fd);
+        } catch (int result) {
+            qDebug() << "ERROR: uvc handler ceate fail:" << result;
+        }
 
-                    if( callback_function ) {
-                        callback_function(f, data->data, data->width, data->height, data->data_bytes);
-                    }
-                    else {
-                        switch (data->frame_format) {
-                        case UVC_FRAME_FORMAT_YUYV: {
-                            QImage *rgb = f->rgb();
-                            YUV *yuv = reinterpret_cast<YUV *>(data->data);
-                            pixel.yuv422_to_rgb(yuv, rgb->bits(), data->width, data->height);
-
-                            QImage img = rgb->copy();
-                            f->setUrlImage(img);
-                        }
-                        default: break;
-                        }
+        if( hander ) {
+            std::vector<CameraParam> param =  hander->GetCameraParam();
+            for(const auto &_p : param) {
+                if( _p.format == format ) {
+                    if( fps < _p.fps ) {
+                        fps = _p.fps;
+                        width = _p.width;
+                        height = _p.height;
                     }
                 }
             }
+
+            int ret = hander->UvcSetProperty(width, height, fps, format);
+            qDebug() << "UvcSetProperty ret:" << ret << width << height << fps << format;
+            if( ret == UVC_SUCCESS )
+            {
+                ret = hander->UvcRequestStart();
+                if( ret == UVC_SUCCESS )
+                {
+                    exit_thread = false;
+                    f->updateCameraState();
+                    while (!exit_thread) {
+                        std::tuple<Uvcframe*, int> t = hander->UvcGetFrame(0);
+                        Uvcframe *data = std::get<0>(t);
+                        int err = std::get<1>(t);
+                        if( data == NULL ) {
+                            qDebug() << "uvc invaild data" << err << fd;
+                            QThread::msleep(1000);
+                            continue;
+                        }
+                        if( data->data_bytes < (data->width * data->height * 2) ) {
+                            continue;
+                        }
+
+                        if( callback_function ) {
+                            callback_function(content, data->data, data->width, data->height, data->data_bytes);
+                        }
+                        else {
+                            switch (data->frame_format) {
+                            case UVC_FRAME_FORMAT_YUYV: {
+                                QImage *rgb = f->rgb();
+                                YUV *yuv = reinterpret_cast<YUV *>(data->data);
+                                pixel.yuv422_to_rgb(yuv, rgb->bits(), data->width, data->height);
+
+                                QImage img = rgb->copy();
+                                f->setUrlImage(img);
+                            }
+                            default: break;
+                            }
+                        }
+                    }
+                }
+                else {
+                    qDebug() << QString("ERROR(code: %1): UvcRequestStart fail").arg(ret);
+
+                }
+            }
             else {
-                qDebug() << QString("ERROR(code: %1): UvcRequestStart fail").arg(ret);
+                qDebug() << QString("ERROR(code: %1): UvcSetProperty fail").arg(ret);
 
             }
-        }
-        else {
-            qDebug() << QString("ERROR(code: %1): UvcSetProperty fail").arg(ret);
-
         }
     });
     QObject::connect(thread, &QThread::finished, [=](){

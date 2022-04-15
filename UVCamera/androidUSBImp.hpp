@@ -3,12 +3,27 @@
 
 #include "libusb.h"
 #include "libuvc.h"
+#include "libuvc_internal.h"
 #include <string>
 #include <algorithm>
+
+#include "QDebug"
 
 typedef uvc_frame_t Uvcframe;
 typedef uvc_frame_callback_t UvcCallBack;
 typedef uvc_frame_format FrameFormat;
+
+std::map<std::string, FrameFormat> format_t = {
+    {"YUY2", UVC_FRAME_FORMAT_YUYV},
+    {"MJPG", UVC_FRAME_FORMAT_MJPEG}
+};
+
+typedef struct {
+    FrameFormat format;
+    int width;
+    int height;
+    int fps;
+} CameraParam;
 
 class UvcHandler
 {
@@ -26,6 +41,29 @@ public:
             throw(int) libuvcRes;
         //
     };
+
+    inline std::vector<CameraParam> GetCameraParam() {
+        std::vector<CameraParam> cameraInfo;
+
+        uvc_streaming_interface_t *stream_ifs;
+        DL_FOREACH(libuvcDeviceHandle->info->stream_ifs, stream_ifs) {
+            uvc_format_desc_t *format;
+            DL_FOREACH(stream_ifs->format_descs, format) {
+                uvc_frame_desc_t *frame;
+                DL_FOREACH(format->frame_descs, frame) {
+                    uint32_t *interval;
+                    if (frame->intervals) {
+                        for (interval = frame->intervals; *interval; ++interval) {
+                            int fps = 10000000 / *interval;
+                            FrameFormat f = format_t.at(reinterpret_cast<char *>(format->fourccFormat));
+                            cameraInfo.push_back({f, frame->wWidth, frame->wHeight, fps});
+                        }
+                    }
+                }
+            }
+        }
+        return cameraInfo;
+    }
 
     inline int UvcSetProperty(int width, int height, int frameRate, FrameFormat format)
     {
@@ -65,6 +103,10 @@ public:
         }
     }
 
+    inline int ZoomAbsolute(const uint16_t &value) {
+        return uvc_set_zoom_abs(libuvcDeviceHandle, value);
+    }
+
 private:
     int androidPFD;
     //
@@ -79,6 +121,10 @@ private:
     uvc_error_t libuvcRes;
 
     uvc_stream_handle *libuvcStreamCtl;
+
+    inline FrameFormat toFormat(const uint8_t *f) {
+
+    }
     //
 };
 

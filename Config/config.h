@@ -38,6 +38,7 @@ public:
     }
 
     int init(QGuiApplication *a, QQmlApplicationEngine *e);
+    Q_INVOKABLE void started();
 
     QString documentsPath();
     QString imageGalleryPath();
