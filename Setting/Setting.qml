@@ -17,6 +17,7 @@ Rectangle {
         buttonText: qsTr("Save")
         onButtonClicked: {
             Config.saveSetting()
+            stackView.pop()
         }
     }
 

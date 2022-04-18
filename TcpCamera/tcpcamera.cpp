@@ -125,6 +125,7 @@ Q_SIGNALS:
 private Q_SLOTS:
     void onReadyRead();
     void searchOvertime();
+    void hostTest();
 
 };
 
@@ -669,11 +670,22 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
     }
 }
 
+void TcpCameraPrivate::hostTest()
+{
+
+}
+
 void TcpCameraPrivate::searchDevice()
 {
     if( searcher.size() > 0 ) {
         return;
     }
+
+    /*
+     *  在ios里需要获取本地网络使用权限
+     *  否则socket无法连接到板子
+     */
+    QHostInfo::lookupHost("test.com", this, &TcpCameraPrivate::hostTest);
 
     const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
     for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
