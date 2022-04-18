@@ -20,7 +20,7 @@ public:
     int width;
     int height;
     int fps;
-    FrameFormat format;
+    CameraPixelFormat format;
     FrameFormat formatConvert(const CameraPixelFormat &f) {
         switch (f) {
         case __pix_yuyv: { return UVC_FRAME_FORMAT_YUYV; }
@@ -67,7 +67,7 @@ void UVCamera::open(const int &_fd, const CameraPixelFormat &_format,
         p->callback_function = func;
         p->content = content;
     }
-    p->format = p->formatConvert(_format);
+    p->format = _format;
     p->thread->start();
 }
 
@@ -98,6 +98,16 @@ int UVCamera::height()
     return p->height;
 }
 
+CameraPixelFormat UVCamera::pixelFormat()
+{
+    return p->format;
+}
+
+int UVCamera::fps()
+{
+    return p->fps;
+}
+
 int UVCamera::zoomAbsolute(const uint16_t &value)
 {
     if( p->hander ) {
@@ -124,9 +134,11 @@ UVCameraPrivate::UVCameraPrivate(UVCamera *parent)
         }
 
         if( hander ) {
+            fps = 0;
+            FrameFormat _format = formatConvert(format);
             std::vector<CameraParam> param =  hander->GetCameraParam();
             for(const auto &_p : param) {
-                if( _p.format == format ) {
+                if( _p.format == _format ) {
                     if( fps < _p.fps ) {
                         fps = _p.fps;
                         width = _p.width;
@@ -135,8 +147,8 @@ UVCameraPrivate::UVCameraPrivate(UVCamera *parent)
                 }
             }
 
-            int ret = hander->UvcSetProperty(width, height, fps, format);
-            qDebug() << "UvcSetProperty ret:" << ret << width << height << fps << format;
+            int ret = hander->UvcSetProperty(width, height, fps, _format);
+            qDebug() << "UvcSetProperty ret:" << ret << width << height << fps << _format;
             if( ret == UVC_SUCCESS )
             {
                 ret = hander->UvcRequestStart();

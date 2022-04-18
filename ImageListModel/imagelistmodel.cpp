@@ -58,10 +58,6 @@ void ImageListModel::search(const QString &path)
                          << QString("*.jpg")
                          << QString("*.jpeg")
                          << QString("*.avi"));
-
-//        d.setNameFilters(QStringList()
-//                         << QString("*.jpg")
-//                         << QString("*.jpeg"));
         int count = 0;
         QFileInfoList list = d.entryInfoList();
         for(int i = 0; i < list.size(); i++) {

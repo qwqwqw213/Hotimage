@@ -36,12 +36,11 @@ Item {
             toolbar.opacity = 0
         }
         else {
-            toolbar.visible = true
             toolbar.opacity = 1
         }
     }
 
-    property real childOpacity: 0
+    property real childOpacity: 1
 
     Rectangle {
         id: background
@@ -50,6 +49,7 @@ Item {
         opacity: childOpacity
     }
 
+    property bool ready: false
     ListView {
         id: photoScan
         anchors.fill: parent
@@ -73,6 +73,12 @@ Item {
                 if( index === photoScan.currentIndex ) {
                     if( enterLeaveState == 0 ) {
                         imagePlayer.visible = false
+                    }
+                    else if( enterLeaveState == 1 ) {
+                        imagePlayer.ready = false
+                    }
+                    else if( enterLeaveState == 3 ) {
+                        imagePlayer.ready = true
                     }
                 }
             }
@@ -122,13 +128,17 @@ Item {
 
         opacity: childOpacity
         onOpacityChanged: {
-            if( opacity < 1 ) {
-                visible = false;
+            if( opacity < 0.1 ) {
+                visible = false
+            }
+            else {
+                visible = true
             }
         }
 
         Behavior on opacity {
-            OpacityAnimator { duration: 200 }
+            enabled: ready
+            NumberAnimation { duration: 200 }
         }
 
         // top bar
@@ -150,8 +160,8 @@ Item {
                 y: Config.topMargin
 
                 anchors.left: parent.left
-                font.family: Config.fontLight
-                font.pixelSize: width * 0.85
+                font.family: Config.fontRegular
+                font.pixelSize: width * 0.75
                 text: "\uf104"
                 verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignHCenter

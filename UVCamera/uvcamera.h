@@ -20,6 +20,8 @@ public:
 
     int width() override;
     int height() override;
+    CameraPixelFormat pixelFormat() override;
+    int fps() override;
 
     int zoomAbsolute(const uint16_t &value);
 

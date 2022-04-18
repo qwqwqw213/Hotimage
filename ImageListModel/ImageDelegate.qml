@@ -86,7 +86,7 @@ MouseArea {
                                                 imageDelegate.itemSourceH)
                         }
                         else {
-                            if( flick.width == 0 && flick.height == 0 ) {
+                            if( flick.width == 0 && flick.height == 0 && imagePlayer.ready ) {
                                 imageDelegate.enterLeaveState = 3
                                 flick.width = imageDelegate.width
                                 flick.height = imageDelegate.height

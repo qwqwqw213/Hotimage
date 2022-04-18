@@ -318,11 +318,9 @@ ApplicationWindow {
                         btnCaptrueIcon.scale = 0.5
                     }
                     onReleased: {
-                        if( TcpCamera.isConnected ) {
-                            btnCaptrueIcon.scale = 1.0
-                            TcpCamera.capture()
-                            captureAnimationView.start()
-                        }
+                        btnCaptrueIcon.scale = 1.0
+                        TcpCamera.capture()
+                        captureAnimationView.start()
                     }
                 }
             }

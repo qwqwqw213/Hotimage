@@ -13,11 +13,6 @@ typedef uvc_frame_t Uvcframe;
 typedef uvc_frame_callback_t UvcCallBack;
 typedef uvc_frame_format FrameFormat;
 
-std::map<std::string, FrameFormat> format_t = {
-    {"YUY2", UVC_FRAME_FORMAT_YUYV},
-    {"MJPG", UVC_FRAME_FORMAT_MJPEG}
-};
-
 typedef struct {
     FrameFormat format;
     int width;
@@ -40,6 +35,11 @@ public:
         if (libuvcRes != 0)
             throw(int) libuvcRes;
         //
+
+        mapFormat = std::map<std::string, FrameFormat> {
+            {"YUY2", UVC_FRAME_FORMAT_YUYV},
+            {"MJPG", UVC_FRAME_FORMAT_MJPEG}
+        };
     };
 
     inline std::vector<CameraParam> GetCameraParam() {
@@ -55,7 +55,7 @@ public:
                     if (frame->intervals) {
                         for (interval = frame->intervals; *interval; ++interval) {
                             int fps = 10000000 / *interval;
-                            FrameFormat f = format_t.at(reinterpret_cast<char *>(format->fourccFormat));
+                            FrameFormat f = mapFormat.at(reinterpret_cast<char *>(format->fourccFormat));
                             cameraInfo.push_back({f, frame->wWidth, frame->wHeight, fps});
                         }
                     }
@@ -121,6 +121,8 @@ private:
     uvc_error_t libuvcRes;
 
     uvc_stream_handle *libuvcStreamCtl;
+
+    std::map<std::string, FrameFormat> mapFormat;
 
     inline FrameFormat toFormat(const uint8_t *f) {
 

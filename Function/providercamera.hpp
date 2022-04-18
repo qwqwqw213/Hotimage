@@ -11,6 +11,7 @@ enum CameraPixelFormat
     __pix_invalid = 0,
     __pix_mjpeg,
     __pix_yuyv,
+    __pix_yuv420p,
     __pix_rgb24,
 };
 
@@ -44,6 +45,7 @@ public:
     virtual int width() { return 0; }
     virtual int height() { return 0; }
     virtual CameraPixelFormat pixelFormat() { return __pix_invalid; }
+    virtual int fps() { return 0; }
 
     QImage *rgb() {
         if( rgbImage.isNull() ) {

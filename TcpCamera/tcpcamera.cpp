@@ -79,6 +79,18 @@ public:
     void capture();
     void shutter();
     void setPalette(const int &index);
+
+#ifdef Q_OS_ANDROID
+    void sendFloatCommand(int position, unsigned char value0, unsigned char value1, unsigned char value2, unsigned char value3);
+    void sendUshortCommand(int position, unsigned char value0, unsigned char value1);
+    void sendCorrection(float correction);
+    void sendReflection(float reflection);
+    void sendAmb(float amb);
+    void sendHumidity(float humidity);
+    void sendEmissivity(float emiss);
+    void sendDistance(unsigned short distance);
+#endif
+
     void setCameraParam(const qreal &emiss, const qreal &reflected,
                         const qreal &ambient, const qreal &humidness,
                         const qreal &correction, const int &distance);
@@ -100,6 +112,8 @@ public:
     QString cameraSN;
 
     int isHotspotMode(const uint8_t &n, const uint8_t &o);
+
+    void decode(uint16_t *data, const int &width, const int &height, const CameraPixelFormat &format, QImage *image);
 
 private:
     TcpCamera *f;
@@ -147,22 +161,47 @@ TcpCamera * TcpCamera::instance()
 
 bool TcpCamera::isOpen()
 {
+#ifdef Q_OS_ANDROID
+    return p->uvc.isNull() ? p->thread->isRunning() : true;
+#else
     return p->thread->isRunning();
+#endif
 }
 
 int TcpCamera::width()
 {
+#ifdef Q_OS_ANDROID
     return p->uvc.isNull() ? p->cfg.header.width : p->uvc->width();
+#else
+    return p->cfg.header.width;
+#endif
 }
 
 int TcpCamera::height()
 {
+#ifdef Q_OS_ANDROID
     return p->uvc.isNull() ? p->cfg.header.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
+#else
+    return p->cfg.header.height - IMAGE_Y_OFFSET;
+#endif
+}
+
+int TcpCamera::fps()
+{
+#ifdef Q_OS_ANDROID
+    return p->uvc.isNull() ? p->fps : p->uvc->fps();
+#else
+    return p->fps;
+#endif
 }
 
 bool TcpCamera::isConnected()
 {
-    return (isOpen() ? (p->socket != nullptr) : false);
+#ifdef Q_OS_ANDROID
+    return p->uvc.isNull() ? (p->socket != nullptr) : p->uvc->isOpen();
+#else
+    return (p->socket != nullptr);
+#endif
 }
 
 QString TcpCamera::localIp()
@@ -217,11 +256,6 @@ void TcpCamera::close()
     }
 }
 
-double TcpCamera::fps()
-{
-    return p->fps;
-}
-
 void TcpCamera::capture()
 {
     if( !isConnected() ) {
@@ -232,11 +266,17 @@ void TcpCamera::capture()
 
 void TcpCamera::shutter()
 {
+    if( !isConnected() ) {
+        return;
+    }
     p->shutter();
 }
 
 void TcpCamera::setPalette(const int &index)
 {
+    if( !isConnected() ) {
+        return;
+    }
     p->setPalette(index);
     emit paletteChanged();
 }
@@ -310,9 +350,9 @@ void TcpCamera::openRecord()
         path.append("REC_" + fileName);
 
         cfg.filePath = path;
-        cfg.width = p->cfg.header.width;
-        cfg.height = p->cfg.header.height - IMAGE_Y_OFFSET;
-        cfg.fps = 25;
+        cfg.width = width();
+        cfg.height = height();
+        cfg.fps = fps();
         cfg.encodePixel = p->encode->pixel(QImage::Format_RGB888);
         p->encode->openEncode(cfg);
         emit encodingChanged();
@@ -383,25 +423,29 @@ void TcpCamera::saveSetting()
     p->saveSetting();
 }
 
-bool TcpCamera::isUsbCamera()
-{
-    return !p->uvc.isNull();
-}
-
 void TcpCamera::openUsbCamera(const int &fd)
 {
+#ifdef Q_OS_ANDROID
     closeUsbCamera();
     p->uvc.reset(new UVCamera);
-    QObject::connect(p->uvc.data(), &UVCamera::updateCameraState, this, &TcpCamera::usbCameraStatusChanged);
+    QObject::connect(p->uvc.data(), &UVCamera::updateCameraState, [=](){
+        if( p->uvc->isOpen() ) {
+            p->uvc->zoomAbsolute(0x8005);
+            p->setPalette(p->cfg.set.palette);
+        }
+    });
     p->uvc->open(fd, __pix_yuyv,
                  TcpCameraPrivate::UvcCallback, p.data());
+#endif
 }
 
 void TcpCamera::closeUsbCamera()
 {
+#ifdef Q_OS_ANDROID
     if( !p->uvc.isNull() ) {
         p->uvc->close();
     }
+#endif
 }
 
 TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
@@ -743,6 +787,11 @@ void TcpCameraPrivate::onReadyRead()
         int state = isHotspotMode(header.value, cfg.header.value);
         memcpy(&cfg.header, &header, sizeof (t_header));
 
+        QImage *image = f->rgb();
+        CameraPixelFormat format = cfg.header.pixelFormat == __yuyv ? __pix_yuyv : __pix_yuv420p;
+        decode(reinterpret_cast<uint16_t *>(buf.data() + headerSize), cfg.header.width, cfg.header.height, format, image);
+
+        /*
 #ifdef TEMPERATURE_SDK
         if( temperatureData == NULL ) {
             temperatureData = (float*)calloc(cfg.header.width * (cfg.header.height - IMAGE_Y_OFFSET) + 10, sizeof(float));
@@ -931,6 +980,7 @@ void TcpCameraPrivate::onReadyRead()
         if( encode->status() ) {
             encode->pushEncode(image->copy());
         }
+        */
 
         unpackMutex.lock();
         buf.remove(0, totalSize);
@@ -951,6 +1001,193 @@ void TcpCameraPrivate::onReadyRead()
             cfg.set.hotspotMode = state;
             emit f->hotspotParamChanged();
         }
+    }
+}
+
+void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &height, const CameraPixelFormat &format, QImage *image)
+{
+#ifdef TEMPERATURE_SDK
+    if( temperatureData == NULL ) {
+        temperatureData = (float*)calloc(cfg.header.width * (cfg.header.height - IMAGE_Y_OFFSET) + 10, sizeof(float));
+    }
+#endif
+
+    frameCount ++;
+    fpsCount ++;
+    if( lastTimeStamp == 0 ) {
+        lastTimeStamp = QDateTime::currentMSecsSinceEpoch();
+    }
+    else {
+        qint64 curTimeStamp = QDateTime::currentMSecsSinceEpoch();
+        if( (curTimeStamp - lastTimeStamp) >= 1000 ) {
+            lastTimeStamp = 0;
+            fps = fpsCount;
+            fpsCount = 0;
+        }
+    }
+
+    uint16_t *temp = data + (width * (height - IMAGE_Y_OFFSET));
+    float correction;
+    float Refltmp;
+    float Airtmp;
+    float humi;
+    float emiss;
+    unsigned short distance;
+    char sn[32];//camera序列码
+    char cameraSoftVersion[16];//camera软件版本
+    unsigned short shutTemper;
+    float floatShutTemper;//快门温度
+    unsigned short coreTemper;
+    float floatCoreTemper;//外壳温度
+
+    int amountPixels=0;
+    switch (width)
+    {
+    case 384:
+        amountPixels=width*(4-1);
+        break;
+    case 240:
+        amountPixels=width*(4-3);
+        break;
+    case 256:
+        amountPixels=width*(4-3);
+        break;
+    case 640:
+        amountPixels=width*(4-1);
+        break;
+    }
+
+    memcpy(&shutTemper,temp+amountPixels+1,sizeof(unsigned short));
+    floatShutTemper=shutTemper/10.0f-273.15f;//快门温度
+    memcpy(&coreTemper,temp+amountPixels+2,sizeof(unsigned short));//外壳
+    floatCoreTemper=coreTemper/10.0f-273.15f;
+    memcpy((unsigned short*)cameraSoftVersion,temp+amountPixels+24,16*sizeof(uint8_t));//camera soft version
+    memcpy((unsigned short*)sn,temp+amountPixels+32,32*sizeof(uint8_t));//SN
+
+    int userArea=amountPixels+127;
+    memcpy(&correction,temp+userArea,sizeof( float));//修正
+    userArea=userArea+2;
+    memcpy(&Refltmp,temp+userArea,sizeof( float));//反射温度
+    userArea=userArea+2;
+    memcpy(&Airtmp,temp+userArea,sizeof( float));//环境温度
+    userArea=userArea+2;
+    memcpy(&humi,temp+userArea,sizeof( float));//湿度
+    userArea=userArea+2;
+    memcpy(&emiss,temp+userArea,sizeof( float));//发射率
+    userArea=userArea+2;
+    memcpy(&distance,temp+userArea,sizeof(unsigned short));//距离
+
+#ifdef TEMPERATURE_SDK
+    if( (frameCount % 4500) == 25 ) {
+        thermometryT4Line(width,
+                          height,
+                          temperatureTable,
+                          temp,
+                          &floatFpaTmp,
+                          &correction,
+                          &Refltmp,
+                          &Airtmp,
+                          &humi,
+                          &emiss,
+                          &distance,
+                          CAMERA_LEN,
+                          SHUTTER_FIX,
+                          RANGE_MODE);
+        if( frameCount > 9000 ) {
+            frameCount = 0;
+        }
+    }
+
+    thermometrySearch(width,
+                      height,
+                      temperatureTable,
+                      data,
+                      temperatureData,
+                      RANGE_MODE,
+                      OUTPUT_MODE);
+#endif
+    if( !QString(sn).isEmpty() && cameraSN.isEmpty() ) {
+        cameraSN = QString(sn);
+        emit f->cameraSNChanged();
+        emit f->paletteChanged();
+        emit f->connectStatusChanged();
+        emit f->cameraParamChanged();
+    }
+
+    uint8_t *bit = image->bits();
+    if( format == __pix_yuyv ) {
+        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+                                       width, height - IMAGE_Y_OFFSET);
+    }
+    else if( format == __pix_yuv420p ) {
+        PixelOperations::yuv420p_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+                                        width, height - IMAGE_Y_OFFSET);
+    }
+
+#ifdef TEMPERATURE_SDK
+    // 画温度信息
+    if( showTemp ) {
+        QPainter pr(image);
+        QFontMetrics metrics(pr.font());
+
+        // 最大温度
+        pr.setPen(Qt::red);
+        pr.drawLine(temperatureData[1] - 10, temperatureData[2],
+                    temperatureData[1] + 10, temperatureData[2]);
+        pr.drawLine(temperatureData[1], temperatureData[2] - 10,
+                    temperatureData[1], temperatureData[2] + 10);
+
+        QString str = QString::number(temperatureData[3], 'f', 1);
+        int fontW = metrics.horizontalAdvance(str);
+        int fontH = metrics.height();
+        pr.drawText(temperatureData[1], temperatureData[2] - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+
+        // 最小温度
+        pr.setPen(Qt::blue);
+        pr.drawLine(temperatureData[4] - 10, temperatureData[5],
+                    temperatureData[4] + 10, temperatureData[5]);
+        pr.drawLine(temperatureData[4], temperatureData[5] - 10,
+                    temperatureData[4], temperatureData[5] + 10);
+
+        str = QString::number(temperatureData[6], 'f', 1);
+        fontW = metrics.horizontalAdvance(str);
+        fontH = metrics.height();
+        pr.drawText(temperatureData[4], temperatureData[5] - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+
+        // 中心温度
+        pr.setPen(Qt::white);
+        int cx = width / 2;
+        int cy = height / 2;
+        pr.drawLine(cx - 10, cy, cx + 10, cy);
+        pr.drawLine(cx, cy - 10, cx, cy + 10);
+
+        str = QString::number(temperatureData[0], 'f', 1);
+        fontW = metrics.horizontalAdvance(str);
+        fontH = metrics.height();
+        pr.drawText(cx, cy - fontH,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+
+        // 帧率
+        pr.setPen(Qt::white);
+        str = QString::number(fps, 'f', 2);
+        fontW = metrics.horizontalAdvance(str);
+        fontH = metrics.height();
+        pr.drawText(10, 10,
+                    fontW, fontH,
+                    Qt::AlignCenter,
+                    str);
+    }
+#endif
+    if( encode->status() ) {
+        encode->pushEncode(image->copy());
     }
 }
 
@@ -1017,37 +1254,138 @@ void TcpCameraPrivate::capture()
 
 void TcpCameraPrivate::shutter()
 {
-    if( uvc.isNull() ) {
-        cfg.set.type = HandShake::__shuffer;
-        QByteArray byte = handshake.pack(cfg.set);
-        emit write(byte);
-    }
-    else {
+#ifdef Q_OS_ANDROID
+    if( !uvc.isNull() ) {
         uvc->zoomAbsolute(0x8000);
+        return;
     }
+#endif
+    cfg.set.type = HandShake::__shuffer;
+    QByteArray byte = handshake.pack(cfg.set);
+    emit write(byte);
 }
 
 void TcpCameraPrivate::setPalette(const int &index)
 {
+#ifdef Q_OS_ANDROID
+    if( !uvc.isNull() ) {
+        uvc->zoomAbsolute(0x8800 | (index & 0xfff));
+        return;
+    }
+#endif
     cfg.set.type = HandShake::__palette;
     cfg.set.palette = index;
     QByteArray byte = handshake.pack(cfg.set);
     emit write(byte);
 }
 
+#ifdef Q_OS_ANDROID
+void TcpCameraPrivate::sendFloatCommand(int position, unsigned char value0, unsigned char value1, unsigned char value2, unsigned char value3)
+{
+    int psitionAndValue0 = (position << 8) | (0x000000ff & value0);
+    if( uvc->zoomAbsolute(psitionAndValue0) < 0 ) {
+        return;
+    }
+    int psitionAndValue1 = ((position + 1) << 8) | (0x000000ff & value1);
+    if( uvc->zoomAbsolute(psitionAndValue1) < 0 ) {
+        return;
+    }
+    int psitionAndValue2 = ((position + 2) << 8) | (0x000000ff & value2);
+    if( uvc->zoomAbsolute(psitionAndValue2) < 0 ) {
+        return;
+    }
+    int psitionAndValue3 = ((position + 3) << 8) | (0x000000ff & value3);
+    if( uvc->zoomAbsolute(psitionAndValue3) < 0 ) {
+        return;
+    }
+}
+
+void TcpCameraPrivate::sendUshortCommand(int position, unsigned char value0, unsigned char value1)
+{
+    int psitionAndValue0 = (position << 8) | (0x000000ff & value0);
+    if( uvc->zoomAbsolute(psitionAndValue0) < 0 ) {
+        return;
+    }
+    int psitionAndValue1 = ((position + 1) << 8) | (0x000000ff & value1);
+    if( uvc->zoomAbsolute(psitionAndValue1) < 0 ) {
+        return;
+    }
+}
+
+void TcpCameraPrivate::sendCorrection(float correction)
+{
+    unsigned char iputCo[4];
+    memcpy(iputCo,&correction,sizeof(float));
+    sendFloatCommand(0 * 4, iputCo[0], iputCo[1], iputCo[2], iputCo[3]);
+}
+
+void TcpCameraPrivate::TcpCameraPrivate::sendReflection(float reflection)
+{
+    unsigned char iputRe[4];
+    memcpy(iputRe,&reflection,sizeof(float));
+    sendFloatCommand(1 * 4, iputRe[0], iputRe[1], iputRe[2], iputRe[3]);
+}
+
+void TcpCameraPrivate::sendAmb(float amb)
+{
+    unsigned char iputAm[4];
+    memcpy(iputAm,&amb,sizeof(float));
+    sendFloatCommand(2 * 4, iputAm[0], iputAm[1], iputAm[2], iputAm[3]);
+
+}
+
+void TcpCameraPrivate::sendHumidity(float humidity)
+{
+    unsigned char iputHu[4];
+    memcpy(iputHu,&humidity,sizeof(float));
+    sendFloatCommand(3 * 4, iputHu[0], iputHu[1], iputHu[2], iputHu[3]);
+
+}
+
+void TcpCameraPrivate::sendEmissivity(float emiss)
+{
+    unsigned char iputEm[4];
+    memcpy(iputEm,&emiss,sizeof(float));
+    sendFloatCommand(4 * 4, iputEm[0], iputEm[1], iputEm[2], iputEm[3]);
+}
+
+void TcpCameraPrivate::sendDistance(unsigned short distance)
+{
+    unsigned char iputDi[2];
+    memcpy(iputDi,&distance,sizeof(unsigned short));
+    sendUshortCommand(5 * 4, iputDi[0], iputDi[1]);
+}
+#endif
+
 void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected,
                                       const qreal &ambient, const qreal &humidness,
                                       const qreal &correction, const int &distance)
 {
-    cfg.set.type = HandShake::__config;
     cfg.set.emiss = emiss;
     cfg.set.reflected = reflected;
     cfg.set.ambient = ambient;
     cfg.set.humidness = humidness;
     cfg.set.correction = correction;
     cfg.set.distance = distance;
-    QByteArray byte = handshake.pack(cfg.set);
     emit f->cameraParamChanged();
+#ifdef Q_OS_ANDROID
+    if( !uvc.isNull() ) {
+        sendEmissivity(emiss);
+        QThread::msleep(15);
+        sendReflection(reflected);
+        QThread::msleep(15);
+        sendAmb(ambient);
+        QThread::msleep(15);
+        sendHumidity(humidness);
+        QThread::msleep(15);
+        sendCorrection(correction);
+        QThread::msleep(15);
+        sendDistance(distance);
+        return;
+    }
+#endif
+    cfg.set.type = HandShake::__config;
+    QByteArray byte = handshake.pack(cfg.set);
     emit write(byte);
 }
 
@@ -1090,11 +1428,25 @@ void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, 
 
     TcpCameraPrivate *cam = static_cast<TcpCameraPrivate *>(content);
 
-    QImage *rgb = cam->f->rgb();
-    PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), rgb->bits(), width, height - IMAGE_Y_OFFSET);
+    CameraPixelFormat format = cam->uvc->pixelFormat();
 
-    QImage img = rgb->copy();
-    cam->f->setUrlImage(img);
+    switch (format) {
+    case __pix_yuyv: {
+        QImage *rgb = cam->f->rgb();
+        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), rgb->bits(), width, height - IMAGE_Y_OFFSET);
+        QImage img = rgb->copy();
+        cam->f->setUrlImage(img);
+    }
+        break;
+    case __pix_mjpeg: {
+        QImage jpg = QImage::fromData(reinterpret_cast<uint8_t *>(data), bufferLength);
+        cam->f->setUrlImage(jpg);
+    }
+        break;
+    default: break;
+    }
+
+
 }
 #endif
 

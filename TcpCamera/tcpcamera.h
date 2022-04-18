@@ -25,6 +25,7 @@ public:
     bool isOpen() override;
     int width() override;
     int height() override;
+    int fps() override;
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectStatusChanged)
     bool isConnected();
@@ -40,8 +41,6 @@ public:
     void open();
 //    void open(tcp_config *s);
     void close();
-
-    double fps();
 
     Q_INVOKABLE void capture();
 
@@ -92,8 +91,6 @@ public:
 
     void saveSetting();
 
-    Q_PROPERTY(bool isUsbCamera READ isUsbCamera NOTIFY usbCameraStatusChanged)
-    bool isUsbCamera();
     void openUsbCamera(const int &fd);
     void closeUsbCamera();
 
@@ -115,9 +112,6 @@ Q_SIGNALS:
     void cameraParamChanged();
     void manualConnectStateChanged();
     void hotspotParamChanged();
-
-    // usb camera
-    void usbCameraStatusChanged();
 };
 
 #endif // RECV_H
