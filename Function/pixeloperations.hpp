@@ -88,12 +88,6 @@ typedef struct _DOT
 
 typedef struct
 {
-    int w;
-    int h;
-} Size;
-
-typedef struct
-{
     int x0;
     int y0;
     int x1;

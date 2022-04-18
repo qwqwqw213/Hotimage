@@ -1,7 +1,7 @@
 #ifndef __HANDSHAKEDEF_H__
 #define __HANDSHAKEDEF_H__
 
-typedef struct
+typedef struct tHeader
 {
     char marker[4];
     unsigned int bufferLength;

@@ -540,7 +540,7 @@ ApplicationWindow {
     // 消息注册
     Connections {
         target: TcpCamera
-        onMsg: {
+        onMsg: (str) => {
             messagebox.text = str
         }
 

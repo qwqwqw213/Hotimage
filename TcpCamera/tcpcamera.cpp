@@ -506,10 +506,13 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             emit write(byte);
         });
 
+        qDebug() << QThread::currentThreadId() << "start search socket";
         searchDevice();
     });
 
     QObject::connect(thread, &QThread::finished, [=](){
+        clearSearcher();
+
         timer->stop();
         timer->deleteLater();
         timer = nullptr;
@@ -672,7 +675,6 @@ void TcpCameraPrivate::searchDevice()
         return;
     }
 
-    qDebug() << "search socket";
     const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
     for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
         if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
