@@ -98,6 +98,7 @@ public:
 
     QMutex unpackMutex;
 
+    QTimer *searchTimer;
     bool manualConnState;
     QVector<TcpSearcher *> searcher;
     void clearSearcher();
@@ -508,6 +509,8 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         });
 
         qDebug() << QThread::currentThreadId() << "start search socket";
+        searchTimer = new QTimer;
+        QObject::connect(searchTimer, &QTimer::timeout, this, &TcpCameraPrivate::searchOvertime);
         searchDevice();
     });
 
@@ -637,6 +640,7 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
         return;
     }
 
+    searchTimer->stop();
     clearSearcher();
 
     manualConnState = true;
@@ -680,12 +684,13 @@ void TcpCameraPrivate::searchDevice()
     if( searcher.size() > 0 ) {
         return;
     }
-
     /*
      *  在ios里需要获取本地网络使用权限
      *  否则socket无法连接到板子
      */
+#ifdef Q_OS_IOS
     QHostInfo::lookupHost("test.com", this, &TcpCameraPrivate::hostTest);
+#endif
 
     const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
     for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
@@ -707,7 +712,8 @@ void TcpCameraPrivate::searchDevice()
         }
     }
 
-    QTimer::singleShot(20 * 1000, this, &TcpCameraPrivate::searchOvertime);
+//    QTimer::singleShot(20 * 1000, this, &TcpCameraPrivate::searchOvertime);
+    searchTimer->start(20 * 1000);
 }
 
 void TcpCameraPrivate::searchOvertime()

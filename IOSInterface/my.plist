@@ -41,6 +41,8 @@
 	<true/>
 	<key>MinimumOSVersion</key>
 	<string>${IPHONEOS_DEPLOYMENT_TARGET}</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connect camera device</string>
 	<key>UILaunchStoryboardName</key>
 	<string>iLaunchScreen</string>
 	<key>UIRequiresFullScreen</key>
