@@ -25,8 +25,15 @@ Item {
         }
     }
 
+    function showTitle() {
+        if( !toolbar.visible ) {
+            toolbar.visible = true
+            toolbar.opacity = 1
+        }
+    }
+
     function hideTitle() {
-        if( imagePlayer.visible ) {
+        if( toolbar.visible ) {
             toolbar.opacity = 0
         }
     }

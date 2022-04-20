@@ -14,7 +14,6 @@
 #include "AndroidInterface/androidinterface.h"
 
 #include "QGuiApplication"
-
 #include "QDir"
 #include "QStandardPaths"
 #include "QFileInfo"

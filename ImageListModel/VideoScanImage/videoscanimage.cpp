@@ -91,11 +91,13 @@ QString VideoScanImage::addQueue(const QString &path, QString &videoTotalTime)
     int res = avformat_open_input(&p->fmtCnt, url, NULL, NULL);
     if( res < 0 ) {
 //        return QString();
+        qDebug() << "ERROR: avformat_open_input, code:" << res;
         goto FINISHED;
     }
 
     res = avformat_find_stream_info(p->fmtCnt, NULL);
     if( res < 0 ) {
+        qDebug() << "ERROR: avformat_find_stream_info, code:" << res;
         goto FINISHED;
     }
 
@@ -116,21 +118,25 @@ QString VideoScanImage::addQueue(const QString &path, QString &videoTotalTime)
 
     p->codec = avcodec_find_decoder(p->codecCnt->codec_id);
     if( !p->codec ) {
+        qDebug() << "ERROR: avcodec_find_decoder";
         goto FINISHED;
     }
 
     res = avcodec_open2(p->codecCnt, p->codec, NULL);
     if( res < 0 ) {
+        qDebug() << "ERROR: avcodec_open2, code:" << res;
         goto FINISHED;
     }
 
     p->frame = av_frame_alloc();
     if( !p->frame ) {
+        qDebug() << "ERROR: av_frame_alloc";
         goto FINISHED;
     }
 
     p->rgbFrame = av_frame_alloc();
     if( !p->rgbFrame ) {
+        qDebug() << "ERROR: rgb av_frame_alloc";
         goto FINISHED;
     }
 
@@ -145,12 +151,9 @@ QString VideoScanImage::addQueue(const QString &path, QString &videoTotalTime)
                          p->rgbFrame->width, p->rgbFrame->height,
                          AV_PIX_FMT_RGB24, 1);
     if( res < 0 ) {
+        qDebug() << "ERROR: av_image_alloc, code:" << res;
         goto FINISHED;
     }
-
-    img = QImage(*p->rgbFrame->data,
-                 p->rgbFrame->width, p->rgbFrame->height,
-                 QImage::Format_RGB888);
 
     av_init_packet(&packet);
     while (true)
@@ -189,6 +192,9 @@ FINISHED:
     }
 
     if( p->rgbFrame ) {
+        img = QImage(*p->rgbFrame->data,
+                     p->rgbFrame->width, p->rgbFrame->height,
+                     QImage::Format_RGB888);
         av_frame_free(&p->rgbFrame);
         p->rgbFrame = NULL;
     }

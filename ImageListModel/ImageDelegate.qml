@@ -28,32 +28,35 @@ MouseArea {
 
             property real pressedWidth
             property real pressedHeight
-            property real minScaleWidth: imageDelegate.width * 0.85
-            property real minScaleHeight: imageDelegate.height * 0.85
 
             onPinchStarted: {
                 resizeAnimation.running = false
                 pressedWidth = flick.contentWidth
                 pressedHeight = flick.contentHeight
                 imageDelegate.pinchStarted()
+                imagePlayer.hideTitle()
             }
 
             onPinchUpdated: (pinch) => {
-                // adjust content pos due to drag
-               flick.contentX += pinch.previousCenter.x - pinch.center.x
-               flick.contentY += pinch.previousCenter.y - pinch.center.y
+                flick.contentX += pinch.previousCenter.x - pinch.center.x
+                flick.contentY += pinch.previousCenter.y - pinch.center.y
 
-               // resize content
-               flick.resizeContent((pressedWidth * pinch.scale) < minScaleWidth ?
-                                       minScaleWidth : (pressedWidth * pinch.scale),
-                                   (pressedHeight * pinch.scale) < minScaleHeight ?
-                                       minScaleHeight : (pressedHeight * pinch.scale), pinch.center)
+                var w = pressedWidth * pinch.scale
+                var h = image.sourceSize.height * (w / image.sourceSize.width)
+                if( h < flick.height ) {
+                    h = flick.height
+                }
+                flick.resizeContent(w < itemW ? itemW : w,
+                                    h < itemH ? itemH : h,
+                                    pinch.center)
+
             }
 
             onPinchFinished: {
                 if( flick.contentWidth < flick.width
                         || flick.contentHeight < flick.height ) {
-                    resizeAnimation.resize(flick.x, flick.y, flick.width, flick.height)
+//                    resizeAnimation.resize(flick.x, flick.y, flick.width, flick.height)
+                    leave(delegateIndex)
                 }
             }
 
@@ -98,80 +101,84 @@ MouseArea {
                     }
                 }
             }
-        }
 
-        MouseArea {
-            Timer {
-                id: timer
-                interval: 500
-                onTriggered: imageDelegate.clicked()
-            }
-
-            anchors.fill: parent
-
-            property real pressedX
-            property real pressedY
-            property real currentX
-            property real currentY
-            property bool dragging: false
-            // 移动flick content时
-            // mouse position接收的mouse坐标会发生偏移
-            // 表现为
-            // 如果flick x移动了10个像素, 下次mouse x则会-10, 拖动会发生跳动
-            property real minusX
-            property real minusY
-
-
-            onPressed: {
-                moving = false
-                dragging = false
-                pressedX = mouseX
-                pressedY = mouseY
-                currentX = flick.contentX
-                currentY = flick.contentY
-                minusX = 0
-                minusY = 0
-            }
-            onPositionChanged: {
-                var y = (mouseY + minusY) - pressedY
-                var x = (mouseX + minusX) - pressedX
-                if( moving ) {
-                    flick.contentY = currentY - y
-                    flick.contentX = currentX - x
-                    minusX = x
-                    minusY = y
+            MouseArea {
+                Timer {
+                    id: timer
+                    interval: 500
+                    onTriggered: imageDelegate.clicked()
                 }
-                else {
-                    if( y > 20 && flick.atYBeginning ) {
-                        moving = true
-                        dragging = true
-                        flick.interactive = false
-                    }
-                    else if( (flick.width < flick.contentWidth)
-                            && ((x > 0 && flick.atXBeginning) || (x < 0 && flick.atXEnd)) ) {
-                        // 放大时
-                        // 拖动到x begin 或x end时, 禁止flick滑动, 让list处理滑动切换
-                        flick.interactive = false
-                    }
-                }
-            }
-            onReleased: {
-                if( moving ) {
+
+                anchors.fill: parent
+
+                property real pressedX
+                property real pressedY
+                property real currentX
+                property real currentY
+                property bool dragging: false
+                // 移动flick content时
+                // mouse position接收的mouse坐标会发生偏移
+                // 表现为
+                // 如果flick x移动了10个像素, 下次mouse x则会-10, 拖动会发生跳动
+                property real minusX
+                property real minusY
+
+
+                onPressed: {
                     moving = false
-                    leave(delegateIndex)
-                }
-                flick.interactive = true
-            }
-
-            onClicked: {
-                if( dragging ) {
                     dragging = false
-                    return
+                    pressedX = mouseX
+                    pressedY = mouseY
+                    currentX = flick.contentX
+                    currentY = flick.contentY
+                    minusX = 0
+                    minusY = 0
                 }
-                timer.start()
+                onPositionChanged: {
+                    var y = (mouseY + minusY) - pressedY
+                    var x = (mouseX + minusX) - pressedX
+                    if( moving ) {
+                        flick.contentY = currentY - y
+                        flick.contentX = currentX - x
+                        minusX = x
+                        minusY = y
+                    }
+                    else {
+                        if( y > 20 && flick.atYBeginning ) {
+                            moving = true
+                            dragging = true
+                            flick.interactive = false
+                        }
+                        else if( (flick.width < flick.contentWidth)
+                                && ((x > 0 && flick.atXBeginning) || (x < 0 && flick.atXEnd)) ) {
+                            // 放大时
+                            // 拖动到x begin 或x end时, 禁止flick滑动, 让list处理滑动切换
+                            flick.interactive = false
+                        }
+                    }
+                }
+                onReleased: {
+                    if( moving ) {
+                        moving = false
+                        leave(delegateIndex)
+                    }
+                    flick.interactive = true
+                }
+
+                onClicked: {
+                    if( dragging ) {
+                        dragging = false
+                        return
+                    }
+                    timer.start()
+                }
+                // 双击放大 缩小
+                onDoubleClicked: {
+                    if( fileType !== 1 ) {
+                        imageDelegate.resizeFlickContent(mouseX, mouseY)
+                    }
+                }
             }
-            // 双击放大 缩小
-            onDoubleClicked: imageDelegate.resizeFlickContent(mouseX, mouseY)
         }
     }
 
