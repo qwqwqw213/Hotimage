@@ -26,9 +26,10 @@ public:
     }
     ~ProviderCamera() { rgbImage = QImage(); }
 
-    static int byteSize(const int &w, const int &h, const CameraPixelFormat &format) {
+    static size_t byteSize(const int &w, const int &h, const CameraPixelFormat &format) {
         switch (format) {
         case CameraPixelFormat::__pix_yuyv: { return (w * h * 2); }
+        case CameraPixelFormat::__pix_yuv420p: { return (w * h * 3 / 2); }
         case CameraPixelFormat::__pix_rgb24: { return (w * h * 3); }
         default: return 0;
         }
@@ -67,7 +68,10 @@ public:
     }
     Q_PROPERTY(QString frameUrl READ frameUrl NOTIFY updateImageFrameUrl)
     QString frameUrl() { return provider->url(); }
+    Q_PROPERTY(QString freeze READ freeze CONSTANT)
+    QString freeze() { return provider->freezeUrl(); }
     void setUrlImage(QImage &image) { provider->append(image); }
+    void clearImage() { provider->clear(); }
 
 Q_SIGNALS:
     void updateCameraState();

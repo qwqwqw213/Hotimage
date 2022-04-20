@@ -1,173 +1,194 @@
 #include "videoplayer.h"
 
+#include "queue.hpp"
+
 #include "QDebug"
 #include "QPainter"
 #include "QPixmap"
 
 #include "QElapsedTimer"
+#include "QQmlApplicationEngine"
+#include "QQuickImageProvider"
 
-VideoPlayer::VideoPlayer(QQuickItem *parent)
-    : QQuickPaintedItem(parent)
+class VideoPlayerProvider : public QQuickImageProvider
 {
-    m_image = QImage();
-    m_index = -1;
-    m_status = __video_close;
+public:
+    VideoPlayerProvider()
+        : QQuickImageProvider(QQmlImageProviderBase::Image)
+        , url("") { }
+    ~VideoPlayerProvider() { }
 
-    decode = new VideoProcess(this);
-//    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
-//                     this, &VideoPlayer::updateImage, Qt::QueuedConnection);
+    QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) {
+        Q_UNUSED(id)
+        Q_UNUSED(size)
+        Q_UNUSED(requestedSize)
+        return images.dequeue();
+    }
 
-    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
-                     [=](QImage img){
-        // qml image 第一次请求图片url的时候队列为空
-        // 解码的时候第一张图片不发送更新消息
-        // 否则暂停的时候无帧图片
-        int size = videoProvider->add(img);
-        if( size > 1 && decode->status() == VideoProcess::__running ) {
-            if( m_status == __video_close ) {
-                m_status = __video_playing;
-                emit playStatusChanged();
-            }
-            emit frameUpdate();
+    QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) {
+        Q_UNUSED(id)
+        Q_UNUSED(size)
+        Q_UNUSED(requestedSize)
+        return QPixmap();
+    }
+
+    bool setUrl(QQmlApplicationEngine *e, const QString &path)
+    {
+        if( url.isEmpty() && e != nullptr ) {
+            e->addImageProvider(path, this);
+            url = QString("image://%1/").arg(path);
+            return true;
         }
-    });
+        return false;
+    }
 
-    QObject::connect(decode, &VideoProcess::error, this, [=](){
-        decode->closeStream();
-        videoProvider->release();
-        m_index = -1;
-        emit playStatusChanged();
-    }, Qt::QueuedConnection);
-    QObject::connect(decode, &VideoProcess::statusChanged, this, [=](){
-        if( decode->status() == VideoProcess::__stop ) {
-            m_index = -1;
-            decode->closeStream();
-            videoProvider->release();
-            m_status = __video_close;
-            emit playStatusChanged();
-        }
-        else if( decode->status() == VideoProcess::__pause ) {
-            m_status = __video_pause;
-            emit playStatusChanged();
-        }
-    }, Qt::QueuedConnection);
+    bool canRead() { return images.size() > 0; }
+    int append(QImage &img) { images.enqueue(img); return images.size(); }
+    QString frameUrl() { return url + QString::number(QDateTime::currentMSecsSinceEpoch()); }
+    void clear() { images.clear(); }
 
-    videoProvider = new VideoProvider;
+private:
+    QString url;
+    Queue<QImage> images;
+};
+
+class VideoPlayerPrivate
+{
+public:
+    VideoPlayerPrivate(VideoPlayer *parent);
+    ~VideoPlayerPrivate();
+
+    VideoProcess *decode;
+    int index;
+    bool playing;
+    VideoPlayerProvider *provider;
+
+private:
+    VideoPlayer *f;
+};
+
+VideoPlayer::VideoPlayer(QObject *parent)
+    : QObject(parent)
+    , p(new VideoPlayerPrivate(this))
+{
 }
 
 VideoPlayer::~VideoPlayer()
 {
-    m_image = QImage();
-    m_index = -1;
-    decode->closeStream();
-    videoProvider->release();
+    closeStream();
 }
 
-void VideoPlayer::updateImage(QImage image)
+void VideoPlayer::openStream(const QString &path, const int &index)
 {
-    m_image = image;
-    update();
-    emit frameUpdate();
-}
-
-void VideoPlayer::paint(QPainter *painter)
-{
-    painter->setRenderHint(QPainter::SmoothPixmapTransform);
-    painter->drawPixmap(m_x, m_y,
-                        m_w, m_h,
-                        QPixmap::fromImage(m_image));
-}
-
-void VideoPlayer::openStream(const QString &path, const int &w, const int &h, const int &index)
-{
-    if( decode->status() < 1 ) {
-        m_w = w;
-        m_h = h;
-        m_x = (this->width() - m_w) / 2.0;
-        m_y = (this->height() - m_h) / 2.0;
-        m_index = index;
-        emit imageSizeChanged();
-        decode->openStream(path.toStdString());
+    if( p->decode->status() < 1 ) {
+        p->index = index;
+        p->decode->openStream(path.toStdString());
     }
 }
 
 void VideoPlayer::seek(const qreal &f)
 {
-    if( decode->status() > 0 ) {
-        int msec = f * decode->totalMsecTime();
-        decode->seek(msec);
+    if( p->decode->status() > 0 ) {
+        int msec = f * p->decode->totalMsecTime();
+        p->decode->seek(msec);
     }
 }
 
-void VideoPlayer::pause()
+void VideoPlayer::playPause()
 {
-    int state = decode->pausePlay();
-    if( state == VideoProcess::__pause ) {
-        // 暂停后到下一次开始
-        // QML Image类会请求一次图片路径
-        // 这时候Provider无图片, 请求失败, 导致画面会闪一下
-        // 暂停的时候需要补一帧图片到Provider
-        videoProvider->add(decode->image());
-    }
+    p->decode->pausePlay();
 }
 
 void VideoPlayer::closeStream()
 {
-    decode->closeStream();
-    videoProvider->release();
-    m_image = QImage();
-    m_index = -1;
-    m_status = __video_close;
-    update();
+    p->decode->closeStream();
+    p->provider->clear();
+    p->index = -1;
+    p->playing = false;
     emit playStatusChanged();
 }
 
-int VideoPlayer::playing()
+bool VideoPlayer::isValid()
 {
-    return m_status;
+    return (p->decode->status() > VideoProcess::__stop);
+}
+
+bool VideoPlayer::playing()
+{
+    return p->playing;
 }
 
 int VideoPlayer::playIndex()
 {
-    return m_index;
-}
-
-int VideoPlayer::imageWidth()
-{
-    return m_w;
-}
-
-int VideoPlayer::imageHeight()
-{
-    return m_h;
+    return p->index;
 }
 
 QString VideoPlayer::currentTime()
 {
-    return decode->currentTime();
+    return p->decode->currentTime();
 }
 
 QString VideoPlayer::totalTime()
 {
-    return decode->totalTime();
+    return p->decode->totalTime();
 }
 
 qreal VideoPlayer::progress()
 {
-    return decode->currentMescTime() / (qreal)decode->totalMsecTime();
+    return p->decode->currentMescTime() / (qreal)p->decode->totalMsecTime();
 }
 
 QString VideoPlayer::frameUrl()
 {
-    return videoProvider->qmlUrl();
+
+    return p->provider->canRead() ? p->provider->frameUrl() : "";
 }
 
-VideoProvider * VideoPlayer::provider()
+void VideoPlayer::setFrameUrl(QQmlApplicationEngine *e, const QString &path)
 {
-    return videoProvider;
+    p->provider->setUrl(e, path);
 }
 
-QString VideoPlayer::providerUrl()
+VideoPlayerPrivate::VideoPlayerPrivate(VideoPlayer *parent)
 {
-    return videoProvider->url();
+    f = parent;
+
+    index = -1;
+    playing = false;
+
+    decode = new VideoProcess(f);
+    QObject::connect(decode, static_cast<void (VideoProcess::*)(QImage)>(&VideoProcess::frame),
+                     [=](QImage img){
+        // qml image 第一次请求图片url的时候队列为空
+        // 解码的时候第一张图片不发送更新消息
+        // 否则暂停的时候无帧图片
+        int size = provider->append(img);
+        if( decode->status() == VideoProcess::__running
+                && !playing ) {
+            playing = true;
+            emit f->playStatusChanged();
+        }
+        if( size > 1 ) {
+            emit f->frameUpdate();
+        }
+    });
+
+    QObject::connect(decode, &VideoProcess::error, f, [=](){
+        f->closeStream();
+    }, Qt::QueuedConnection);
+    QObject::connect(decode, &VideoProcess::statusChanged, f, [=](){
+        if( decode->status() == VideoProcess::__stop ) {
+            f->closeStream();
+        }
+        else if( decode->status() == VideoProcess::__pause ) {
+            playing = false;
+            emit f->playStatusChanged();
+        }
+    }, Qt::QueuedConnection);
+    provider = new VideoPlayerProvider;
+}
+
+VideoPlayerPrivate::~VideoPlayerPrivate()
+{
+
 }

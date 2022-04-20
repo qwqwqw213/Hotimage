@@ -23,6 +23,11 @@ public:
         return d;
     }
     int size() { return q.size(); }
+    void clear() {
+        m.lock();
+        q.clear();
+        m.unlock();
+    }
 
 private:
     QQueue<T> q;

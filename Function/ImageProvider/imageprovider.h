@@ -30,6 +30,7 @@ public:
     // @path      图片路径, 不能够重复
     // @index     图片索引, 每次更新需要改变, 不然不会刷新图片
     QString url();
+    QString freezeUrl();
     bool setUrl(QQmlApplicationEngine *e, const QString &path);
 
     bool hasUrl();
@@ -37,6 +38,8 @@ public:
     // 当队列有图片时才读取url
     // 不然输出无图片警告
     bool canRead();
+
+    void clear();
 
 private:
     Queue<QImage> m_queue;

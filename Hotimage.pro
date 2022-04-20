@@ -15,6 +15,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+        CameraView/cameraview.cpp \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
         ImageListModel/VideoScanImage/videoscanimage.cpp \
@@ -37,6 +38,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    CameraView/cameraview.h \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
     Function/providercamera.hpp \

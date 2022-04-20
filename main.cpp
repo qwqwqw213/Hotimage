@@ -1,5 +1,6 @@
 #include <QQuickStyle>
 
+#include "CameraView/cameraview.h"
 #include "Config/config.h"
 
 #include "QDebug"
@@ -18,6 +19,8 @@ int main(int argc, char *argv[])
 #else
         QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
+
+//        qmlRegisterType<CameraView>("custom.cameraview", 0, 1, "CameraView");
 
         QGuiApplication app(argc, argv);
 

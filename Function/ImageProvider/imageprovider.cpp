@@ -68,6 +68,11 @@ QString ImageProvider::url()
     return m_url + QString::number(QDateTime::currentMSecsSinceEpoch());
 }
 
+QString ImageProvider::freezeUrl()
+{
+    return m_image.isNull() ? "" : (m_url + QString::number(QDateTime::currentMSecsSinceEpoch()));
+}
+
 bool ImageProvider::setUrl(QQmlApplicationEngine *e, const QString &path)
 {
     if( m_url.isEmpty() && e != nullptr ) {
@@ -86,4 +91,10 @@ bool ImageProvider::canRead()
 {
 //    return (m_queue.size() > 0);
     return !m_image.isNull();
+}
+
+void ImageProvider::clear()
+{
+    m_image = QImage();
+    emit imageEnqueue();
 }

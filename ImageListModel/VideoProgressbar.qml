@@ -33,7 +33,7 @@ Item {
             // 暂停按钮
             Text {
                 id: btnPause
-                text: VideoPlayer.playing === 1 ? "\uf04c" : "\uf04b"
+                text: VideoPlayer.playing ? "\uf04c" : "\uf04b"
                 font.family: Config.fontLight
                 font.pixelSize: 30
                 anchors.centerIn: Config.isLandscape ?
@@ -45,7 +45,7 @@ Item {
                     id: btnPauseArea
                     anchors.fill: parent
                     onClicked: {
-                        VideoPlayer.pause()
+                        VideoPlayer.playPause()
                     }
                 }
             }

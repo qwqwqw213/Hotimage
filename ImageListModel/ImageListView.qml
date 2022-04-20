@@ -224,11 +224,6 @@ Item {
         visible: false
     }
 
-    property bool ready: false
-    StackView.onActivated: {
-        ready = true
-    }
-
     property bool init: false
     StackView.onActivating: {
         if( !init ) {
@@ -246,7 +241,6 @@ Item {
 
     property real oldContentY: 0
     StackView.onDeactivated: {
-        ready = false
         oldContentY = imageList.contentY
     }
 }

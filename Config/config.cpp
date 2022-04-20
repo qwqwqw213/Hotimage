@@ -325,7 +325,7 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 视频播放器模块
     p->videoPlayer.reset(new VideoPlayer);
-    e->addImageProvider(p->videoPlayer->providerUrl(), p->videoPlayer->provider());
+    p->videoPlayer->setFrameUrl(e, "VideoPlayer");
     cnt->setContextProperty("VideoPlayer", p->videoPlayer.data());
 
     // 摄像头模块

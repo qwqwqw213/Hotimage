@@ -10,6 +10,8 @@ import "./Loading"
 import "./MessageBox"
 import "./ScaleBar"
 
+//import custom.cameraview 0.1
+
 ApplicationWindow {
     id: window
     visible: true
@@ -52,6 +54,7 @@ ApplicationWindow {
             rotationAnimation.running = true
         }
     }
+
 
     Rectangle {
         id: mainView
@@ -160,8 +163,8 @@ ApplicationWindow {
                     id: btnSettingArea
                     anchors.fill: parent
                     onClicked: {
-                        stackView.push(setting)
-//                        stackView.push("qrc:/Setting/Setting.qml")
+//                        stackView.push(setting)
+                        stackView.push("qrc:/Setting/Setting.qml")
                     }
                 }
             }
@@ -181,7 +184,7 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 width: parent.height * scaleBar.value
                 height: parent.width * scaleBar.value
-                source: TcpCamera.canReadUrl ? TcpCamera.frameUrl : ""
+                source: mainView.videoPlay ? (TcpCamera.canReadUrl ? TcpCamera.frameUrl : "") : TcpCamera.freeze
                 rotation: 90
 
                 // 录像标志
@@ -234,7 +237,7 @@ ApplicationWindow {
             }
 
             Loading {
-                visible: !TcpCamera.canReadUrl
+                visible: mainView.videoPlay ? !TcpCamera.canReadUrl : false
                 anchors.fill: parent
                 text: qsTr("Camera connecting...")
             }
@@ -374,7 +377,8 @@ ApplicationWindow {
                         btnPhoto.scale = 1.0
                     }
                     onClicked: {
-                        stackView.push(imageListView)
+//                        stackView.push(imageListView)
+                        stackView.push("qrc:/ImageListModel/ImageListView.qml")
                     }
                 }
             }
@@ -413,16 +417,16 @@ ApplicationWindow {
         }
     }
 
-    Setting {
-        id: setting
-    }
+//    Setting {
+//        id: setting
+//    }
 
-    ImageListView {
-        id: imageListView
-//        anchors.fill: parent
-//        visible: false
-//        y: parent.height
-    }
+//    ImageListView {
+//        id: imageListView
+////        anchors.fill: parent
+////        visible: false
+////        y: parent.height
+//    }
 
     onClosing: {
         if( stackView.depth > 1 ) {
@@ -558,5 +562,7 @@ ApplicationWindow {
         z: 100
     }
 
-    Component.onCompleted: Config.started()
+    Component.onCompleted: {
+        Config.started()
+    }
 }

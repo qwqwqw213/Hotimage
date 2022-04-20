@@ -32,10 +32,18 @@ Item {
     }
 
     function autoTitle() {
-        if( toolbar.opacity > 0 ) {
+//        if( toolbar.opacity > 0 ) {
+//            toolbar.opacity = 0
+//        }
+//        else {
+//            toolbar.visible = true
+//            toolbar.opacity = 1
+//        }
+        if( toolbar.visible ) {
             toolbar.opacity = 0
         }
         else {
+            toolbar.visible = true
             toolbar.opacity = 1
         }
     }
@@ -127,18 +135,19 @@ Item {
         z: 5
 
         opacity: childOpacity
-        onOpacityChanged: {
-            if( opacity < 0.1 ) {
-                visible = false
-            }
-            else {
-                visible = true
-            }
-        }
 
         Behavior on opacity {
             enabled: ready
-            NumberAnimation { duration: 200 }
+            NumberAnimation {
+                duration: 200
+                onRunningChanged: {
+                    if( !running ) {
+                        if( toolbar.opacity < 1 ) {
+                            toolbar.visible = false
+                        }
+                    }
+                }
+            }
         }
 
         // top bar
@@ -278,15 +287,14 @@ Item {
     }
 
     Loader {
-        id: videoTool
         property real progressBarOpacity: 1
-        active: VideoPlayer.playing > 0 ? true : false
+        active: VideoPlayer.isValid
         anchors.fill: parent
-        sourceComponent: component
+        sourceComponent: videoToolComponent
         z: 5
 
         Component {
-            id: component
+            id: videoToolComponent
             Item {
                 Behavior on opacity {
                     OpacityAnimator {
@@ -313,7 +321,7 @@ Item {
                     height: 50
                     anchors.left: progressBarItem.left
                     anchors.top: parent.top
-                    anchors.topMargin: 10
+                    anchors.topMargin: 10 + Config.topMargin
                     radius: 10
                     color: "#D0505050"
 
@@ -343,6 +351,7 @@ Item {
                         onClicked: {
                             // close video stream
                             VideoPlayer.closeStream()
+                            autoTitle()
                         }
                     }
                 }
@@ -352,7 +361,7 @@ Item {
                     width: parent.width * 0.85
                     height: Config.isLandscape ? 60 : 120
                     x: (parent.width - width) / 2.0
-                    y: parent.height - height - 10
+                    y: parent.height - height - 10 - Config.bottomMargin
                 }
             }
         }

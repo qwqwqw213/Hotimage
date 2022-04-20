@@ -431,9 +431,11 @@ void TcpCamera::openUsbCamera(const int &fd)
     closeUsbCamera();
     p->uvc.reset(new UVCamera);
     QObject::connect(p->uvc.data(), &UVCamera::updateCameraState, [=](){
+        qDebug() << "camera state update:" << p->uvc->isOpen();
         if( p->uvc->isOpen() ) {
             p->uvc->zoomAbsolute(0x8005);
             p->setPalette(p->cfg.set.palette);
+            close();
         }
     });
     p->uvc->open(fd, __pix_yuyv,
@@ -446,6 +448,7 @@ void TcpCamera::closeUsbCamera()
 #ifdef Q_OS_ANDROID
     if( !p->uvc.isNull() ) {
         p->uvc->close();
+        open();
     }
 #endif
 }
@@ -607,6 +610,7 @@ void TcpCameraPrivate::socketConnection()
                 cameraSN = QString("");
                 socket->deleteLater();
                 socket = nullptr;
+                f->clearImage();
                 searchDevice();
             }
         }
@@ -713,7 +717,7 @@ void TcpCameraPrivate::searchDevice()
     }
 
 //    QTimer::singleShot(20 * 1000, this, &TcpCameraPrivate::searchOvertime);
-    searchTimer->start(20 * 1000);
+    searchTimer->start(10 * 1000);
 }
 
 void TcpCameraPrivate::searchOvertime()
@@ -1013,8 +1017,8 @@ void TcpCameraPrivate::onReadyRead()
             socket->write(byte);
         }
 
-        QImage img = image->copy();
-        f->setUrlImage(img);
+//        QImage img = image->copy();
+//        f->setUrlImage(img);
 
         // 热点模式被打开
         if( (state >= 0) && (cfg.set.hotspotMode != state) ) {
@@ -1126,12 +1130,16 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
                       RANGE_MODE,
                       OUTPUT_MODE);
 #endif
-    if( !QString(sn).isEmpty() && cameraSN.isEmpty() ) {
+    if( cameraSN.isEmpty() ) {
         cameraSN = QString(sn);
         emit f->cameraSNChanged();
         emit f->paletteChanged();
         emit f->connectStatusChanged();
         emit f->cameraParamChanged();
+    }
+    else {
+        cameraSN = QString(sn);
+        emit f->cameraSNChanged();
     }
 
     uint8_t *bit = image->bits();
@@ -1209,6 +1217,9 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
     if( encode->status() ) {
         encode->pushEncode(image->copy());
     }
+
+    QImage i = image->copy();
+    f->setUrlImage(i);
 }
 
 void TcpCameraPrivate::readSetting()
@@ -1287,6 +1298,7 @@ void TcpCameraPrivate::shutter()
 
 void TcpCameraPrivate::setPalette(const int &index)
 {
+    cfg.set.palette = index;
 #ifdef Q_OS_ANDROID
     if( !uvc.isNull() ) {
         uvc->zoomAbsolute(0x8800 | (index & 0xfff));
@@ -1294,7 +1306,6 @@ void TcpCameraPrivate::setPalette(const int &index)
     }
 #endif
     cfg.set.type = HandShake::__palette;
-    cfg.set.palette = index;
     QByteArray byte = handshake.pack(cfg.set);
     emit write(byte);
 }
@@ -1449,22 +1460,24 @@ void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, 
     TcpCameraPrivate *cam = static_cast<TcpCameraPrivate *>(content);
 
     CameraPixelFormat format = cam->uvc->pixelFormat();
+    QImage *rgb = cam->f->rgb();
+    cam->decode(reinterpret_cast<uint16_t *>(data), width, height, format, rgb);
 
-    switch (format) {
-    case __pix_yuyv: {
-        QImage *rgb = cam->f->rgb();
-        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), rgb->bits(), width, height - IMAGE_Y_OFFSET);
-        QImage img = rgb->copy();
-        cam->f->setUrlImage(img);
-    }
-        break;
-    case __pix_mjpeg: {
-        QImage jpg = QImage::fromData(reinterpret_cast<uint8_t *>(data), bufferLength);
-        cam->f->setUrlImage(jpg);
-    }
-        break;
-    default: break;
-    }
+//    switch (format) {
+//    case __pix_yuyv: {
+//        QImage *rgb = cam->f->rgb();
+//        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), rgb->bits(), width, height - IMAGE_Y_OFFSET);
+//        QImage img = rgb->copy();
+//        cam->f->setUrlImage(img);
+//    }
+//        break;
+//    case __pix_mjpeg: {
+//        QImage jpg = QImage::fromData(reinterpret_cast<uint8_t *>(data), bufferLength);
+//        cam->f->setUrlImage(jpg);
+//    }
+//        break;
+//    default: break;
+//    }
 
 
 }

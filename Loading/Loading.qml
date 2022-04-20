@@ -5,7 +5,13 @@ import QtQuick 2.14
 
 Item {
     id: loading
+
     property alias text: label.text
+    onVisibleChanged: {
+        shape.angle = 0
+        shape.arc = 0
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "#f0505050"

@@ -74,7 +74,8 @@ MouseArea {
                     }
                 }
 
-                source: imageSource
+                source: VideoPlayer.playIndex === photoScan.currentIndex ?
+                            VideoPlayer.frameUrl : imageSource
                 onStatusChanged: {
                     if( status == Image.Ready ) {
                         if( imageDelegate.enterLeaveState === 2 ) {
@@ -171,6 +172,25 @@ MouseArea {
             }
             // 双击放大 缩小
             onDoubleClicked: imageDelegate.resizeFlickContent(mouseX, mouseY)
+        }
+    }
+
+    MouseArea {
+        visible: VideoPlayer.playIndex === photoScan.currentIndex ?
+                     false : (fileType === 1 ? ((enterLeaveState === 3) ? !moving : false) : false)
+        anchors.centerIn: parent
+        width: 50
+        height: 50
+        Text {
+            anchors.fill: parent
+            font.family: Config.fontLight
+            font.pixelSize: parent.width
+            text: "\uf144"
+            color: parent.pressed ? "gray" : "white"
+        }
+        onClicked: {
+            imagePlayer.hideTitle()
+            VideoPlayer.openStream(filePath, photoScan.currentIndex)
         }
     }
 

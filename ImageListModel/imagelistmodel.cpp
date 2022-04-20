@@ -81,7 +81,6 @@ void ImageListModel::search(const QString &path)
             QString qmlPath;
             QString videoTotalTime("");
             if( type == __video ) {
-//                qDebug() << file;
                 qmlPath = p->videoScan->addQueue(file, videoTotalTime);
             }
             else {
