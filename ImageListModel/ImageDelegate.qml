@@ -127,6 +127,10 @@ MouseArea {
 
 
                 onPressed: {
+                    if( VideoPlayer.playIndex === delegateIndex ) {
+                        return
+                    }
+
                     moving = false
                     dragging = false
                     pressedX = mouseX
@@ -139,6 +143,10 @@ MouseArea {
                     minusY = 0
                 }
                 onPositionChanged: {
+                    if( VideoPlayer.playIndex === delegateIndex ) {
+                        return
+                    }
+
                     var y = (mouseY + minusY) - pressedY
                     var x = (mouseX + minusX) - pressedX
                     if( moving ) {
@@ -168,6 +176,10 @@ MouseArea {
                     }
                 }
                 onReleased: {
+                    if( VideoPlayer.playIndex === delegateIndex ) {
+                        return
+                    }
+
                     if( moving ) {
                         moving = false
                         leave(delegateIndex)

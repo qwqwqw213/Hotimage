@@ -335,15 +335,14 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     cnt->setContextProperty("Config", this);
 
     // 视频播放器模块
+    // 如果ffmpeg没有注册, 调用API会返回-1094995529
     p->videoPlayer.reset(new VideoPlayer);
     p->videoPlayer->setFrameUrl(e, "VideoPlayer");
     cnt->setContextProperty("VideoPlayer", p->videoPlayer.data());
 
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
-    p->imageModel->search(p->imageGalleryPath);
-    VideoScanImage *scanProvider = p->imageModel->provider();
-    e->addImageProvider(scanProvider->url(), scanProvider);
+    p->imageModel->search(p->imageGalleryPath, e);
     cnt->setContextProperty("ImageModel", p->imageModel.data());
 
     // 摄像头模块

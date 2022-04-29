@@ -3,9 +3,9 @@
 
 #include "QAbstractListModel"
 
-#include "VideoScanImage/videoscanimage.h"
-
 // image gallery
+
+class QQmlApplicationEngine;
 
 class ImageListModelPrivate;
 class ImageListModel : public QAbstractListModel
@@ -29,7 +29,7 @@ public:
     explicit ImageListModel(QObject *parent = nullptr);
     ~ImageListModel();
 
-    void search(const QString &path);
+    void search(const QString &path, QQmlApplicationEngine *e);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
@@ -54,8 +54,6 @@ public:
     void setSelectionStatus(const bool &status);
 
     Q_INVOKABLE void removeSelection();
-
-    VideoScanImage *provider();
 
 public Q_SLOTS:
     void add(const QString &path);

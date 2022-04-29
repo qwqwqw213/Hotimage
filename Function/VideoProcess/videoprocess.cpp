@@ -25,6 +25,7 @@ public:
     std::string error;
     std::thread thread;
     std::mutex mutex;
+    bool notify;
     std::condition_variable condition;
     int status;
 
@@ -154,6 +155,165 @@ VideoProcess::~VideoProcess()
 
 }
 
+bool VideoProcess::loadVideoInfo(const QString &path, VideoInfo *info)
+{
+    std::string url = path.toStdString();
+
+    int videoIndex = -1;
+    AVFormatContext *fmtCnt = NULL;
+    AVCodecContext *codecCnt = NULL;
+    AVCodec *codec = NULL;
+    AVFrame *frame = NULL;
+    AVFrame *rgbFrame = NULL;
+    SwsContext *sws = NULL;
+    AVStream *stream = NULL;
+    AVPacket packet;
+
+    int sec = 0;
+
+    int res = avformat_open_input(&fmtCnt, url.c_str(), NULL, NULL);
+    if( res < 0 ) {
+//        return QString();
+        qDebug() << "ERROR: avformat_open_input, code:" << res << ", url:" << url.c_str();
+        goto FINISHED;
+    }
+
+    res = avformat_find_stream_info(fmtCnt, NULL);
+    if( res < 0 ) {
+        qDebug() << "ERROR: avformat_find_stream_info, code:" << res;
+        goto FINISHED;
+    }
+
+    for(uint32_t i = 0; i < fmtCnt->nb_streams; i ++) {
+        stream = fmtCnt->streams[i];
+        if( stream->codec->codec_type == AVMEDIA_TYPE_VIDEO ) {
+            stream = stream;
+            codecCnt = stream->codec;
+            videoIndex = i;
+            sec = fmtCnt->duration / 1000000.0;
+            break;
+        }
+    }
+
+    if( videoIndex < 0 ) {
+        goto FINISHED;
+    }
+
+    codec = avcodec_find_decoder(codecCnt->codec_id);
+    if( !codec ) {
+        qDebug() << "ERROR: avcodec_find_decoder";
+        goto FINISHED;
+    }
+
+    res = avcodec_open2(codecCnt, codec, NULL);
+    if( res < 0 ) {
+        qDebug() << "ERROR: avcodec_open2, code:" << res;
+        goto FINISHED;
+    }
+
+    frame = av_frame_alloc();
+    if( !frame ) {
+        qDebug() << "ERROR: av_frame_alloc";
+        goto FINISHED;
+    }
+
+    rgbFrame = av_frame_alloc();
+    if( !rgbFrame ) {
+        qDebug() << "ERROR: rgb av_frame_alloc";
+        goto FINISHED;
+    }
+
+    sws = sws_getContext(codecCnt->width, codecCnt->height, codecCnt->pix_fmt,
+                         codecCnt->width, codecCnt->height, AV_PIX_FMT_RGB24,
+                         SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+    rgbFrame->width = codecCnt->width;
+    rgbFrame->height = codecCnt->height;
+    rgbFrame->format = AV_PIX_FMT_RGB24;
+    res = av_image_alloc(rgbFrame->data, rgbFrame->linesize,
+                         rgbFrame->width, rgbFrame->height,
+                         AV_PIX_FMT_RGB24, 1);
+    if( res < 0 ) {
+        qDebug() << "ERROR: av_image_alloc, code:" << res;
+        goto FINISHED;
+    }
+
+    av_init_packet(&packet);
+    while (true)
+    {
+        res = av_read_frame(fmtCnt, &packet);
+        if( res < 0 ) {
+            break;
+        }
+        if( packet.stream_index == videoIndex )
+        {
+            res = avcodec_send_packet(codecCnt, &packet);
+            if( res < 0 ) {
+                continue;
+            }
+            res = avcodec_receive_frame(codecCnt, frame);
+            if( res < 0 ) {
+                continue;
+            }
+            sws_scale(sws,
+                      frame->data, frame->linesize, 0, frame->height,
+                      rgbFrame->data, rgbFrame->linesize);
+            break;
+        }
+    }
+    av_packet_unref(&packet);
+
+FINISHED:
+    info->scale = QImage();
+
+    if( fmtCnt ) {
+        avformat_close_input(&fmtCnt);
+        fmtCnt = NULL;
+    }
+
+    if( frame ) {
+        av_frame_free(&frame);
+        frame = NULL;
+    }
+
+    if( rgbFrame ) {
+        info->scale = QImage(*rgbFrame->data,
+                             rgbFrame->width, rgbFrame->height,
+                             QImage::Format_RGB888);
+        av_frame_free(&rgbFrame);
+        rgbFrame = NULL;
+    }
+
+    if( sws ) {
+        sws_freeContext(sws);
+        sws = NULL;
+    }
+
+    if( info->scale.isNull() ) {
+        qDebug() << "get video scan error";
+        if( res < 0 ) {
+            char error[512];
+            av_strerror(res, error, 512);
+            qDebug() << "FFMPEG ERROR:" << error;
+        }
+        return false;
+    }
+
+    if( sec < 3600 ) {
+        info->time = QString("%1:%2")
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+    else {
+        info->time = QString("%1:%2:%3")
+                .arg(sec / 3600, 2, 10, QLatin1Char('0'))
+                .arg(sec / 60, 2, 10, QLatin1Char('0'))
+                .arg(sec % 60, 2, 10, QLatin1Char('0'));
+    }
+
+    return true;
+}
+
 bool VideoProcess::openEncode(const EncodeConfig &config)
 {
     p->open_encode(config);
@@ -164,6 +324,7 @@ void VideoProcess::pushEncode(QImage img)
 {
     if( p->encode ) {
         p->encode_queue.append(img);
+        p->notify = true;
         p->condition.notify_all();
     }
 }
@@ -197,6 +358,7 @@ bool VideoProcess::closeEncode()
 {
     if( p->status ) {
         p->status = __stop;
+        p->notify = true;
         p->condition.notify_all();
 
         p->thread.join();
@@ -278,6 +440,7 @@ int VideoProcess::pausePlay()
     }
     else if( p->status == __pause ) {
         p->status = __running;
+        p->notify = true;
         p->condition.notify_all();
     }
     return p->status;
@@ -307,6 +470,7 @@ void VideoProcess::closeDecode()
 {
     if( p->decode ) {
         p->status = __stop;
+        p->notify = true;
         p->condition.notify_all();
         p->thread.join();
     }
@@ -320,6 +484,7 @@ int VideoProcess::pushPacket(uint8_t *data, const int &size)
     }
 
     p->h264_stream->push(data, size);
+    p->notify = true;
     p->condition.notify_all();
 
 //    return p->send_h264_data(buf, size);
@@ -473,7 +638,10 @@ void VideoProcessPrivate::open_encode(const EncodeConfig &cfg)
 
         while (status == VideoProcess::__running) {
             std::unique_lock<std::mutex> lock(mutex);
-            condition.wait(lock);
+            notify = false;
+            while (!notify) {
+                condition.wait(lock);
+            }
             lock.unlock();
 
             while (encode_queue.size()) {
@@ -755,7 +923,9 @@ int VideoProcessPrivate::read_video_stream()
             emit f->statusChanged();
             qDebug() << "stream puase";
             std::unique_lock<std::mutex> lock(mutex);
-            condition.wait(lock);
+            while (!notify) {
+                condition.wait(lock);
+            }
             lock.unlock();
             // 恢复播放状态更新
             emit f->statusChanged();
@@ -876,6 +1046,7 @@ void VideoProcessPrivate::close_video_stream()
         qDebug() << "close stream";
 
         status = VideoProcess::__stop;
+        notify = true;
         condition.notify_all();
 
         thread.join();
@@ -982,7 +1153,9 @@ int VideoProcessPrivate::open_h264_decode()
             }
 
             std::unique_lock<std::mutex> lock(mutex);
-            condition.wait(lock);
+            while (!notify) {
+                condition.wait(lock);
+            }
             lock.unlock();
         }
 

@@ -36,6 +36,11 @@ typedef struct _tEncodeConfig
     }
 } EncodeConfig;
 
+typedef struct _tVideoInfo {
+    QString time;
+    QImage scale;
+} VideoInfo;
+
 class VideoProcessPrivate;
 class VideoProcess : public QObject
 {
@@ -49,6 +54,12 @@ public:
     };
     explicit VideoProcess(QObject *parent = nullptr);
     ~VideoProcess();
+
+
+    /*
+     *  获取视频缩略图 时间
+     */
+    bool loadVideoInfo(const QString &path, VideoInfo *info);
 
     /*
      *  视频编码

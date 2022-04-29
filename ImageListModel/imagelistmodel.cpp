@@ -1,5 +1,8 @@
 #include "imagelistmodel.h"
 
+#include "VideoProcess/videoprocess.h"
+#include "queue.hpp"
+
 #include "thread"
 
 #include "QDebug"
@@ -7,6 +10,54 @@
 #include "QFile"
 #include "QThread"
 #include "QImageReader"
+#include "QQuickImageProvider"
+#include "QQmlApplicationEngine"
+
+class VideoScanProvider : public QQuickImageProvider {
+public:
+    VideoScanProvider()
+        : QQuickImageProvider(QQuickImageProvider::Image) {
+        images = QVector<QImage>();
+
+    }
+    ~VideoScanProvider() { }
+
+    QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) {
+        Q_UNUSED(size)
+        Q_UNUSED(requestedSize)
+        int i = id.toUInt();
+        if( i < images.size() ) {
+            return images.at(i);
+        }
+        return QImage();
+    }
+
+    QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) {
+        Q_UNUSED(id)
+        Q_UNUSED(size)
+        Q_UNUSED(requestedSize)
+        return QPixmap();
+    }
+
+    bool setUrl(QQmlApplicationEngine *e, const QString &path) {
+        if( url.isEmpty() && e != nullptr ) {
+            e->addImageProvider(path, this);
+            url = QString("image://%1/").arg(path);
+            return true;
+        }
+        return false;
+    }
+
+    QString append(QImage &image) {
+        int size = images.size();
+        images.append(image);
+        return url + QString::number(size);
+    }
+
+private:
+    QString url;
+    QVector<QImage> images;
+};
 
 class ImageListModelPrivate
 {
@@ -30,7 +81,8 @@ public:
     // 记录删除总数
     int removeCount;
 
-    VideoScanImage *videoScan;
+    VideoScanProvider *provider;
+    VideoProcess *process;
 
 private:
     ImageListModel *f;
@@ -48,9 +100,12 @@ ImageListModel::~ImageListModel()
 
 }
 
-void ImageListModel::search(const QString &path)
+void ImageListModel::search(const QString &path, QQmlApplicationEngine *e)
 {
     qDebug() << "search path:" << path;
+
+    p->provider->setUrl(e, QString("VideoScan"));
+
     p->searchThread = std::thread([=](){
         QDir d;
         d.setPath(path);
@@ -59,37 +114,10 @@ void ImageListModel::search(const QString &path)
                          << QString("*.jpg")
                          << QString("*.jpeg")
                          << QString("*.avi"));
+
         int count = 0;
         QFileInfoList list = d.entryInfoList();
         for(int i = 0; i < list.size(); i++) {
-//            QString file = list.at(i).filePath();
-//            QString name = list.at(i).fileName();
-//            int nameIndex = name.indexOf("_") + 1;
-//            if( nameIndex >= 1 ) {
-//                QString strDatetime = name.right(name.length() - nameIndex);
-//                strDatetime = strDatetime.left(strDatetime.indexOf('.'));
-//                if( strDatetime.length() == 14 ) {
-//                    name = QString("%1-%2-%3 %4:%5:%6")
-//                            .arg(strDatetime.mid(0, 4))
-//                            .arg(strDatetime.mid(4, 2))
-//                            .arg(strDatetime.mid(6, 2))
-//                            .arg(strDatetime.mid(8, 2))
-//                            .arg(strDatetime.mid(10, 2))
-//                            .arg(strDatetime.mid(12, 2));
-//                }
-//            }
-//            int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
-//            QString qmlPath;
-//            QString videoTotalTime("");
-//            if( type == __video ) {
-//                qmlPath = p->videoScan->addQueue(file, videoTotalTime);
-//            }
-//            else {
-//                qmlPath = QString::fromUtf8(QString("file:///" + file).toUtf8());
-//            }
-
-//            p->list.append(std::make_tuple(name, qmlPath, 0, type, file, videoTotalTime));
-
             add(list.at(i).filePath());
             count ++;
         }
@@ -288,27 +316,21 @@ void ImageListModel::removeSelection()
     }
 }
 
-VideoScanImage *ImageListModel::provider()
-{
-    return p->videoScan;
-}
-
 void ImageListModel::add(const QString &path)
 {
     beginInsertRows(QModelIndex(), p->list.size(), p->list.size());
     QString name = path.right(path.length() - path.lastIndexOf('/') - 1);
     QString file = QString::fromUtf8(QString("file:///" + path).toUtf8());
     int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
-    QString videoTotalTime("");
     if( type == __video ) {
-        QString scanPath = p->videoScan->addQueue(path, videoTotalTime);
-        p->list.append(std::make_tuple(name, scanPath, 0, type, path, videoTotalTime));
+        VideoInfo info;
+        p->process->loadVideoInfo(path, &info);
+        QString scanPath = p->provider->append(info.scale);
+        p->list.append(std::make_tuple(name, scanPath, 0, type, path, info.time));
     }
     else {
-        p->list.append(std::make_tuple(name, file, 0, type, path, videoTotalTime));
+        p->list.append(std::make_tuple(name, file, 0, type, path, QString("")));
     }
-
-//    p->list.append(std::make_tuple(name, file, 0, type));
     endInsertRows();
     emit listCountChanged();
 }
@@ -325,12 +347,18 @@ ImageListModelPrivate::ImageListModelPrivate(ImageListModel *parent)
     currentIndex = -1;
     selectionStatus = false;
 
-    videoScan = new VideoScanImage("videoscan");
+    provider = new VideoScanProvider;
+    process = new VideoProcess;
 }
 
 ImageListModelPrivate::~ImageListModelPrivate()
 {
     if( searchThread.joinable() ) {
         searchThread.join();
+    }
+
+    if( process ) {
+        delete process;
+        process = nullptr;
     }
 }

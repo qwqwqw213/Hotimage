@@ -1020,12 +1020,13 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
                     str);
     }
 #endif
-    if( encode->status() ) {
-        encode->pushEncode(image->copy());
-    }
-
     int rotation = f->rotationIndex();
     QImage i = image->mirrored(rotation & 0x01, (rotation >> 1) & 0x01);
+
+    if( encode->status() ) {
+        encode->pushEncode(i.copy());
+    }
+
     f->setUrlImage(i);
 }
 

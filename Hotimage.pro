@@ -18,7 +18,6 @@ SOURCES += \
         CameraView/cameraview.cpp \
         Config/config.cpp \
         Function/ImageProvider/imageprovider.cpp \
-        ImageListModel/VideoScanImage/videoscanimage.cpp \
         ImageListModel/imagelistmodel.cpp \
         TcpCamera/tcpcamera.cpp \
         VideoPlayer/videoplayer.cpp \
@@ -43,7 +42,6 @@ HEADERS += \
     Function/ImageProvider/imageprovider.h \
     Function/providercamera.hpp \
     Function/queue.hpp \
-    ImageListModel/VideoScanImage/videoscanimage.h \
     ImageListModel/imagelistmodel.h \
     TcpCamera/HandShakeDef.h \
     TcpCamera/tcpdef.h \
