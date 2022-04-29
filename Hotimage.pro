@@ -155,8 +155,8 @@ DEPENDPATH += $$PWD/libs/ios
 
 android {
 
-#DEFINES  += \
-#    TEMPERATURE_SDK
+DEFINES  += \
+    TEMPERATURE_SDK
 
 QT += \
     androidextras \

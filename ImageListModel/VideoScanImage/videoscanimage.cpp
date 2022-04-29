@@ -5,6 +5,7 @@ extern "C"{
 #include "libavformat/avformat.h"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
+#include "libavutil/error.h"
 }
 
 #include "QDebug"
@@ -91,7 +92,7 @@ QString VideoScanImage::addQueue(const QString &path, QString &videoTotalTime)
     int res = avformat_open_input(&p->fmtCnt, url, NULL, NULL);
     if( res < 0 ) {
 //        return QString();
-        qDebug() << "ERROR: avformat_open_input, code:" << res;
+        qDebug() << "ERROR: avformat_open_input, code:" << res << ", url:" << url;
         goto FINISHED;
     }
 
@@ -206,6 +207,11 @@ FINISHED:
 
     if( img.isNull() ) {
         qDebug() << "get video scan error";
+        if( res < 0 ) {
+            char error[512];
+            av_strerror(res, error, 512);
+            qDebug() << "FFMPEG ERROR:" << error;
+        }
         return QString("");
     }
 

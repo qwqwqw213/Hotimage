@@ -6,6 +6,7 @@
 #include "QDirIterator"
 #include "QFile"
 #include "QThread"
+#include "QImageReader"
 
 class ImageListModelPrivate
 {
@@ -61,33 +62,35 @@ void ImageListModel::search(const QString &path)
         int count = 0;
         QFileInfoList list = d.entryInfoList();
         for(int i = 0; i < list.size(); i++) {
-            QString file = list.at(i).filePath();
-            QString name = list.at(i).fileName();
-            int nameIndex = name.indexOf("_") + 1;
-            if( nameIndex >= 1 ) {
-                QString strDatetime = name.right(name.length() - nameIndex);
-                strDatetime = strDatetime.left(strDatetime.indexOf('.'));
-                if( strDatetime.length() == 14 ) {
-                    name = QString("%1-%2-%3 %4:%5:%6")
-                            .arg(strDatetime.mid(0, 4))
-                            .arg(strDatetime.mid(4, 2))
-                            .arg(strDatetime.mid(6, 2))
-                            .arg(strDatetime.mid(8, 2))
-                            .arg(strDatetime.mid(10, 2))
-                            .arg(strDatetime.mid(12, 2));
-                }
-            }
-            int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
-            QString qmlPath;
-            QString videoTotalTime("");
-            if( type == __video ) {
-                qmlPath = p->videoScan->addQueue(file, videoTotalTime);
-            }
-            else {
-                qmlPath = QString::fromUtf8(QString("file:///" + file).toUtf8());
-            }
+//            QString file = list.at(i).filePath();
+//            QString name = list.at(i).fileName();
+//            int nameIndex = name.indexOf("_") + 1;
+//            if( nameIndex >= 1 ) {
+//                QString strDatetime = name.right(name.length() - nameIndex);
+//                strDatetime = strDatetime.left(strDatetime.indexOf('.'));
+//                if( strDatetime.length() == 14 ) {
+//                    name = QString("%1-%2-%3 %4:%5:%6")
+//                            .arg(strDatetime.mid(0, 4))
+//                            .arg(strDatetime.mid(4, 2))
+//                            .arg(strDatetime.mid(6, 2))
+//                            .arg(strDatetime.mid(8, 2))
+//                            .arg(strDatetime.mid(10, 2))
+//                            .arg(strDatetime.mid(12, 2));
+//                }
+//            }
+//            int type = file.lastIndexOf(".avi") >= 0 ? __video : __image;
+//            QString qmlPath;
+//            QString videoTotalTime("");
+//            if( type == __video ) {
+//                qmlPath = p->videoScan->addQueue(file, videoTotalTime);
+//            }
+//            else {
+//                qmlPath = QString::fromUtf8(QString("file:///" + file).toUtf8());
+//            }
 
-            p->list.append(std::make_tuple(name, qmlPath, 0, type, file, videoTotalTime));
+//            p->list.append(std::make_tuple(name, qmlPath, 0, type, file, videoTotalTime));
+
+            add(list.at(i).filePath());
             count ++;
         }
         emit searchFinished();

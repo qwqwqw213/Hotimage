@@ -32,5 +32,7 @@
         <file>resource/whitehot.jpg</file>
         <file>Setting/SwcDelegate.qml</file>
         <file>ImageListModel/ImageDelegate.qml</file>
+        <file>FontButton/FontButton.qml</file>
+        <file>Log/Log.qml</file>
     </qresource>
 </RCC>

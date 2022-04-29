@@ -9,6 +9,8 @@ import "./Setting"
 import "./Loading"
 import "./MessageBox"
 import "./ScaleBar"
+import "./FontButton"
+import "./Log"
 
 //import custom.cameraview 0.1
 
@@ -125,9 +127,9 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    font.family: Config.fontRegular
+                    font.family: Config.fontSolid
                     font.pixelSize: parent.width * 0.8
-                    text: "\uf01e"
+                    text: "\uf2f9"
                     color: btnShutterArea.pressed ? "#a0a0a0" : "white"
                     rotation: window.oldRotation
                 }
@@ -331,8 +333,8 @@ ApplicationWindow {
             // 相册按钮
             Item {
                 id: btnPhoto
-                width: parent.buttonSize * 0.85
-                height: parent.buttonSize * 0.85
+                width: btnCapture.width * 0.75
+                height: width
                 anchors.verticalCenter: btnCapture.verticalCenter
                 anchors.right: parent.right
                 anchors.rightMargin: width / 2
@@ -384,35 +386,25 @@ ApplicationWindow {
             }
 
             // 录像按钮
-            Item {
+            FontButton {
                 id: btnRecord
-                width: parent.buttonSize * 0.85
-                height: parent.buttonSize * 0.85
+                width: btnCapture.width * 0.75
+                height: width
                 anchors.verticalCenter: btnCapture.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: width / 2
-
-                Text {
-                    anchors.centerIn: parent
-                    font.family: Config.fontLight
-                    font.pixelSize: btnRecord.width * 0.9
-                    text: "\uf03d"
-                    color: TcpCamera.encoding ? "red" : (btnRecordArea.pressed ? "#a0a0a0" : "white")
-                    rotation: oldRotation
-                }
-
-                MouseArea {
-                    id: btnRecordArea
-                    anchors.fill: parent
-                    onClicked: {
-                        if( TcpCamera.encoding ) {
-                            TcpCamera.closeRecord()
-                        }
-                        else {
-                            TcpCamera.openRecord()
-                        }
+                family: Config.fontSolid
+                icon: "\uf03d"
+                pressColor: "#a0a0a0"
+                onClicked: {
+                    if( TcpCamera.encoding ) {
+                        TcpCamera.closeRecord()
+                    }
+                    else {
+                        TcpCamera.openRecord()
                     }
                 }
+                rotation: window.oldRotation
             }
         }
     }
@@ -512,6 +504,9 @@ ApplicationWindow {
             if( pressValid && !moveValid ) {
                 if( mouseX - pressedX > 20 ) {
                     moveValid = true
+                    if( stackView.depth < 3 ) {
+                        mainView.videoPlay = true
+                    }
                 }
             }
             if( moveValid ) {
@@ -538,6 +533,21 @@ ApplicationWindow {
                     stackView.pop()
                 }
             }
+        }
+    }
+
+//    Log {
+//        id: log
+//        anchors.left: parent.left
+//        anchors.verticalCenter: parent.verticalCenter
+//        width: parent.width / 2
+//        height: parent.height * 0.65
+//    }
+
+    Connections {
+        target: Config
+        onUpdateLog: (str) => {
+//            log.append(str)
         }
     }
 

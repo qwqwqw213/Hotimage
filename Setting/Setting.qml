@@ -67,7 +67,7 @@ Rectangle {
 
             SwcDelegate {
                 height: parent.itemHeight
-                label: qsTr("Hostpot mode")
+                label: qsTr("Hotspot mode")
                 onOffStatus: TcpCamera.hotspotMode
                 onClicked: {
                     if( TcpCamera.isConnected ) {
@@ -299,6 +299,21 @@ Rectangle {
                                          humidnessSlider.item.value,
                                          correctionSlider.item.value,
                                          distanceSlider.item.value)
+            }
+
+            SectionDelegate {
+                height: parent.itemHeight / 2
+                label: qsTr("Image flip")
+            }
+
+            Repeater {
+                model: TcpCamera.rotationCount
+                SelectDelegate {
+                    height: parent.itemHeight
+                    label: TcpCamera.rotation(index)
+                    selection: TcpCamera.rotationIndex === index
+                    onClicked: TcpCamera.rotationIndex = index
+                }
             }
 
             SectionDelegate {

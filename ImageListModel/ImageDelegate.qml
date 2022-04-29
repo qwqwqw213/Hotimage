@@ -122,6 +122,8 @@ MouseArea {
                 // 如果flick x移动了10个像素, 下次mouse x则会-10, 拖动会发生跳动
                 property real minusX
                 property real minusY
+                property real currentW
+                property real currentH
 
 
                 onPressed: {
@@ -131,6 +133,8 @@ MouseArea {
                     pressedY = mouseY
                     currentX = flick.contentX
                     currentY = flick.contentY
+                    currentW = flick.contentWidth
+                    currentH = flick.contentHeight
                     minusX = 0
                     minusY = 0
                 }
@@ -138,8 +142,14 @@ MouseArea {
                     var y = (mouseY + minusY) - pressedY
                     var x = (mouseX + minusX) - pressedX
                     if( moving ) {
+//                        var ratio = y / imageDelegate.height;
+//                        flick.contentWidth = currentW - (currentW * ratio)
+//                        flick.contentHeight = currentH - (currentH * ratio)
+
                         flick.contentY = currentY - y
                         flick.contentX = currentX - x
+//                        console.log("move:", flick.contentX, flick.contentY, mouseX, minusX, pressedX)
+
                         minusX = x
                         minusY = y
                     }
@@ -164,7 +174,6 @@ MouseArea {
                     }
                     flick.interactive = true
                 }
-
                 onClicked: {
                     if( dragging ) {
                         dragging = false
@@ -263,7 +272,6 @@ MouseArea {
 
     function leave(index) {
         var item = imageList.itemRect(index)
-//        console.log("leave:", item.x, item.y, item.w, item.h, item.pw, item.ph)
         imageDelegate.itemX = item.x
         imageDelegate.itemY = item.y
         imageDelegate.itemW = item.w
@@ -272,6 +280,8 @@ MouseArea {
         imageDelegate.itemSourceH = item.ph
         flick.x = 0 - flick.contentX
         flick.y = 0 - flick.contentY
+//        flick.width = flick.contentWidth
+//        flick.height = flick.contentHeight
         flick.contentX = 0
         flick.contentY = 0
         enterLeaveState = 1
@@ -368,9 +378,11 @@ MouseArea {
         timer.stop()
         if( flick.contentWidth > flick.width
                 || flick.contentHeight > flick.height ) {
+            imagePlayer.showTitle()
             resizeAnimation.resize(flick.x, flick.y, flick.width, flick.height)
         }
         else {
+            imagePlayer.hideTitle()
             var ratio = imageDelegate.landscape ?
                         flick.width / image.sourceSize.width : flick.height / image.sourceSize.height
             var w = image.sourceSize.width * ratio

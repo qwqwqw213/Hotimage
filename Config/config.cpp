@@ -79,6 +79,7 @@ public:
     int bottomMargin;
 
     QStringList fontFamilies;
+    void addFont(const QString &path);
 
 private:
     Config *f;
@@ -142,18 +143,35 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
 
     // 字库加载
     p->fontFamilies.clear();
-    int id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Brands-Regular-400.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
-    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Duotone-Solid-900.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
-    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Light-300.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
-    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Regular-400.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
-    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Solid-900.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
-    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Thin-100.otf");
-    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id));
+    int id = -1;
+    qDebug() << "- font awesome -";
+    p->addFont(":/resource/font/Font Awesome 6 Brands-Regular-400.otf");
+    p->addFont(":/resource/font/Font Awesome 6 Duotone-Solid-900.otf");
+    p->addFont(":/resource/font/Font Awesome 6 Pro-Light-300.otf");
+    p->addFont(":/resource/font/Font Awesome 6 Pro-Regular-400.otf");
+    p->addFont(":/resource/font/Font Awesome 6 Pro-Solid-900.otf");
+    p->addFont(":/resource/font/Font Awesome 6 Pro-Thin-100.otf");
+
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Brands-Regular-400.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Duotone-Solid-900.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Light-300.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Regular-400.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Solid-900.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+//    id = QFontDatabase::addApplicationFont(":/resource/font/Font Awesome 6 Pro-Thin-100.otf");
+//    qDebug() << id << QFontDatabase::applicationFontFamilies(id).at(0) << QFontDatabase::applicationFontFamilies(id).size();
+//    p->fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+    qDebug() << "- font awesome -";
+
     id = QFontDatabase::addApplicationFont(":/resource/font/SourceHanSansCN-Normal.otf");
     if( id >= 0 ) {
         QFont font = a->font();
@@ -163,12 +181,12 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
         a->setFont(font);
     }
 
-    qDebug() << "- font awesome -";
-    for(const auto &font : p->fontFamilies) {
-        qDebug() << font;
-    }
-    qDebug() << "font families size:" << p->fontFamilies.size();
-    qDebug() << "- font awesome -";
+//    qDebug() << "- font awesome -";
+//    for(const auto &font : p->fontFamilies) {
+//        qDebug() << font;
+//    }
+//    qDebug() << "font families size:" << p->fontFamilies.size();
+//    qDebug() << "- font awesome -";
 
     p->screen = QGuiApplication::primaryScreen();
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
@@ -316,17 +334,17 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     // 配置模块
     cnt->setContextProperty("Config", this);
 
+    // 视频播放器模块
+    p->videoPlayer.reset(new VideoPlayer);
+    p->videoPlayer->setFrameUrl(e, "VideoPlayer");
+    cnt->setContextProperty("VideoPlayer", p->videoPlayer.data());
+
     // 图片文件路径模块
     p->imageModel.reset(new ImageListModel);
     p->imageModel->search(p->imageGalleryPath);
     VideoScanImage *scanProvider = p->imageModel->provider();
     e->addImageProvider(scanProvider->url(), scanProvider);
     cnt->setContextProperty("ImageModel", p->imageModel.data());
-
-    // 视频播放器模块
-    p->videoPlayer.reset(new VideoPlayer);
-    p->videoPlayer->setFrameUrl(e, "VideoPlayer");
-    cnt->setContextProperty("VideoPlayer", p->videoPlayer.data());
 
     // 摄像头模块
     p->tcpCamera.reset(new TcpCamera);
@@ -513,6 +531,12 @@ void Config::saveSetting()
     p->saveSetting();
 }
 
+void Config::appendLog(const QString &str)
+{
+    qDebug() << str;
+    emit updateLog(str);
+}
+
 ConfigPrivate::ConfigPrivate(Config *parent)
 {
     f = parent;
@@ -639,6 +663,20 @@ void ConfigPrivate::saveSetting()
 {
     qDebug() << "save setting path:" << setting->fileName();
     setting->setValue("Normal/Language", language);
+}
+
+void ConfigPrivate::addFont(const QString &path)
+{
+    QFile file(path);
+    if( !file.open(QIODevice::ReadOnly) ) {
+        qDebug() << "ERROR: open font file fail:" << path;
+        return;
+    }
+
+    int id = QFontDatabase::addApplicationFontFromData(file.readAll());
+    qDebug() << QFontDatabase::applicationFontFamilies(id).at(0);
+    fontFamilies.append(QFontDatabase::applicationFontFamilies(id).at(0));
+    file.close();
 }
 
 Config * Config::configSelf = nullptr;

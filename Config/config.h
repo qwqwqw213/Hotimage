@@ -97,10 +97,13 @@ public:
 
     Q_INVOKABLE void saveSetting();
 
+    void appendLog(const QString &str);
+
 Q_SIGNALS:
     void rotationChanged();
     void languageChanged();
     void orientationChanged();
+    void updateLog(const QString &);
 
 
 private:
