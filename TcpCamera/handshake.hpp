@@ -164,6 +164,10 @@ typedef struct
     // 1 路由器连接热点
     bool hotspotMode;
 
+    // 0 一帧接收全部图像数据
+    // 1 一帧接收二分之一图像数据
+    int frameMode;
+
     std::string hotspot_ssid;
     std::string hotspot_password;
 } t_setting_page;
@@ -180,6 +184,7 @@ public:
         __palette,
         __config,
         __mode,
+        __frameMode,
         __hotspot_info,
         __disconnect,
     };
@@ -198,6 +203,7 @@ public:
         s = _s;
         fd = _fd;
         request = __req_none;
+        frame_mode = 0;
         msg_callback_func = func;
         if( !t.joinable() )
         {
@@ -277,7 +283,8 @@ public:
                     ctl.sendCorrection(fd, fix);
                     usleep(10000);
                     hotspot_mode = buf[26];
-                    int start = 27;
+                    frame_mode = buf[27];
+                    int start = 28;
                     size_t offset = str.find(';');
                     if( offset != std::string::npos
                         && str.find(';', offset) != std::string::npos )
@@ -295,6 +302,7 @@ public:
                             << "         humi: " << humi << "\n"
                             << "          fix: " << fix << "\n"
                             << "     distance: " << distance << "\n"
+                            << "   frame mode:"  << frame_mode << "\n"
                             << " hotspot mode: " << hotspot_mode << "\n"
                             << "         ssid: " << hotspot_ssid << "\n"
                             << "     password: " << hotspot_password << "\n";
@@ -332,6 +340,10 @@ public:
                           << "distance:" << distance << "\n";
             }
                 break;
+            case HandShake::__frameMode: {
+                frame_mode = buf[2];
+            }
+                break;
             case HandShake::__hotspot_info: {
                 hotspot_mode = buf[2];
                 int start = 3;
@@ -365,6 +377,7 @@ public:
         return request;
     }
 
+    uint8_t frameMode() { return frame_mode; }
     uint8_t hotspotMode() { return hotspot_mode; }
     std::string hotspotSSID() { return hotspot_ssid; }
     std::string hotspotPassword() { return hotspot_password; }
@@ -454,7 +467,8 @@ public:
             byte.replace(20, 2, qint2byte(t.distance, 2));
             byte.replace(22, 4, qfloat2byte(t.correction));
             byte[26] = t.hotspotMode;
-            int offset = 27;
+            byte[27] = t.frameMode;
+            int offset = 28;
             byte.replace(offset, t.hotspot_ssid.length(), t.hotspot_ssid.c_str());
             offset = offset + t.hotspot_ssid.length();
             byte[offset] = ';';
@@ -479,6 +493,10 @@ public:
             break;
         case __mode: {
             byte[2] = t.mode;
+        }
+            break;
+        case __frameMode: {
+            byte[2] = t.frameMode;
         }
             break;
         case __hotspot_info: {
@@ -508,6 +526,7 @@ private:
     int fd;
     bool isWait;
     XthermControl ctl;
+    uint8_t frame_mode;
     uint8_t hotspot_mode;
     std::string hotspot_ssid;
     std::string hotspot_password;

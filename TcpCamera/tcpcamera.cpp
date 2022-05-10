@@ -105,6 +105,7 @@ public:
     void searchDevice();
 
     bool showTemp;
+    int frameMode;
 
     QString localIP;
     QString deviceIP;
@@ -113,7 +114,8 @@ public:
 
     int isHotspotMode(const uint8_t &n, const uint8_t &o);
 
-    void decode(uint16_t *data, const int &width, const int &height, const CameraPixelFormat &format, QImage *image);
+    uint8_t *frameBuffer;
+    void decode(uint8_t *buf, const int &width, const int &height, const CameraPixelFormat &format, QImage *image, const bool &fullBuffer);
 
 private:
     TcpCamera *f;
@@ -222,6 +224,11 @@ bool TcpCamera::manaulConnectState()
 
 void TcpCamera::manualConnect(const QString &devIp)
 {
+    if( p->manualConnState ) {
+        emit msg(tr("Searching"));
+        return;
+    }
+
     if( isConnected() ) {
         emit msg(tr("Is connected state"));
         return;
@@ -322,6 +329,20 @@ qreal TcpCamera::correction()
 uint16_t TcpCamera::distance()
 {
     return p->cfg.set.distance;
+}
+
+int TcpCamera::frameMode()
+{
+    return p->cfg.set.frameMode;
+}
+
+void TcpCamera::setFrameMode(const int &mode)
+{
+    p->cfg.set.frameMode = mode;
+    p->cfg.set.type = HandShake::__frameMode;
+    QByteArray byte = p->handshake.pack(p->cfg.set);
+    emit p->write(byte);
+    emit frameModeChanged();
 }
 
 bool TcpCamera::showTemp()
@@ -471,6 +492,8 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
     fps = 0.0;
     manualConnState = false;
 
+    frameBuffer = nullptr;
+
     thread = new QThread;
     QObject::connect(thread, &QThread::started, [=](){
         exit = 0;
@@ -546,6 +569,11 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
 #endif
 
         buf.clear();
+
+        if( frameBuffer ) {
+            delete [] frameBuffer;
+            frameBuffer = nullptr;
+        }
 
         emit f->connectStatusChanged();
         g_Config->appendLog(QString("socket release"));
@@ -651,6 +679,8 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
 
     socket = new QTcpSocket;
 
+    qDebug() << "manual connect ip:" << dev;
+
     int time = 0;
     while ((exit != 1) && (socket != nullptr) && (time < 30)) {
         socket->connectToHost(dev, cfg.port);
@@ -666,6 +696,7 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
     manualConnState = false;
     emit f->manualConnectStateChanged();
 
+    qDebug() << "manual:" << socket->state();
     if( socket->state() != QTcpSocket::ConnectedState ) {
         emit f->msg("Manual connect fail");
         socket->deleteLater();
@@ -673,7 +704,9 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
         searchDevice();
     }
     else {
-        emit f->msg("Connect success");
+        qDebug() << "manual conenct success";
+
+        socketConnection();
     }
 }
 
@@ -764,7 +797,7 @@ void TcpCameraPrivate::onReadyRead()
     if( !header.isValidHeader() ) {
         // 包丢失
         // 重新校验包
-        qDebug() << "invalid pack";
+//        qDebug() << "invalid pack";
 
         int i = 0;
         int flag = 0;
@@ -778,7 +811,7 @@ void TcpCameraPrivate::onReadyRead()
                 QByteArray head = buf.mid(i, headerSize);
                 if( header.isValidHeader(head.data()) )
                 {
-                    qDebug() << "remove invalid data, size:" << i;
+                    qDebug() << "invalid pack, remove invalid data, size:" << i;
                     unpackMutex.lock();
                     buf.remove(0, i);
                     unpackMutex.unlock();
@@ -796,7 +829,7 @@ void TcpCameraPrivate::onReadyRead()
 
         if( flag == 0 ) {
             // 当前数据无效
-            qDebug() << "pack invalid:" << size;
+            qDebug() << "invalid pack, remove all:" << size;
             unpackMutex.lock();
             buf.remove(0, size);
             unpackMutex.unlock();
@@ -804,18 +837,22 @@ void TcpCameraPrivate::onReadyRead()
         return;
     }
 
-    int totalSize = header.bufferLength + headerSize;
-    if( buf.size() >= totalSize )
+    if( buf.size() >= header.bufferLength )
     {
         int state = isHotspotMode(header.value, cfg.header.value);
         memcpy(&cfg.header, &header, sizeof (t_header));
 
         QImage *image = f->rgb();
         CameraPixelFormat format = cfg.header.pixelFormat == __yuyv ? __pix_yuyv : __pix_yuv420p;
-        decode(reinterpret_cast<uint16_t *>(buf.data() + headerSize), cfg.header.width, cfg.header.height, format, image);
+        bool fullFrame = (header.value >> 3) & 0x01;
+        decode(reinterpret_cast<uint8_t *>(buf.data() + headerSize),
+               cfg.header.width, cfg.header.height,
+               format,
+               image,
+               fullFrame);
 
         unpackMutex.lock();
-        buf.remove(0, totalSize);
+        buf.remove(0, header.bufferLength);
         unpackMutex.unlock();
 
         if( exit == 0 ) {
@@ -833,7 +870,8 @@ void TcpCameraPrivate::onReadyRead()
     }
 }
 
-void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &height, const CameraPixelFormat &format, QImage *image)
+//void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &height, const CameraPixelFormat &format, QImage *image)
+void TcpCameraPrivate::decode(uint8_t *buf, const int &width, const int &height, const CameraPixelFormat &format, QImage *image, const bool &fullBuffer)
 {
 #ifdef TEMPERATURE_SDK
     if( temperatureData == NULL ) {
@@ -855,6 +893,22 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
         }
     }
 
+    if( !fullBuffer ) {
+        if( frameBuffer == nullptr ) {
+            frameBuffer = new uint8_t[ProviderCamera::byteSize(width, height, format)];
+        }
+
+        int packIndex = (cfg.header.value >> 2) & 0x01;
+        int row = width * 2;
+        for(int i = 0; i < height / 2; i ++) {
+            memcpy(frameBuffer + ((2 * i + packIndex) * row),
+                   buf + (i * row),
+                   row);
+        }
+    }
+
+    uint16_t *data = fullBuffer ?
+                reinterpret_cast<uint16_t *>(buf) : reinterpret_cast<uint16_t *>(frameBuffer);
     uint16_t *temp = data + (width * (height - IMAGE_Y_OFFSET));
     float correction;
     float Refltmp;
@@ -950,19 +1004,43 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
 
     uint8_t *bit = image->bits();
     if( format == __pix_yuyv ) {
-        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+        PixelOperations::yuv422_to_rgb(fullBuffer ? buf : frameBuffer,
+                                       bit,
                                        width, height - IMAGE_Y_OFFSET);
     }
     else if( format == __pix_yuv420p ) {
-        PixelOperations::yuv420p_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+        PixelOperations::yuv420p_to_rgb(fullBuffer ? buf : frameBuffer,
+                                        bit,
                                         width, height - IMAGE_Y_OFFSET);
     }
+//    if( format == __pix_yuyv ) {
+//        PixelOperations::yuv422_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+//                                       width, height - IMAGE_Y_OFFSET);
+//    }
+//    else if( format == __pix_yuv420p ) {
+//        PixelOperations::yuv420p_to_rgb(reinterpret_cast<uint8_t *>(data), bit,
+//                                        width, height - IMAGE_Y_OFFSET);
+//    }
+
+    int rotation = f->rotationIndex();
+    QImage i = image->mirrored(rotation & 0x01, (rotation >> 1) & 0x01);
+
+    QPainter pr(&i);
+    QFontMetrics metrics(pr.font());
+
+    // 帧率
+    pr.setPen(Qt::white);
+    QString str = QString::number(fps, 'f', 2);
+    int fontW = metrics.horizontalAdvance(str);
+    int fontH = metrics.height();
+    pr.drawText(10, 10,
+                fontW, fontH,
+                Qt::AlignCenter,
+                str);
 
 #ifdef TEMPERATURE_SDK
     // 画温度信息
     if( showTemp ) {
-        QPainter pr(image);
-        QFontMetrics metrics(pr.font());
 
         // 最大温度
         pr.setPen(Qt::red);
@@ -1008,21 +1086,8 @@ void TcpCameraPrivate::decode(uint16_t *data, const int &width, const int &heigh
                     fontW, fontH,
                     Qt::AlignCenter,
                     str);
-
-        // 帧率
-        pr.setPen(Qt::white);
-        str = QString::number(fps, 'f', 2);
-        fontW = metrics.horizontalAdvance(str);
-        fontH = metrics.height();
-        pr.drawText(10, 10,
-                    fontW, fontH,
-                    Qt::AlignCenter,
-                    str);
     }
 #endif
-    int rotation = f->rotationIndex();
-    QImage i = image->mirrored(rotation & 0x01, (rotation >> 1) & 0x01);
-
     if( encode->status() ) {
         encode->pushEncode(i.copy());
     }
@@ -1043,6 +1108,7 @@ void TcpCameraPrivate::readSetting()
     cfg.set.humidness = g_Config->readSetting("Tcp/humidness", 1.0).toDouble();
     cfg.set.correction = g_Config->readSetting("Tcp/correction", 1.0).toDouble();
     cfg.set.distance = g_Config->readSetting("Tcp/distance", 0).toUInt();
+    cfg.set.frameMode = g_Config->readSetting("Tcp/frameMode", 0).toUInt();
     showTemp = g_Config->readSetting("Tcp/showtemp", false).toBool();
     cfg.set.hotspotMode = g_Config->readSetting("Tcp/hotspotMode", false).toBool();
     cfg.set.hotspot_ssid = g_Config->readSetting("Tcp/hotspotSsid", "").toString().toStdString();
@@ -1061,6 +1127,7 @@ void TcpCameraPrivate::saveSetting()
     param.append({"Tcp/humidness", cfg.set.humidness});
     param.append({"Tcp/correction", cfg.set.correction});
     param.append({"Tcp/distance", cfg.set.distance});
+    param.append({"Tcp/frameMode", cfg.set.frameMode});
     param.append({"Tcp/showtemp", showTemp});
     param.append({"Tcp/hotspotMode", cfg.set.hotspotMode});
     param.append({"Tcp/hotspotSsid", QString::fromStdString(cfg.set.hotspot_ssid)});
@@ -1271,7 +1338,7 @@ void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, 
 
     CameraPixelFormat format = cam->uvc->pixelFormat();
     QImage *rgb = cam->f->rgb();
-    cam->decode(reinterpret_cast<uint16_t *>(data), width, height, format, rgb);
+    cam->decode(reinterpret_cast<uint8_t *>(data), width, height, format, rgb, true);
 
 //    switch (format) {
 //    case __pix_yuyv: {

@@ -13,8 +13,6 @@
 #include "QThread"
 #include "QMutex"
 
-static int ffmpeg_init = 0;
-
 class VideoProcessPrivate
 {
 
@@ -143,16 +141,17 @@ VideoProcess::VideoProcess(QObject *parent)
     : QObject(parent)
     , p(new VideoProcessPrivate(this))
 {
-    if( ffmpeg_init == 0 ) {
-        ffmpeg_init = 1;
-        avcodec_register_all();
-        av_register_all();
-    }
 }
 
 VideoProcess::~VideoProcess()
 {
 
+}
+
+void VideoProcess::initialize()
+{
+    avcodec_register_all();
+    av_register_all();
 }
 
 bool VideoProcess::loadVideoInfo(const QString &path, VideoInfo *info)

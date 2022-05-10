@@ -39,21 +39,10 @@ ApplicationWindow {
     onWidthChanged: console.log("main width:", width)
     onHeightChanged: console.log("main height:", height)
 
-    property real oldRotation: 0
-    PropertyAnimation {
-        id: rotationAnimation
-        property: "oldRotation"
-        target: window
-        from: window.oldRotation
-        to: Config.rotation
-        duration: 100
-        easing.type: Easing.OutCurve
-    }
-
-    Connections {
-        target: Config
-        onRotationChanged: {
-            rotationAnimation.running = true
+    property real oldRotation: Config.rotation
+    Behavior on oldRotation {
+        NumberAnimation {
+            duration: 100
         }
     }
 

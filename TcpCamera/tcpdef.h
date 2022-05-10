@@ -20,7 +20,7 @@
 
 #endif
 
-#define SERVER_IP       "192.168.20.22"
+#define SERVER_IP       "192.168.20.29"
 #define SERVER_PORT     27015
 
 typedef struct

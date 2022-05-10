@@ -334,6 +334,9 @@ int Config::init(QGuiApplication *a, QQmlApplicationEngine *e)
     // 配置模块
     cnt->setContextProperty("Config", this);
 
+    // ffmpeg init
+    VideoProcess::initialize();
+
     // 视频播放器模块
     // 如果ffmpeg没有注册, 调用API会返回-1094995529
     p->videoPlayer.reset(new VideoPlayer);

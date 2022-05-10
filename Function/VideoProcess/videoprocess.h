@@ -55,6 +55,8 @@ public:
     explicit VideoProcess(QObject *parent = nullptr);
     ~VideoProcess();
 
+    static void initialize();
+
 
     /*
      *  获取视频缩略图 时间

@@ -66,6 +66,10 @@ public:
     Q_PROPERTY(qreal distance READ distance NOTIFY cameraParamChanged)
     uint16_t distance();
 
+    Q_PROPERTY(int frameMode READ frameMode WRITE setFrameMode NOTIFY frameModeChanged)
+    int frameMode();
+    void setFrameMode(const int &mode);
+
     Q_PROPERTY(bool showTemp READ showTemp WRITE setShowTemp NOTIFY showTempChanged)
     bool showTemp();
     void setShowTemp(const bool &show);
@@ -112,6 +116,7 @@ Q_SIGNALS:
     void cameraParamChanged();
     void manualConnectStateChanged();
     void hotspotParamChanged();
+    void frameModeChanged();
 };
 
 #endif // RECV_H

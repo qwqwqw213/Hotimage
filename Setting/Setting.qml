@@ -152,6 +152,25 @@ Rectangle {
 
             SectionDelegate {
                 height: parent.itemHeight / 2
+                label: qsTr("Imaging quality")
+            }
+
+            SelectDelegate {
+                height: parent.itemHeight
+                label: qsTr("FPS first")
+                selection: TcpCamera.frameMode === 0 ? true : false
+                onClicked: TcpCamera.frameMode = 0
+            }
+
+            SelectDelegate {
+                height: parent.itemHeight
+                label: qsTr("Image first")
+                selection: TcpCamera.frameMode === 1 ? true : false
+                onClicked: TcpCamera.frameMode = 1
+            }
+
+            SectionDelegate {
+                height: parent.itemHeight / 2
                 label: qsTr("Palette")
             }
 
