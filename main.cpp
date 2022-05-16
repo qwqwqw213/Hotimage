@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
         exitCode = app.exec();
 
         config->release();
+        qDebug() << "app exit";
     } while(exitCode == REBOOT_CODE);
 
     return exitCode;

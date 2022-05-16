@@ -67,11 +67,14 @@ Rectangle {
 
             SwcDelegate {
                 height: parent.itemHeight
-                label: qsTr("Hotspot mode")
-                onOffStatus: TcpCamera.hotspotMode
+                label: qsTr("Hotspot enable")
+                onOffStatus: TcpCamera.hotspotEnable
                 onClicked: {
                     if( TcpCamera.isConnected ) {
-                        TcpCamera.setHotspotParam(ssid.value, password.value)
+                        if( !TcpCamera.setHotspotParam(ssid.value, password.value) ) {
+                            ssid.value = ""
+                            password.value = ""
+                        }
                     }
                     else {
                         messagebox.text = qsTr("Device not connect")
@@ -92,8 +95,8 @@ Rectangle {
                 lineHeight: 1.5
                 text: qsTr("If you want camera device connect to phone hotspot.")
                       + qsTr("\n1. connect camera device wi-fi")
-                      + qsTr("\n2. fill in hotspot ssid and password, turn on \"Hotspot mode\"")
-                      + qsTr("\n3. open phone system setting, turn on hotspot")
+                      + qsTr("\n2. fill in hotspot ssid and password, turn on \"Hotspot enable\"")
+                      + qsTr("\n3. open phone system setting, turn on hotspot switch")
                       + qsTr("\nif hotspot info changed, need reconnect device and reset ssid and password")
             }
 

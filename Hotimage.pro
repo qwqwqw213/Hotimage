@@ -50,7 +50,8 @@ HEADERS += \
     TcpCamera/tcpsearcher.hpp \
     VideoPlayer/videoplayer.h
 
-DEFINES += ANDROID_APP
+# HandShake defined
+DEFINES += MOBILE_APP
 
 DEPENDPATH += $$PWD/Function
 INCLUDEPATH += $$PWD/Function

@@ -121,6 +121,7 @@ void ImageListModel::search(const QString &path, QQmlApplicationEngine *e)
             add(list.at(i).filePath());
             count ++;
         }
+        qDebug() << "image gallery search finished";
         emit searchFinished();
     });
 }

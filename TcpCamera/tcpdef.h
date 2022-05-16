@@ -16,19 +16,24 @@
 #define CAMERA_LEN      130
 #define RANGE_MODE      120
 #define SHUTTER_FIX     0
-#define OUTPUT_MODE     5
+//#define OUTPUT_MODE     5
+#define N16_MODE        4
+#define YUYV_MODE       5
 
 #endif
 
 #define SERVER_IP       "192.168.20.29"
-#define SERVER_PORT     27015
+#define SERVER_PORT     27016
 
 typedef struct
 {
     QString ip;
     int port;
-    t_setting_page set;
-    t_header header;
+    bool hotspotEnable;
+    QString hotspotSsid;
+    QString hotspotPassword;
+    hs::t_packet set;
+    hs::t_header header;
 } tcp_config;
 
 #endif // TCPDEF_H

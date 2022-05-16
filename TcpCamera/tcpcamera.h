@@ -68,6 +68,8 @@ public:
 
     Q_PROPERTY(int frameMode READ frameMode WRITE setFrameMode NOTIFY frameModeChanged)
     int frameMode();
+    // 0: half frame
+    // 1: full frame
     void setFrameMode(const int &mode);
 
     Q_PROPERTY(bool showTemp READ showTemp WRITE setShowTemp NOTIFY showTempChanged)
@@ -85,8 +87,8 @@ public:
     Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
     QString cameraSN();
 
-    Q_PROPERTY(bool hotspotMode READ hotspotMode NOTIFY hotspotParamChanged)
-    bool hotspotMode();
+    Q_PROPERTY(bool hotspotEnable READ hotspotEnable NOTIFY hotspotParamChanged)
+    bool hotspotEnable();
     Q_PROPERTY(QString hotspotSSID READ hotspotSSID NOTIFY hotspotParamChanged)
     QString hotspotSSID();
     Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY hotspotParamChanged)

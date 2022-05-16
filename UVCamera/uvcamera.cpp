@@ -152,6 +152,7 @@ UVCameraPrivate::UVCameraPrivate(UVCamera *parent)
             if( ret == UVC_SUCCESS )
             {
                 ret = hander->UvcRequestStart();
+                qDebug() << "uvc start:" << ret;
                 if( ret == UVC_SUCCESS )
                 {
                     exit_thread = false;
@@ -165,6 +166,7 @@ UVCameraPrivate::UVCameraPrivate(UVCamera *parent)
                             QThread::msleep(1000);
                             continue;
                         }
+
                         if( data->data_bytes < f->byteSize(data->width, data->height, format) ) {
                             qDebug() << "uvc invaild data size" << data->data_bytes << data->width << data->height;
                             continue;

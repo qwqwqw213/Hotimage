@@ -17,6 +17,7 @@ enum CameraPixelFormat {
     __pix_yuyv,
     __pix_yuv420p,
     __pix_rgb24,
+    __pix_custom,
 };
 
 enum CameraFlip {
@@ -103,7 +104,6 @@ public:
         return QString("Unknow");
     }
 
-
     // qml 加载图片部分
     Q_PROPERTY(bool canReadUrl READ canReadUrl NOTIFY updateImageFrameUrl)
     bool canReadUrl() { return provider->canRead(); }
@@ -121,6 +121,53 @@ public:
     QString freeze() { return provider->freezeUrl(); }
     void setUrlImage(QImage &image) { provider->append(image); }
     void clearImage() { provider->clear(); }
+
+protected:
+    // 原始坐标转换为画面旋转后的坐标
+    // @param 原始坐标
+    // @param 坐标起始索引, 0 or 1
+    QPoint rotatePoint(const QPoint &p, const int &start = 0) {
+        int x = p.x();
+        int y = p.y();
+        int minus = (start == 1 ? 0 : 1);
+        if( (rotationIndex() & 0x01) == __horizontally_flip ) {
+            x = cx() + (cx() - minus - x);
+        }
+        if( (rotationIndex() & 0x02) == __vertically_flip ) {
+            y = cy() + (cy() - minus - y);
+        }
+        return QPoint(x, y);
+    }
+
+    QLine rotateLine(const QLine &l, const int &start = 0) {
+        int x0 = l.x1();
+        int y0 = l.y1();
+        int x1 = l.x2();
+        int y1 = l.y2();
+        int minus = (start == 1 ? 0 : 1);
+        if( (rotationIndex() & 0x01) == __horizontally_flip ) {
+            x0 = cx() + (cx() - minus - x0);
+            x1 = cx() + (cx() - minus - x1);
+        }
+        if( (rotationIndex() & 0x02) == __vertically_flip ) {
+            y0 = cy() + (cy() - minus - y0);
+            y1 = cy() + (cy() - minus - y1);
+        }
+        return QLine(x0, y0, x1, y1);
+    }
+
+    QRect rotateRect(const QRect &r, const int &start = 0) {
+        int x = r.x();
+        int y = r.y();
+        int minus = (start == 1 ? 0 : 1);
+        if( (rotationIndex() & 0x01) == __horizontally_flip ) {
+            x = cx() + (cx() - minus - x) - r.width();
+        }
+        if( (rotationIndex() & 0x02) == __vertically_flip ) {
+            y = cy() + (cy() - minus - y) - r.height();
+        }
+        return QRect(x, y, r.width(), r.height());
+    }
 
 Q_SIGNALS:
     void updateCameraState();
