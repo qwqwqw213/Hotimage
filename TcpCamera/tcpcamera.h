@@ -84,14 +84,16 @@ public:
     Q_PROPERTY(QString recordTime READ recordTime NOTIFY recordTimeChanged)
     QString recordTime();
 
-    Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY cameraSNChanged)
+    Q_PROPERTY(QString cameraSN READ cameraSN NOTIFY productInfoChanged)
     QString cameraSN();
+    Q_PROPERTY(QString version READ version NOTIFY productInfoChanged)
+    QString version();
 
-    Q_PROPERTY(bool hotspotEnable READ hotspotEnable NOTIFY hotspotParamChanged)
+    Q_PROPERTY(bool hotspotEnable READ hotspotEnable NOTIFY hotspotEnableChanged)
     bool hotspotEnable();
-    Q_PROPERTY(QString hotspotSSID READ hotspotSSID NOTIFY hotspotParamChanged)
+    Q_PROPERTY(QString hotspotSSID READ hotspotSSID CONSTANT)
     QString hotspotSSID();
-    Q_PROPERTY(QString hotspotPassword READ hotspotPassword NOTIFY hotspotParamChanged)
+    Q_PROPERTY(QString hotspotPassword READ hotspotPassword CONSTANT)
     QString hotspotPassword();
     Q_INVOKABLE bool setHotspotParam(const QString &ssid, const QString &password);
 
@@ -114,10 +116,10 @@ Q_SIGNALS:
     void encodingChanged();
     void recordTimeChanged();
     void videoFrame(QImage);
-    void cameraSNChanged();
+    void productInfoChanged();
     void cameraParamChanged();
     void manualConnectStateChanged();
-    void hotspotParamChanged();
+    void hotspotEnableChanged();
     void frameModeChanged();
 };
 

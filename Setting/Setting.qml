@@ -172,6 +172,18 @@ Rectangle {
                 onClicked: TcpCamera.frameMode = 1
             }
 
+            Text {
+                width: parent.width - leftRightMargin * 2
+                height: contentHeight + leftRightMargin * 2
+                anchors.left: parent.left
+                anchors.leftMargin: leftRightMargin
+                topPadding: leftRightMargin
+                color: "white"
+                wrapMode: Text.Wrap
+                lineHeight: 1.5
+                text: qsTr("Keep the framerate smooth using \"FPS first\" when abnormal communication")
+            }
+
             SectionDelegate {
                 height: parent.itemHeight / 2
                 label: qsTr("Palette")
@@ -366,6 +378,12 @@ Rectangle {
                 height: parent.itemHeight
                 label: qsTr("SN")
                 value: TcpCamera.cameraSN
+            }
+
+            InfoDelegate {
+                height: parent.itemHeight
+                label: qsTr("Version")
+                value: TcpCamera.version
             }
         }
 

@@ -4,17 +4,18 @@
 #include "QDebug"
 #include "QElapsedTimer"
 
+#include "iostream"
 #include "stdio.h"
 #include "vector"
 #include "math.h"
 #include "stdlib.h"
 #include "cstdint"
+#include "memory"
 using namespace std;
 
 #define RELEASE_BUFFER(x) { if (x) {delete [] x; x = NULL;} }
 
 #define RGB_SIZE                    256
-#define PSEUDO_COLOR_TABLE_SIZE     7
 
 typedef unsigned char YUV;
 typedef unsigned char RGB;
@@ -45,14 +46,16 @@ enum PixelChannel
 
 enum PseudoColorTable
 {
-    __InvalidPseudoTable = -1,
-    __WhiteHot,
-    __BlackHot,
-    __BlackRed,
-    __PurpleRedYello,
-    __BlueGreenRed,
-    __RainbowHighBlue,
-    __RainbowHighRed,
+    __Pseudo_WhiteHot = 0,
+    __Pseudo_BlackHot,
+    __Pseudo_Iron,
+    __Pseudo_IronGray,
+    __Pseudo_Rainbow,
+    __Pseudo_HCR,
+    __Pseudo_Ocean,
+    __Pseudo_Summer,
+    __Pseudo_Hot,
+    __InvalidPseudoTable,
 };
 
 struct Vec3f
@@ -68,14 +71,14 @@ struct Vec3f
     }
 };
 
-typedef struct
-{
-    PseudoColorTable current;
-    vector<Vec3f> **map;
-    RGB *r;
-    RGB *g;
-    RGB *b;
-} PseudoColor;
+//typedef struct
+//{
+//    PseudoColorTable current;
+//    vector<Vec3f> **map;
+//    RGB *r;
+//    RGB *g;
+//    RGB *b;
+//} PseudoColor;
 
 typedef struct _DOT
 {
@@ -118,8 +121,9 @@ typedef struct
 class PixelOperations
 {
 public:
-    PixelOperations() { m_pseudo = nullptr; }
-    ~PixelOperations() { freePseudo(); }
+    PixelOperations() { }
+    PixelOperations(const PseudoColorTable &table) { initializerPseudo(table); }
+    ~PixelOperations() { }
 
     // v: cr
     // u: cb
@@ -512,400 +516,40 @@ public:
         }
     }
 
-    bool hasPseudoTable() { return (m_pseudo != nullptr); }
-
-    int pseudoCount() {
-        return PSEUDO_COLOR_TABLE_SIZE;
-    }
-
     bool initializerPseudo(const PseudoColorTable &table)
     {
-        if( hasPseudoTable() ) {
-            return true;
-        }
-        PseudoColor *pseudo = new PseudoColor;
-        pseudo->map = new vector<Vec3f>*[PSEUDO_COLOR_TABLE_SIZE];
-        for(int i = 0; i < PSEUDO_COLOR_TABLE_SIZE; i ++) {
-            pseudo->map[i] = new vector<Vec3f>[3];
-        }
-        pseudo->r = new RGB[RGB_SIZE];
-        pseudo->g = new RGB[RGB_SIZE];
-        pseudo->b = new RGB[RGB_SIZE];
-
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0, 0.0, 0.0));
-           r.push_back(Vec3f(0.111111111111, 0.222222222222, 0.222222222222));
-           r.push_back(Vec3f(0.222222222222, 0.444444444444, 0.444444444444));
-           r.push_back(Vec3f(0.333333333333, 0.666666666667, 0.666666666667));
-           r.push_back(Vec3f(0.444444444444, 0.888888888889, 0.888888888889));
-           r.push_back(Vec3f(0.555555555556, 1.0, 1.0));
-           r.push_back(Vec3f(0.666666666667, 1.0, 1.0));
-           r.push_back(Vec3f(0.777777777778, 1.0, 1.0));
-           r.push_back(Vec3f(0.888888888889, 1.0, 1.0));
-           r.push_back(Vec3f(1.0, 1.0, 1.0));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0, 0.0, 0.0));
-           g.push_back(Vec3f(0.111111111111, 0.0, 0.0));
-           g.push_back(Vec3f(0.222222222222, 0.0, 0.0));
-           g.push_back(Vec3f(0.333333333333, 0.166666666667, 0.166666666667));
-           g.push_back(Vec3f(0.444444444444, 0.388888888889, 0.388888888889));
-           g.push_back(Vec3f(0.555555555556, 0.611111111111, 0.611111111111));
-           g.push_back(Vec3f(0.666666666667, 0.833333333333, 0.833333333333));
-           g.push_back(Vec3f(0.777777777778, 1.0, 1.0));
-           g.push_back(Vec3f(0.888888888889, 1.0, 1.0));
-           g.push_back(Vec3f(1.0, 1.0, 1.0));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0, 0.0, 0.0));
-           b.push_back(Vec3f(0.111111111111, 0.0, 0.0));
-           b.push_back(Vec3f(0.222222222222, 0.0, 0.0));
-           b.push_back(Vec3f(0.333333333333, 0.0, 0.0));
-           b.push_back(Vec3f(0.444444444444, 0.0, 0.0));
-           b.push_back(Vec3f(0.555555555556, 0.111111111111, 0.111111111111));
-           b.push_back(Vec3f(0.666666666667, 0.333333333333, 0.333333333333));
-           b.push_back(Vec3f(0.777777777778, 0.555555555556, 0.555555555556));
-           b.push_back(Vec3f(0.888888888889, 0.777777777778, 0.777777777778));
-           b.push_back(Vec3f(1.0, 1.0, 1.0));
-           pseudo->map[__BlackRed][R_MAP] = r; pseudo->map[__BlackRed][G_MAP] = g; pseudo->map[__BlackRed][B_MAP] = b;
-       }
-
-       {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0, 1.0, 1.0));
-           r.push_back(Vec3f(0.111111111111, 0.888888888889, 0.888888888889));
-           r.push_back(Vec3f(0.222222222222, 0.777777777778, 0.777777777778));
-           r.push_back(Vec3f(0.333333333333, 0.666666666667, 0.666666666667));
-           r.push_back(Vec3f(0.444444444444, 0.555555555556, 0.555555555556));
-           r.push_back(Vec3f(0.555555555556, 0.444444444444, 0.444444444444));
-           r.push_back(Vec3f(0.666666666667, 0.333333333333, 0.333333333333));
-           r.push_back(Vec3f(0.777777777778, 0.222222222222, 0.222222222222));
-           r.push_back(Vec3f(0.888888888889, 0.111111111111, 0.111111111111));
-           r.push_back(Vec3f(1.0, 0.0, 0.0));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0, 1.0, 1.0));
-           g.push_back(Vec3f(0.111111111111, 0.888888888889, 0.888888888889));
-           g.push_back(Vec3f(0.222222222222, 0.777777777778, 0.777777777778));
-           g.push_back(Vec3f(0.333333333333, 0.666666666667, 0.666666666667));
-           g.push_back(Vec3f(0.444444444444, 0.555555555556, 0.555555555556));
-           g.push_back(Vec3f(0.555555555556, 0.444444444444, 0.444444444444));
-           g.push_back(Vec3f(0.666666666667, 0.333333333333, 0.333333333333));
-           g.push_back(Vec3f(0.777777777778, 0.222222222222, 0.222222222222));
-           g.push_back(Vec3f(0.888888888889, 0.111111111111, 0.111111111111));
-           g.push_back(Vec3f(1.0, 0.0, 0.0));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0, 1.0, 1.0));
-           b.push_back(Vec3f(0.111111111111, 0.888888888889, 0.888888888889));
-           b.push_back(Vec3f(0.222222222222, 0.777777777778, 0.777777777778));
-           b.push_back(Vec3f(0.333333333333, 0.666666666667, 0.666666666667));
-           b.push_back(Vec3f(0.444444444444, 0.555555555556, 0.555555555556));
-           b.push_back(Vec3f(0.555555555556, 0.444444444444, 0.444444444444));
-           b.push_back(Vec3f(0.666666666667, 0.333333333333, 0.333333333333));
-           b.push_back(Vec3f(0.777777777778, 0.222222222222, 0.222222222222));
-           b.push_back(Vec3f(0.888888888889, 0.111111111111, 0.111111111111));
-           b.push_back(Vec3f(1.0, 0.0, 0.0));
-           pseudo->map[__BlackHot][R_MAP] = r; pseudo->map[__BlackHot][G_MAP] = g; pseudo->map[__BlackHot][B_MAP] = b;
-        }
-
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0, 0.0, 0.0));
-           r.push_back(Vec3f(0.111111111111, 0.111111111111, 0.111111111111));
-           r.push_back(Vec3f(0.222222222222, 0.222222222222, 0.222222222222));
-           r.push_back(Vec3f(0.333333333333, 0.333333333333, 0.333333333333));
-           r.push_back(Vec3f(0.444444444444, 0.444444444444, 0.444444444444));
-           r.push_back(Vec3f(0.555555555556, 0.555555555556, 0.555555555556));
-           r.push_back(Vec3f(0.666666666667, 0.666666666667, 0.666666666667));
-           r.push_back(Vec3f(0.777777777778, 0.777777777778, 0.777777777778));
-           r.push_back(Vec3f(0.888888888889, 0.888888888889, 0.888888888889));
-           r.push_back(Vec3f(1.0, 1.0, 1.0));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0, 0.0, 0.0));
-           g.push_back(Vec3f(0.111111111111, 0.111111111111, 0.111111111111));
-           g.push_back(Vec3f(0.222222222222, 0.222222222222, 0.222222222222));
-           g.push_back(Vec3f(0.333333333333, 0.333333333333, 0.333333333333));
-           g.push_back(Vec3f(0.444444444444, 0.444444444444, 0.444444444444));
-           g.push_back(Vec3f(0.555555555556, 0.555555555556, 0.555555555556));
-           g.push_back(Vec3f(0.666666666667, 0.666666666667, 0.666666666667));
-           g.push_back(Vec3f(0.777777777778, 0.777777777778, 0.777777777778));
-           g.push_back(Vec3f(0.888888888889, 0.888888888889, 0.888888888889));
-           g.push_back(Vec3f(1.0, 1.0, 1.0));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0, 0.0, 0.0));
-           b.push_back(Vec3f(0.111111111111, 0.111111111111, 0.111111111111));
-           b.push_back(Vec3f(0.222222222222, 0.222222222222, 0.222222222222));
-           b.push_back(Vec3f(0.333333333333, 0.333333333333, 0.333333333333));
-           b.push_back(Vec3f(0.444444444444, 0.444444444444, 0.444444444444));
-           b.push_back(Vec3f(0.555555555556, 0.555555555556, 0.555555555556));
-           b.push_back(Vec3f(0.666666666667, 0.666666666667, 0.666666666667));
-           b.push_back(Vec3f(0.777777777778, 0.777777777778, 0.777777777778));
-           b.push_back(Vec3f(0.888888888889, 0.888888888889, 0.888888888889));
-           b.push_back(Vec3f(1.0, 1.0, 1.0));
-           pseudo->map[__WhiteHot][R_MAP] = r; pseudo->map[__WhiteHot][G_MAP] = g; pseudo->map[__WhiteHot][B_MAP] = b;
-        }
-
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0,1.0,1.0));
-           r.push_back(Vec3f(0.03,1.0,1.0));
-           r.push_back(Vec3f(0.215,1.0,1.0));
-           r.push_back(Vec3f(0.4,0.0,0.0));
-           r.push_back(Vec3f(0.586,0.0,0.0));
-           r.push_back(Vec3f(0.77,0.0,0.0));
-           r.push_back(Vec3f(0.954,1.0,1.0));
-           r.push_back(Vec3f(1.0,1.0,1.0));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0,0.0,0.0));
-           g.push_back(Vec3f(0.03,0.0,0.0));
-           g.push_back(Vec3f(0.215,1.0,1.0));
-           g.push_back(Vec3f(0.4,1.0,1.0));
-           g.push_back(Vec3f(0.586,1.0,1.0));
-           g.push_back(Vec3f(0.77,0.0,0.0));
-           g.push_back(Vec3f(0.954,0.0,0.0));
-           g.push_back(Vec3f(1.0,0.0,0.0));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0,0.16,0.16));
-           b.push_back(Vec3f(0.03,0.0,0.0));
-           b.push_back(Vec3f(0.215,0.0,0.0));
-           b.push_back(Vec3f(0.4,0.0,0.0));
-           b.push_back(Vec3f(0.586,1.0,1.0));
-           b.push_back(Vec3f(0.77,1.0,1.0));
-           b.push_back(Vec3f(0.954,1.0,1.0));
-           b.push_back(Vec3f(1.0,0.75,0.75));
-           pseudo->map[__RainbowHighBlue][R_MAP] = r; pseudo->map[__RainbowHighBlue][G_MAP] = g; pseudo->map[__RainbowHighBlue][B_MAP] = b;
-        }
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0,0.5,0.5));
-           r.push_back(Vec3f(0.111111111111,0.277777777778,0.277777777778));
-           r.push_back(Vec3f(0.222222222222,0.0555555555556,0.0555555555556));
-           r.push_back(Vec3f(0.333333333333,0.166666666667,0.166666666667));
-           r.push_back(Vec3f(0.444444444444,0.388888888889,0.388888888889));
-           r.push_back(Vec3f(0.555555555556,0.611111111111,0.611111111111));
-           r.push_back(Vec3f(0.666666666667,0.833333333333,0.833333333333));
-           r.push_back(Vec3f(0.777777777778,1.0,1.0));
-           r.push_back(Vec3f(0.888888888889,1.0,1.0));
-           r.push_back(Vec3f(1.0,1.0,1.0));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0,0.0,0.0));
-           g.push_back(Vec3f(0.111111111111,0.342020143326,0.342020143326));
-           g.push_back(Vec3f(0.222222222222,0.642787609687,0.642787609687));
-           g.push_back(Vec3f(0.333333333333,0.866025403784,0.866025403784));
-           g.push_back(Vec3f(0.444444444444,0.984807753012,0.984807753012));
-           g.push_back(Vec3f(0.555555555556,0.984807753012,0.984807753012));
-           g.push_back(Vec3f(0.666666666667,0.866025403784,0.866025403784));
-           g.push_back(Vec3f(0.777777777778,0.642787609687,0.642787609687));
-           g.push_back(Vec3f(0.888888888889,0.342020143326,0.342020143326));
-           g.push_back(Vec3f(1.0,1.22464679915e-16,1.22464679915e-16));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0,1.0,1.0));
-           b.push_back(Vec3f(0.111111111111,0.984807753012,0.984807753012));
-           b.push_back(Vec3f(0.222222222222,0.939692620786,0.939692620786));
-           b.push_back(Vec3f(0.333333333333,0.866025403784,0.866025403784));
-           b.push_back(Vec3f(0.444444444444,0.766044443119,0.766044443119));
-           b.push_back(Vec3f(0.555555555556,0.642787609687,0.642787609687));
-           b.push_back(Vec3f(0.666666666667,0.5,0.5));
-           b.push_back(Vec3f(0.777777777778,0.342020143326,0.342020143326));
-           b.push_back(Vec3f(0.888888888889,0.173648177667,0.173648177667));
-           b.push_back(Vec3f(1.0,6.12323399574e-17,6.12323399574e-17));
-           pseudo->map[__RainbowHighRed][R_MAP] = r; pseudo->map[__RainbowHighRed][G_MAP] = g; pseudo->map[__RainbowHighRed][B_MAP] = b;
-        }
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0, 0.0,0.0));
-           r.push_back(Vec3f(0.051, 0.10, 0.10));
-           r.push_back(Vec3f(0.125, 0.39, 0.39));
-           r.push_back(Vec3f(0.250, 0.48, 0.48));
-           r.push_back(Vec3f(0.375, 0.60, 0.60));
-           r.push_back(Vec3f(0.501, 0.90, 0.90));
-           r.push_back(Vec3f(0.625, 0.90, 0.90));
-           r.push_back(Vec3f(0.750, 0.90, 0.90));
-           r.push_back(Vec3f(0.875, 0.90, 0.90));
-           r.push_back(Vec3f(1.0,0.9,0.9));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0, 0.0,0.0));
-           g.push_back(Vec3f(0.111, 0.01, 0.01));
-           g.push_back(Vec3f(0.125, 0.01, 0.01));
-           g.push_back(Vec3f(0.250, 0.01, 0.01));
-           g.push_back(Vec3f(0.375, 0.01, 0.01));
-           g.push_back(Vec3f(0.501, 0.25, 0.25));
-           g.push_back(Vec3f(0.625, 0.50, 0.50));
-           g.push_back(Vec3f(0.750, 0.75, 0.75));
-           g.push_back(Vec3f(0.875, 0.90, 0.90));
-           g.push_back(Vec3f(1.0,0.9,0.9));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0,0.0,0.0));
-           b.push_back(Vec3f(0.051, 0.32, 0.32));
-           b.push_back(Vec3f(0.125, 0.35, 0.35));
-           b.push_back(Vec3f(0.250, 0.44, 0.44));
-           b.push_back(Vec3f(0.375, 0.55, 0.55));
-           b.push_back(Vec3f(0.501, 0.25, 0.25));
-           b.push_back(Vec3f(0.625, 0.01, 0.01));
-           b.push_back(Vec3f(0.750, 0.30, 0.30));
-           b.push_back(Vec3f(0.875, 0.50, 0.50));
-           b.push_back(Vec3f(1.0,0.7,0.7));
-           pseudo->map[__PurpleRedYello][R_MAP] = r; pseudo->map[__PurpleRedYello][G_MAP] = g; pseudo->map[__PurpleRedYello][B_MAP] = b;
-        }
-        {
-           vector<Vec3f> r;
-           r.push_back(Vec3f(0.0, 0.0, 0.0));
-           r.push_back(Vec3f(0.15, 0.16, 0.16));
-           r.push_back(Vec3f(0.35, 0.11, 0.11));
-           r.push_back(Vec3f(0.49, 0.11, 0.11));
-           r.push_back(Vec3f(0.61, 0.15, 0.15));
-           r.push_back(Vec3f(0.74, 0.61, 0.61));
-           r.push_back(Vec3f(0.81, 0.75, 0.75));
-           r.push_back(Vec3f(1.0, 0.8, 0.8));
-           vector<Vec3f> g;
-           g.push_back(Vec3f(0.0, 0.0, 0.0));
-           g.push_back(Vec3f(0.15, 0.34, 0.34));
-           g.push_back(Vec3f(0.35, 0.15, 0.15));
-           g.push_back(Vec3f(0.49, 0.61, 0.61));
-           g.push_back(Vec3f(0.61, 0.75, 0.75));
-           g.push_back(Vec3f(0.74, 0.12, 0.12));
-           g.push_back(Vec3f(0.81, 0.05, 0.05));
-           g.push_back(Vec3f(1.0, 0.05, 0.05));
-           vector<Vec3f> b;
-           b.push_back(Vec3f(0.0, 0.0, 0.0));
-           b.push_back(Vec3f(0.15, 0.85, 0.85));
-           b.push_back(Vec3f(0.35, 0.68, 0.68));
-           b.push_back(Vec3f(0.49, 0.21, 0.21));
-           b.push_back(Vec3f(0.61, 0.33, 0.33));
-           b.push_back(Vec3f(0.74, 0.01, 0.01));
-           b.push_back(Vec3f(0.81, 0.01, 0.01));
-           b.push_back(Vec3f(1.0, 0.05, 0.05));
-           pseudo->map[__BlueGreenRed][R_MAP] = r; pseudo->map[__BlueGreenRed][G_MAP] = g; pseudo->map[__BlueGreenRed][B_MAP] = b;
-        }
-        m_pseudo = pseudo;
-
-        updatePseudoColor(table);
+        pseudoColor.reset(new PseudoColor);
+        pseudoColor->updatePseudoColorTable(table);
         return true;
     }
 
-    PseudoColorTable currentPseudoTable() {
-        if( !hasPseudoTable() ) {
-            return __InvalidPseudoTable;
-        }
-        return m_pseudo->current;
+    PseudoColorTable currentPseudoColorTable() {
+        return pseudoColor->currentPseudoColorTable();
     }
 
     void updatePseudoColor(const PseudoColorTable &table)
     {
-        if( !hasPseudoTable() ) {
-            return;
-        }
-        m_pseudo->current = table;
-        vector<Vec3f> *colorMap = m_pseudo->map[table];
-
-        channelTable(m_pseudo->r, colorMap[R_MAP]);
-        channelTable(m_pseudo->g, colorMap[G_MAP]);
-        channelTable(m_pseudo->b, colorMap[B_MAP]);
+        pseudoColor->updatePseudoColorTable(table);
     }
 
-    void channelTable(unsigned char *table, vector<Vec3f> &data)
-    {
-
-        int idx = 0;
-        for(int i = 0; i < RGB_SIZE; i ++)
-        {
-            float r = i / 255.0f;
-            if( (r < 1.0) && (r >= data[idx + 1].x) ) {
-                idx ++;
-            }
-            double prop = (r - data[idx].x) / (data[idx + 1].x - data[idx].x);
-            double val = data[idx].z + (data[idx + 1].y - data[idx].z) * prop;
-            table[i] = (int)(255 * val);
-        }
+    void gray_to_pseudo(GRAY *in, RGB *out, const int &width, const int &height) {
+        pseudoColor->gray_to_pseudo(in, out, width, height);
     }
 
-    void gray_to_pseudo(RGB *rgb, GRAY *gray, int width, int height)
-    {
-        if( !hasPseudoTable() ) {
-            return;
-        }
-        GRAY _gray;
-        for(int i = 0; i < height; i ++) {
-            for(int j = 0; j < width; j ++) {
-                _gray = gray[width * i + j];
-                *rgb ++ = m_pseudo->r[_gray];
-                *rgb ++ = m_pseudo->g[_gray];
-                *rgb ++ = m_pseudo->b[_gray];
-            }
-        }
+    void yuv420p_to_pseudo(YUV *in, RGB *out, const int &width, const int &height) {
+        pseudoColor->yuv420p_to_pseudo(in, out, width, height);
     }
 
-    void yuv422_to_pseudo(YUV *yuyv, RGB *rgb, int width, int height)
-    {
-        if( !hasPseudoTable() ) {
-            return;
-        }
-
-    //    RGBPixel rgb_pixel;
-        int in = 0;
-        YUV y0;
-        YUV u;
-        YUV y1;
-        YUV v;
-    //    GRAY gray;
-        for(in = 0; in < width * height * 2; in += 4)
-        {
-            y0 = yuyv[in + 0];
-            u  = yuyv[in + 1];
-            y1 = yuyv[in + 2];
-            v  = yuyv[in + 3];
-
-    //        if( yuv_to_rgb_pixel(y0, u, v, &rgb_pixel) == 1 )
-    //        {
-    //            gray = rgb_to_gray_pixel(&rgb_pixel);
-                *rgb ++ = m_pseudo->r[y0];
-                *rgb ++ = m_pseudo->g[y0];
-                *rgb ++ = m_pseudo->b[y0];
-    //        }
-
-    //        if( yuv_to_rgb_pixel(y1, u, v, &rgb_pixel) == 1 )
-    //        {
-    //            gray = rgb_to_gray_pixel(&rgb_pixel);
-                *rgb ++ = m_pseudo->r[y1];
-                *rgb ++ = m_pseudo->g[y1];
-                *rgb ++ = m_pseudo->b[y1];
-    //        }
-        }
+    void yuv422_to_pseudo(YUV *in, RGB *out, const int &width, const int &height) {
+        pseudoColor->yuv422_to_pseudo(in, out, width, height);
     }
 
-    void gray_to_rgb_pixel(const GRAY &gray, RGBPixel *rgb)
-    {
-        if( !hasPseudoTable() ) {
-            return;
-        }
-        rgb->r = m_pseudo->r[gray];
-        rgb->g = m_pseudo->g[gray];
-        rgb->b = m_pseudo->b[gray];
+    void gray_to_rgb_pixel(const GRAY &gray, RGBPixel *rgb) {
+        pseudoColor->gray_to_rgb_pixel(gray, rgb);
     }
 
-    void freePseudo()
-    {
-        if( !hasPseudoTable() ) {
-            return;
-        }
-
-        for(int i = 0; i < PSEUDO_COLOR_TABLE_SIZE; i ++) {
-            delete [] m_pseudo->map[i];
-            m_pseudo->map[i] = NULL;
-        }
-
-        delete [] m_pseudo->map;
-        m_pseudo->map = NULL;
-
-        delete [] m_pseudo->r;
-        m_pseudo->r = NULL;
-
-        delete [] m_pseudo->g;
-        m_pseudo->g = NULL;
-
-        delete [] m_pseudo->b;
-        m_pseudo->b = NULL;
-
-        delete m_pseudo;
-        m_pseudo = NULL;
+    const vector<Vec3f> &pseudoColorMap(const int &index) {
+        return pseudoColor->pseudoColorMap(index);
     }
 
     int lineDot(const Path &path, Line *line)
@@ -968,7 +612,677 @@ public:
     }
 
 private:
-    PseudoColor *m_pseudo;
+    class PseudoColor {
+    public:
+        PseudoColor() {
+            r_ptr.reset(new RGB[RGB_SIZE]);
+            g_ptr.reset(new RGB[RGB_SIZE]);
+            b_ptr.reset(new RGB[RGB_SIZE]);
+            current_table = __InvalidPseudoTable;
+        }
+        ~PseudoColor() { }
+
+        PseudoColorTable currentPseudoColorTable() { return current_table; }
+        void updatePseudoColorTable(const PseudoColorTable &table) {
+            if( table < __Pseudo_WhiteHot
+                    || table >= __InvalidPseudoTable ) {
+                printf("ERROR: pseudo index wrong\n");
+                return;
+            }
+
+            current_table = table;
+
+            vector<Vec3f> r = vector<Vec3f>();
+            vector<Vec3f> g = vector<Vec3f>();
+            vector<Vec3f> b = vector<Vec3f>();
+            switch (table) {
+            case __Pseudo_WhiteHot: {
+                r.push_back(Vec3f(0.00, 0.01, 0.01));
+                r.push_back(Vec3f(0.05, 0.05, 0.05));
+                r.push_back(Vec3f(0.10, 0.11, 0.11));
+                r.push_back(Vec3f(0.15, 0.15, 0.15));
+                r.push_back(Vec3f(0.20, 0.21, 0.21));
+                r.push_back(Vec3f(0.25, 0.25, 0.25));
+                r.push_back(Vec3f(0.30, 0.31, 0.31));
+                r.push_back(Vec3f(0.35, 0.35, 0.35));
+                r.push_back(Vec3f(0.40, 0.41, 0.41));
+                r.push_back(Vec3f(0.45, 0.45, 0.45));
+                r.push_back(Vec3f(0.50, 0.51, 0.51));
+                r.push_back(Vec3f(0.55, 0.55, 0.55));
+                r.push_back(Vec3f(0.60, 0.61, 0.61));
+                r.push_back(Vec3f(0.65, 0.65, 0.65));
+                r.push_back(Vec3f(0.70, 0.71, 0.71));
+                r.push_back(Vec3f(0.75, 0.75, 0.75));
+                r.push_back(Vec3f(0.80, 0.81, 0.81));
+                r.push_back(Vec3f(0.85, 0.85, 0.85));
+                r.push_back(Vec3f(0.90, 0.96, 0.96));
+                r.push_back(Vec3f(0.95, 0.99, 0.99));
+                r.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.05, 0.05));
+                g.push_back(Vec3f(0.10, 0.11, 0.11));
+                g.push_back(Vec3f(0.15, 0.15, 0.15));
+                g.push_back(Vec3f(0.20, 0.21, 0.21));
+                g.push_back(Vec3f(0.25, 0.25, 0.25));
+                g.push_back(Vec3f(0.30, 0.31, 0.31));
+                g.push_back(Vec3f(0.35, 0.35, 0.35));
+                g.push_back(Vec3f(0.40, 0.41, 0.41));
+                g.push_back(Vec3f(0.45, 0.45, 0.45));
+                g.push_back(Vec3f(0.50, 0.51, 0.51));
+                g.push_back(Vec3f(0.55, 0.55, 0.55));
+                g.push_back(Vec3f(0.60, 0.61, 0.61));
+                g.push_back(Vec3f(0.65, 0.65, 0.65));
+                g.push_back(Vec3f(0.70, 0.71, 0.71));
+                g.push_back(Vec3f(0.75, 0.75, 0.75));
+                g.push_back(Vec3f(0.80, 0.81, 0.81));
+                g.push_back(Vec3f(0.85, 0.85, 0.85));
+                g.push_back(Vec3f(0.90, 0.96, 0.96));
+                g.push_back(Vec3f(0.95, 0.99, 0.99));
+                g.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                b.push_back(Vec3f(0.00, 0.01, 0.01));
+                b.push_back(Vec3f(0.05, 0.05, 0.05));
+                b.push_back(Vec3f(0.10, 0.11, 0.11));
+                b.push_back(Vec3f(0.15, 0.15, 0.15));
+                b.push_back(Vec3f(0.20, 0.21, 0.21));
+                b.push_back(Vec3f(0.25, 0.25, 0.25));
+                b.push_back(Vec3f(0.30, 0.31, 0.31));
+                b.push_back(Vec3f(0.35, 0.35, 0.35));
+                b.push_back(Vec3f(0.40, 0.41, 0.41));
+                b.push_back(Vec3f(0.45, 0.45, 0.45));
+                b.push_back(Vec3f(0.50, 0.51, 0.51));
+                b.push_back(Vec3f(0.55, 0.55, 0.55));
+                b.push_back(Vec3f(0.60, 0.61, 0.61));
+                b.push_back(Vec3f(0.65, 0.65, 0.65));
+                b.push_back(Vec3f(0.70, 0.71, 0.71));
+                b.push_back(Vec3f(0.75, 0.75, 0.75));
+                b.push_back(Vec3f(0.80, 0.81, 0.81));
+                b.push_back(Vec3f(0.85, 0.85, 0.85));
+                b.push_back(Vec3f(0.90, 0.96, 0.96));
+                b.push_back(Vec3f(0.95, 0.99, 0.99));
+                b.push_back(Vec3f(1.00, 1.00, 1.00));
+            }
+                break;
+            case __Pseudo_BlackHot: {
+                r.push_back(Vec3f(0.00, 1.00, 1.00));
+                r.push_back(Vec3f(0.05, 0.99, 0.99));
+                r.push_back(Vec3f(0.10, 0.96, 0.96));
+                r.push_back(Vec3f(0.15, 0.85, 0.85));
+                r.push_back(Vec3f(0.20, 0.81, 0.81));
+                r.push_back(Vec3f(0.25, 0.75, 0.75));
+                r.push_back(Vec3f(0.30, 0.71, 0.71));
+                r.push_back(Vec3f(0.35, 0.65, 0.65));
+                r.push_back(Vec3f(0.40, 0.61, 0.61));
+                r.push_back(Vec3f(0.45, 0.55, 0.55));
+                r.push_back(Vec3f(0.50, 0.51, 0.51));
+                r.push_back(Vec3f(0.55, 0.45, 0.45));
+                r.push_back(Vec3f(0.60, 0.41, 0.41));
+                r.push_back(Vec3f(0.65, 0.35, 0.35));
+                r.push_back(Vec3f(0.70, 0.31, 0.31));
+                r.push_back(Vec3f(0.75, 0.25, 0.25));
+                r.push_back(Vec3f(0.80, 0.21, 0.21));
+                r.push_back(Vec3f(0.85, 0.15, 0.15));
+                r.push_back(Vec3f(0.90, 0.11, 0.11));
+                r.push_back(Vec3f(0.95, 0.05, 0.05));
+                r.push_back(Vec3f(1.00, 0.01, 0.01));
+
+                g.push_back(Vec3f(0.00, 1.00, 1.00));
+                g.push_back(Vec3f(0.05, 0.99, 0.99));
+                g.push_back(Vec3f(0.10, 0.96, 0.96));
+                g.push_back(Vec3f(0.15, 0.85, 0.85));
+                g.push_back(Vec3f(0.20, 0.81, 0.81));
+                g.push_back(Vec3f(0.25, 0.75, 0.75));
+                g.push_back(Vec3f(0.30, 0.71, 0.71));
+                g.push_back(Vec3f(0.35, 0.65, 0.65));
+                g.push_back(Vec3f(0.40, 0.61, 0.61));
+                g.push_back(Vec3f(0.45, 0.55, 0.55));
+                g.push_back(Vec3f(0.50, 0.51, 0.51));
+                g.push_back(Vec3f(0.55, 0.45, 0.45));
+                g.push_back(Vec3f(0.60, 0.41, 0.41));
+                g.push_back(Vec3f(0.65, 0.35, 0.35));
+                g.push_back(Vec3f(0.70, 0.31, 0.31));
+                g.push_back(Vec3f(0.75, 0.25, 0.25));
+                g.push_back(Vec3f(0.80, 0.21, 0.21));
+                g.push_back(Vec3f(0.85, 0.15, 0.15));
+                g.push_back(Vec3f(0.90, 0.11, 0.11));
+                g.push_back(Vec3f(0.95, 0.05, 0.05));
+                g.push_back(Vec3f(1.00, 0.01, 0.01));
+
+                b.push_back(Vec3f(0.00, 1.00, 1.00));
+                b.push_back(Vec3f(0.05, 0.99, 0.99));
+                b.push_back(Vec3f(0.10, 0.96, 0.96));
+                b.push_back(Vec3f(0.15, 0.85, 0.85));
+                b.push_back(Vec3f(0.20, 0.81, 0.81));
+                b.push_back(Vec3f(0.25, 0.75, 0.75));
+                b.push_back(Vec3f(0.30, 0.71, 0.71));
+                b.push_back(Vec3f(0.35, 0.65, 0.65));
+                b.push_back(Vec3f(0.40, 0.61, 0.61));
+                b.push_back(Vec3f(0.45, 0.55, 0.55));
+                b.push_back(Vec3f(0.50, 0.51, 0.51));
+                b.push_back(Vec3f(0.55, 0.45, 0.45));
+                b.push_back(Vec3f(0.60, 0.41, 0.41));
+                b.push_back(Vec3f(0.65, 0.35, 0.35));
+                b.push_back(Vec3f(0.70, 0.31, 0.31));
+                b.push_back(Vec3f(0.75, 0.25, 0.25));
+                b.push_back(Vec3f(0.80, 0.21, 0.21));
+                b.push_back(Vec3f(0.85, 0.15, 0.15));
+                b.push_back(Vec3f(0.90, 0.11, 0.11));
+                b.push_back(Vec3f(0.95, 0.05, 0.05));
+                b.push_back(Vec3f(1.00, 0.01, 0.01));
+            }
+                break;
+            case __Pseudo_Iron: {
+                r.push_back(Vec3f(0.00, 0.01, 0.01));
+                r.push_back(Vec3f(0.05, 0.11, 0.11));
+                r.push_back(Vec3f(0.10, 0.21, 0.21));
+                r.push_back(Vec3f(0.15, 0.31, 0.31));
+                r.push_back(Vec3f(0.20, 0.45, 0.45));
+                r.push_back(Vec3f(0.25, 0.65, 0.65));
+                r.push_back(Vec3f(0.30, 0.73, 0.73));
+                r.push_back(Vec3f(0.35, 0.74, 0.74));
+                r.push_back(Vec3f(0.40, 0.79, 0.79));
+                r.push_back(Vec3f(0.45, 0.85, 0.85));
+                r.push_back(Vec3f(0.50, 0.89, 0.89));
+                r.push_back(Vec3f(0.55, 0.92, 0.92));
+                r.push_back(Vec3f(0.60, 0.95, 0.95));
+                r.push_back(Vec3f(0.65, 0.96, 0.96));
+                r.push_back(Vec3f(0.70, 0.98, 0.98));
+                r.push_back(Vec3f(0.75, 0.99, 0.99));
+                r.push_back(Vec3f(0.80, 0.99, 0.99));
+                r.push_back(Vec3f(0.85, 0.99, 0.99));
+                r.push_back(Vec3f(0.90, 0.99, 0.99));
+                r.push_back(Vec3f(0.95, 0.99, 0.99));
+                r.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.01, 0.01));
+                g.push_back(Vec3f(0.10, 0.01, 0.01));
+                g.push_back(Vec3f(0.15, 0.01, 0.01));
+                g.push_back(Vec3f(0.20, 0.01, 0.01));
+                g.push_back(Vec3f(0.25, 0.01, 0.01));
+                g.push_back(Vec3f(0.30, 0.01, 0.01));
+                g.push_back(Vec3f(0.35, 0.11, 0.11));
+                g.push_back(Vec3f(0.40, 0.15, 0.15));
+                g.push_back(Vec3f(0.45, 0.25, 0.25));
+                g.push_back(Vec3f(0.50, 0.37, 0.37));
+                g.push_back(Vec3f(0.55, 0.43, 0.43));
+                g.push_back(Vec3f(0.60, 0.46, 0.46));
+                g.push_back(Vec3f(0.65, 0.51, 0.51));
+                g.push_back(Vec3f(0.70, 0.55, 0.55));
+                g.push_back(Vec3f(0.75, 0.61, 0.61));
+                g.push_back(Vec3f(0.80, 0.65, 0.65));
+                g.push_back(Vec3f(0.85, 0.76, 0.76));
+                g.push_back(Vec3f(0.90, 0.81, 0.81));
+                g.push_back(Vec3f(0.95, 0.88, 0.88));
+                g.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                b.push_back(Vec3f(0.00, 0.11, 0.11));
+                b.push_back(Vec3f(0.05, 0.25, 0.25));
+                b.push_back(Vec3f(0.10, 0.36, 0.36));
+                b.push_back(Vec3f(0.15, 0.47, 0.47));
+                b.push_back(Vec3f(0.20, 0.59, 0.59));
+                b.push_back(Vec3f(0.25, 0.71, 0.71));
+                b.push_back(Vec3f(0.30, 0.66, 0.66));
+                b.push_back(Vec3f(0.35, 0.46, 0.46));
+                b.push_back(Vec3f(0.40, 0.35, 0.35));
+                b.push_back(Vec3f(0.45, 0.21, 0.21));
+                b.push_back(Vec3f(0.50, 0.11, 0.11));
+                b.push_back(Vec3f(0.55, 0.05, 0.05));
+                b.push_back(Vec3f(0.60, 0.01, 0.01));
+                b.push_back(Vec3f(0.65, 0.01, 0.01));
+                b.push_back(Vec3f(0.70, 0.01, 0.01));
+                b.push_back(Vec3f(0.75, 0.05, 0.05));
+                b.push_back(Vec3f(0.80, 0.11, 0.11));
+                b.push_back(Vec3f(0.85, 0.15, 0.15));
+                b.push_back(Vec3f(0.90, 0.25, 0.25));
+                b.push_back(Vec3f(0.95, 0.55, 0.55));
+                b.push_back(Vec3f(1.00, 1.00, 1.00));
+            }
+                break;
+            case __Pseudo_IronGray: {
+                r.push_back(Vec3f(0.00, 0.99, 0.99));
+                r.push_back(Vec3f(0.05, 0.99, 0.99));
+                r.push_back(Vec3f(0.10, 0.95, 0.95));
+                r.push_back(Vec3f(0.15, 0.91, 0.91));
+                r.push_back(Vec3f(0.20, 0.81, 0.81));
+                r.push_back(Vec3f(0.25, 0.71, 0.71));
+                r.push_back(Vec3f(0.30, 0.61, 0.61));
+                r.push_back(Vec3f(0.35, 0.55, 0.55));
+                r.push_back(Vec3f(0.40, 0.48, 0.48));
+                r.push_back(Vec3f(0.45, 0.41, 0.41));
+                r.push_back(Vec3f(0.50, 0.41, 0.41));
+                r.push_back(Vec3f(0.55, 0.35, 0.35));
+                r.push_back(Vec3f(0.60, 0.29, 0.29));
+                r.push_back(Vec3f(0.65, 0.32, 0.32));
+                r.push_back(Vec3f(0.70, 0.34, 0.34));
+                r.push_back(Vec3f(0.75, 0.36, 0.36));
+                r.push_back(Vec3f(0.80, 0.38, 0.38));
+                r.push_back(Vec3f(0.85, 0.42, 0.42));
+                r.push_back(Vec3f(0.90, 0.45, 0.45));
+                r.push_back(Vec3f(0.95, 0.48, 0.48));
+                r.push_back(Vec3f(1.00, 0.51, 0.51));
+
+                g.push_back(Vec3f(0.00, 0.99, 0.99));
+                g.push_back(Vec3f(0.05, 0.95, 0.95));
+                g.push_back(Vec3f(0.10, 0.91, 0.91));
+                g.push_back(Vec3f(0.15, 0.85, 0.85));
+                g.push_back(Vec3f(0.20, 0.75, 0.75));
+                g.push_back(Vec3f(0.25, 0.65, 0.65));
+                g.push_back(Vec3f(0.30, 0.51, 0.51));
+                g.push_back(Vec3f(0.35, 0.45, 0.45));
+                g.push_back(Vec3f(0.40, 0.41, 0.41));
+                g.push_back(Vec3f(0.45, 0.38, 0.38));
+                g.push_back(Vec3f(0.50, 0.31, 0.31));
+                g.push_back(Vec3f(0.55, 0.25, 0.25));
+                g.push_back(Vec3f(0.60, 0.21, 0.21));
+                g.push_back(Vec3f(0.65, 0.15, 0.15));
+                g.push_back(Vec3f(0.70, 0.11, 0.11));
+                g.push_back(Vec3f(0.75, 0.11, 0.11));
+                g.push_back(Vec3f(0.80, 0.11, 0.11));
+                g.push_back(Vec3f(0.85, 0.11, 0.11));
+                g.push_back(Vec3f(0.90, 0.01, 0.01));
+                g.push_back(Vec3f(0.95, 0.01, 0.01));
+                g.push_back(Vec3f(1.00, 0.01, 0.01));
+
+                b.push_back(Vec3f(0.00, 0.01, 0.01));
+                b.push_back(Vec3f(0.05, 0.05, 0.05));
+                b.push_back(Vec3f(0.10, 0.11, 0.11));
+                b.push_back(Vec3f(0.15, 0.15, 0.15));
+                b.push_back(Vec3f(0.20, 0.17, 0.17));
+                b.push_back(Vec3f(0.25, 0.19, 0.19));
+                b.push_back(Vec3f(0.30, 0.21, 0.21));
+                b.push_back(Vec3f(0.35, 0.25, 0.25));
+                b.push_back(Vec3f(0.40, 0.31, 0.31));
+                b.push_back(Vec3f(0.45, 0.35, 0.35));
+                b.push_back(Vec3f(0.50, 0.45, 0.45));
+                b.push_back(Vec3f(0.55, 0.47, 0.47));
+                b.push_back(Vec3f(0.60, 0.41, 0.41));
+                b.push_back(Vec3f(0.65, 0.39, 0.39));
+                b.push_back(Vec3f(0.70, 0.41, 0.41));
+                b.push_back(Vec3f(0.75, 0.43, 0.43));
+                b.push_back(Vec3f(0.80, 0.46, 0.46));
+                b.push_back(Vec3f(0.85, 0.48, 0.48));
+                b.push_back(Vec3f(0.90, 0.51, 0.51));
+                b.push_back(Vec3f(0.95, 0.53, 0.53));
+                b.push_back(Vec3f(1.00, 0.55, 0.55));
+            }
+                break;
+            case __Pseudo_Rainbow: {
+
+            }
+                break;
+            case __Pseudo_HCR: {
+                r.push_back(Vec3f(0.00, 0.01, 0.01));
+                r.push_back(Vec3f(0.05, 0.01, 0.01));
+                r.push_back(Vec3f(0.10, 0.01, 0.01));
+                r.push_back(Vec3f(0.15, 0.01, 0.01));
+                r.push_back(Vec3f(0.20, 0.15, 0.15));
+                r.push_back(Vec3f(0.25, 0.21, 0.21));
+                r.push_back(Vec3f(0.30, 0.26, 0.26));
+                r.push_back(Vec3f(0.35, 0.35, 0.35));
+                r.push_back(Vec3f(0.40, 0.45, 0.45));
+                r.push_back(Vec3f(0.45, 0.59, 0.59));
+                r.push_back(Vec3f(0.50, 0.71, 0.71));
+                r.push_back(Vec3f(0.55, 0.76, 0.76));
+                r.push_back(Vec3f(0.60, 0.82, 0.82));
+                r.push_back(Vec3f(0.65, 0.89, 0.89));
+                r.push_back(Vec3f(0.70, 0.91, 0.91));
+                r.push_back(Vec3f(0.75, 0.99, 0.99));
+                r.push_back(Vec3f(0.80, 0.99, 0.99));
+                r.push_back(Vec3f(0.85, 0.99, 0.99));
+                r.push_back(Vec3f(0.90, 0.99, 0.99));
+                r.push_back(Vec3f(0.95, 0.99, 0.99));
+                r.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.11, 0.11));
+                g.push_back(Vec3f(0.10, 0.21, 0.21));
+                g.push_back(Vec3f(0.15, 0.35, 0.35));
+                g.push_back(Vec3f(0.20, 0.45, 0.45));
+                g.push_back(Vec3f(0.25, 0.55, 0.55));
+                g.push_back(Vec3f(0.30, 0.61, 0.61));
+                g.push_back(Vec3f(0.35, 0.11, 0.11));
+                g.push_back(Vec3f(0.40, 0.11, 0.11));
+                g.push_back(Vec3f(0.45, 0.11, 0.11));
+                g.push_back(Vec3f(0.50, 0.11, 0.11));
+                g.push_back(Vec3f(0.55, 0.21, 0.21));
+                g.push_back(Vec3f(0.60, 0.31, 0.31));
+                g.push_back(Vec3f(0.65, 0.45, 0.45));
+                g.push_back(Vec3f(0.70, 0.55, 0.55));
+                g.push_back(Vec3f(0.75, 0.61, 0.61));
+                g.push_back(Vec3f(0.80, 0.69, 0.69));
+                g.push_back(Vec3f(0.85, 0.71, 0.71));
+                g.push_back(Vec3f(0.90, 0.79, 0.79));
+                g.push_back(Vec3f(0.95, 0.85, 0.85));
+                g.push_back(Vec3f(1.00, 1.00, 1.00));
+
+                b.push_back(Vec3f(0.00, 0.11, 0.11));
+                b.push_back(Vec3f(0.05, 0.35, 0.35));
+                b.push_back(Vec3f(0.10, 0.45, 0.45));
+                b.push_back(Vec3f(0.15, 0.48, 0.48));
+                b.push_back(Vec3f(0.20, 0.55, 0.55));
+                b.push_back(Vec3f(0.25, 0.58, 0.58));
+                b.push_back(Vec3f(0.30, 0.61, 0.61));
+                b.push_back(Vec3f(0.35, 0.51, 0.51));
+                b.push_back(Vec3f(0.40, 0.41, 0.41));
+                b.push_back(Vec3f(0.45, 0.36, 0.36));
+                b.push_back(Vec3f(0.50, 0.21, 0.21));
+                b.push_back(Vec3f(0.55, 0.11, 0.11));
+                b.push_back(Vec3f(0.60, 0.15, 0.15));
+                b.push_back(Vec3f(0.65, 0.19, 0.19));
+                b.push_back(Vec3f(0.70, 0.24, 0.24));
+                b.push_back(Vec3f(0.75, 0.21, 0.21));
+                b.push_back(Vec3f(0.80, 0.26, 0.26));
+                b.push_back(Vec3f(0.85, 0.31, 0.31));
+                b.push_back(Vec3f(0.90, 0.35, 0.35));
+                b.push_back(Vec3f(0.95, 0.45, 0.45));
+                b.push_back(Vec3f(1.00, 1.00, 1.00));
+            }
+                break;
+            case __Pseudo_Ocean: {
+                r.push_back(Vec3f(0.00, 0.01, 0.01));
+                r.push_back(Vec3f(0.05, 0.01, 0.01));
+                r.push_back(Vec3f(0.10, 0.01, 0.01));
+                r.push_back(Vec3f(0.15, 0.01, 0.01));
+                r.push_back(Vec3f(0.20, 0.01, 0.01));
+                r.push_back(Vec3f(0.25, 0.01, 0.01));
+                r.push_back(Vec3f(0.30, 0.01, 0.01));
+                r.push_back(Vec3f(0.35, 0.11, 0.11));
+                r.push_back(Vec3f(0.40, 0.15, 0.15));
+                r.push_back(Vec3f(0.45, 0.21, 0.21));
+                r.push_back(Vec3f(0.50, 0.25, 0.25));
+                r.push_back(Vec3f(0.55, 0.31, 0.31));
+                r.push_back(Vec3f(0.60, 0.35, 0.35));
+                r.push_back(Vec3f(0.65, 0.41, 0.41));
+                r.push_back(Vec3f(0.70, 0.45, 0.45));
+                r.push_back(Vec3f(0.75, 0.53, 0.53));
+                r.push_back(Vec3f(0.80, 0.64, 0.64));
+                r.push_back(Vec3f(0.85, 0.75, 0.75));
+                r.push_back(Vec3f(0.90, 0.81, 0.81));
+                r.push_back(Vec3f(0.95, 0.85, 0.85));
+                r.push_back(Vec3f(1.00, 1, 1));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.11, 0.11));
+                g.push_back(Vec3f(0.10, 0.15, 0.15));
+                g.push_back(Vec3f(0.15, 0.21, 0.21));
+                g.push_back(Vec3f(0.20, 0.25, 0.25));
+                g.push_back(Vec3f(0.25, 0.31, 0.31));
+                g.push_back(Vec3f(0.30, 0.35, 0.35));
+                g.push_back(Vec3f(0.35, 0.41, 0.41));
+                g.push_back(Vec3f(0.40, 0.45, 0.45));
+                g.push_back(Vec3f(0.45, 0.51, 0.51));
+                g.push_back(Vec3f(0.50, 0.55, 0.55));
+                g.push_back(Vec3f(0.55, 0.59, 0.59));
+                g.push_back(Vec3f(0.60, 0.62, 0.62));
+                g.push_back(Vec3f(0.65, 0.68, 0.68));
+                g.push_back(Vec3f(0.70, 0.71, 0.71));
+                g.push_back(Vec3f(0.75, 0.79, 0.79));
+                g.push_back(Vec3f(0.80, 0.85, 0.85));
+                g.push_back(Vec3f(0.85, 0.91, 0.91));
+                g.push_back(Vec3f(0.90, 0.94, 0.94));
+                g.push_back(Vec3f(0.95, 0.99, 0.99));
+                g.push_back(Vec3f(1.00, 1, 1));
+
+                b.push_back(Vec3f(0.00, 0.11, 0.11));
+                b.push_back(Vec3f(0.05, 0.15, 0.15));
+                b.push_back(Vec3f(0.10, 0.21, 0.21));
+                b.push_back(Vec3f(0.15, 0.31, 0.31));
+                b.push_back(Vec3f(0.20, 0.37, 0.37));
+                b.push_back(Vec3f(0.25, 0.46, 0.46));
+                b.push_back(Vec3f(0.30, 0.53, 0.53));
+                b.push_back(Vec3f(0.35, 0.56, 0.56));
+                b.push_back(Vec3f(0.40, 0.59, 0.59));
+                b.push_back(Vec3f(0.45, 0.62, 0.62));
+                b.push_back(Vec3f(0.50, 0.66, 0.66));
+                b.push_back(Vec3f(0.55, 0.69, 0.69));
+                b.push_back(Vec3f(0.60, 0.72, 0.72));
+                b.push_back(Vec3f(0.65, 0.75, 0.75));
+                b.push_back(Vec3f(0.70, 0.79, 0.79));
+                b.push_back(Vec3f(0.75, 0.85, 0.85));
+                b.push_back(Vec3f(0.80, 0.91, 0.91));
+                b.push_back(Vec3f(0.85, 0.96, 0.96));
+                b.push_back(Vec3f(0.90, 0.97, 0.97));
+                b.push_back(Vec3f(0.95, 0.99, 0.99));
+                b.push_back(Vec3f(1.00, 1, 1));
+            }
+                break;
+            case __Pseudo_Summer: {
+                r.push_back(Vec3f(0.00, 0.11, 0.11));
+                r.push_back(Vec3f(0.05, 0.13, 0.13));
+                r.push_back(Vec3f(0.10, 0.17, 0.17));
+                r.push_back(Vec3f(0.15, 0.18, 0.18));
+                r.push_back(Vec3f(0.20, 0.19, 0.19));
+                r.push_back(Vec3f(0.25, 0.21, 0.21));
+                r.push_back(Vec3f(0.30, 0.23, 0.23));
+                r.push_back(Vec3f(0.35, 0.25, 0.25));
+                r.push_back(Vec3f(0.40, 0.31, 0.31));
+                r.push_back(Vec3f(0.45, 0.33, 0.33));
+                r.push_back(Vec3f(0.50, 0.35, 0.35));
+                r.push_back(Vec3f(0.55, 0.45, 0.45));
+                r.push_back(Vec3f(0.60, 0.51, 0.51));
+                r.push_back(Vec3f(0.65, 0.55, 0.55));
+                r.push_back(Vec3f(0.70, 0.61, 0.61));
+                r.push_back(Vec3f(0.75, 0.65, 0.65));
+                r.push_back(Vec3f(0.80, 0.71, 0.71));
+                r.push_back(Vec3f(0.85, 0.75, 0.75));
+                r.push_back(Vec3f(0.90, 0.81, 0.81));
+                r.push_back(Vec3f(0.95, 0.85, 0.85));
+                r.push_back(Vec3f(1.00, 0.99, 0.99));
+
+                g.push_back(Vec3f(0.00, 0.21, 0.21));
+                g.push_back(Vec3f(0.05, 0.25, 0.25));
+                g.push_back(Vec3f(0.10, 0.29, 0.29));
+                g.push_back(Vec3f(0.15, 0.32, 0.32));
+                g.push_back(Vec3f(0.20, 0.35, 0.35));
+                g.push_back(Vec3f(0.25, 0.39, 0.39));
+                g.push_back(Vec3f(0.30, 0.42, 0.42));
+                g.push_back(Vec3f(0.35, 0.46, 0.46));
+                g.push_back(Vec3f(0.40, 0.49, 0.49));
+                g.push_back(Vec3f(0.45, 0.51, 0.51));
+                g.push_back(Vec3f(0.50, 0.55, 0.55));
+                g.push_back(Vec3f(0.55, 0.58, 0.58));
+                g.push_back(Vec3f(0.60, 0.61, 0.61));
+                g.push_back(Vec3f(0.65, 0.65, 0.65));
+                g.push_back(Vec3f(0.70, 0.71, 0.71));
+                g.push_back(Vec3f(0.75, 0.75, 0.75));
+                g.push_back(Vec3f(0.80, 0.81, 0.81));
+                g.push_back(Vec3f(0.85, 0.85, 0.85));
+                g.push_back(Vec3f(0.90, 0.91, 0.91));
+                g.push_back(Vec3f(0.95, 0.95, 0.95));
+                g.push_back(Vec3f(1.00, 0.99, 0.99));
+
+                b.push_back(Vec3f(0.00, 0.11, 0.11));
+                b.push_back(Vec3f(0.05, 0.17, 0.17));
+                b.push_back(Vec3f(0.10, 0.23, 0.23));
+                b.push_back(Vec3f(0.15, 0.25, 0.25));
+                b.push_back(Vec3f(0.20, 0.27, 0.27));
+                b.push_back(Vec3f(0.25, 0.29, 0.29));
+                b.push_back(Vec3f(0.30, 0.31, 0.31));
+                b.push_back(Vec3f(0.35, 0.33, 0.33));
+                b.push_back(Vec3f(0.40, 0.35, 0.35));
+                b.push_back(Vec3f(0.45, 0.37, 0.37));
+                b.push_back(Vec3f(0.50, 0.38, 0.38));
+                b.push_back(Vec3f(0.55, 0.39, 0.39));
+                b.push_back(Vec3f(0.60, 0.41, 0.41));
+                b.push_back(Vec3f(0.65, 0.42, 0.42));
+                b.push_back(Vec3f(0.70, 0.43, 0.43));
+                b.push_back(Vec3f(0.75, 0.44, 0.44));
+                b.push_back(Vec3f(0.80, 0.45, 0.45));
+                b.push_back(Vec3f(0.85, 0.46, 0.46));
+                b.push_back(Vec3f(0.90, 0.47, 0.47));
+                b.push_back(Vec3f(0.95, 0.48, 0.48));
+                b.push_back(Vec3f(1.00, 0.51, 0.51));
+            }
+                break;
+            case __Pseudo_Hot: {
+                r.push_back(Vec3f(0.00, 0.11, 0.11));
+                r.push_back(Vec3f(0.05, 0.19, 0.19));
+                r.push_back(Vec3f(0.10, 0.25, 0.25));
+                r.push_back(Vec3f(0.15, 0.29, 0.29));
+                r.push_back(Vec3f(0.20, 0.35, 0.35));
+                r.push_back(Vec3f(0.25, 0.41, 0.41));
+                r.push_back(Vec3f(0.30, 0.45, 0.45));
+                r.push_back(Vec3f(0.35, 0.51, 0.51));
+                r.push_back(Vec3f(0.40, 0.55, 0.55));
+                r.push_back(Vec3f(0.45, 0.61, 0.61));
+                r.push_back(Vec3f(0.50, 0.65, 0.65));
+                r.push_back(Vec3f(0.55, 0.68, 0.68));
+                r.push_back(Vec3f(0.60, 0.75, 0.75));
+                r.push_back(Vec3f(0.65, 0.77, 0.77));
+                r.push_back(Vec3f(0.70, 0.79, 0.79));
+                r.push_back(Vec3f(0.75, 0.81, 0.81));
+                r.push_back(Vec3f(0.80, 0.85, 0.85));
+                r.push_back(Vec3f(0.85, 0.91, 0.91));
+                r.push_back(Vec3f(0.90, 0.95, 0.95));
+                r.push_back(Vec3f(0.95, 0.99, 0.99));
+                r.push_back(Vec3f(1.00, 1, 1));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.03, 0.03));
+                g.push_back(Vec3f(0.10, 0.05, 0.05));
+                g.push_back(Vec3f(0.15, 0.07, 0.07));
+                g.push_back(Vec3f(0.20, 0.09, 0.09));
+                g.push_back(Vec3f(0.25, 0.11, 0.11));
+                g.push_back(Vec3f(0.30, 0.13, 0.13));
+                g.push_back(Vec3f(0.35, 0.15, 0.15));
+                g.push_back(Vec3f(0.40, 0.17, 0.17));
+                g.push_back(Vec3f(0.45, 0.19, 0.19));
+                g.push_back(Vec3f(0.50, 0.21, 0.21));
+                g.push_back(Vec3f(0.55, 0.23, 0.23));
+                g.push_back(Vec3f(0.60, 0.27, 0.27));
+                g.push_back(Vec3f(0.65, 0.36, 0.36));
+                g.push_back(Vec3f(0.70, 0.45, 0.45));
+                g.push_back(Vec3f(0.75, 0.53, 0.53));
+                g.push_back(Vec3f(0.80, 0.62, 0.62));
+                g.push_back(Vec3f(0.85, 0.71, 0.71));
+                g.push_back(Vec3f(0.90, 0.82, 0.82));
+                g.push_back(Vec3f(0.95, 0.91, 0.91));
+                g.push_back(Vec3f(1.00, 1, 1));
+
+                b.push_back(Vec3f(0.00, 0.01, 0.01));
+                b.push_back(Vec3f(0.05, 0.02, 0.02));
+                b.push_back(Vec3f(0.10, 0.03, 0.03));
+                b.push_back(Vec3f(0.15, 0.04, 0.04));
+                b.push_back(Vec3f(0.20, 0.05, 0.05));
+                b.push_back(Vec3f(0.25, 0.06, 0.06));
+                b.push_back(Vec3f(0.30, 0.07, 0.07));
+                b.push_back(Vec3f(0.35, 0.08, 0.08));
+                b.push_back(Vec3f(0.40, 0.09, 0.09));
+                b.push_back(Vec3f(0.45, 0.11, 0.11));
+                b.push_back(Vec3f(0.50, 0.13, 0.13));
+                b.push_back(Vec3f(0.55, 0.15, 0.15));
+                b.push_back(Vec3f(0.60, 0.17, 0.17));
+                b.push_back(Vec3f(0.65, 0.19, 0.19));
+                b.push_back(Vec3f(0.70, 0.21, 0.21));
+                b.push_back(Vec3f(0.75, 0.23, 0.23));
+                b.push_back(Vec3f(0.80, 0.35, 0.35));
+                b.push_back(Vec3f(0.85, 0.41, 0.41));
+                b.push_back(Vec3f(0.90, 0.52, 0.52));
+                b.push_back(Vec3f(0.95, 0.65, 0.65));
+                b.push_back(Vec3f(1.00, 1, 1));
+            }
+                break;
+            default: return;
+            }
+
+            fillRgb(r_ptr.get(), r);
+            fillRgb(g_ptr.get(), g);
+            fillRgb(b_ptr.get(), b);
+
+            pseudo_color_map[0].swap(r);
+            pseudo_color_map[1].swap(g);
+            pseudo_color_map[2].swap(b);
+        }
+
+        void gray_to_pseudo(GRAY *in, RGB *out, const int &width, const int &height) {
+            RGB *r = r_ptr.get();
+            RGB *g = g_ptr.get();
+            RGB *b = b_ptr.get();
+            for(int i = 0; i < height; i ++) {
+                for(int j = 0; j < width; j ++) {
+                    *out ++ = r[in[width * i + j]];
+                    *out ++ = g[in[width * i + j]];
+                    *out ++ = b[in[width * i + j]];
+                }
+            }
+        }
+
+        void yuv420p_to_pseudo(const YUV *in, RGB *out, const int &width, const int &height) {
+            RGB *r = r_ptr.get();
+            RGB *g = g_ptr.get();
+            RGB *b = b_ptr.get();
+            int offset = 0;
+            for(int i = 0; i < height; i ++)
+            {
+                for(int j = 0; j < width; j ++)
+                {
+                    out[offset ++] = r[in[i * width + j]];
+                    out[offset ++] = g[in[i * width + j]];
+                    out[offset ++] = b[in[i * width + j]];
+                }
+            }
+        }
+
+        void yuv422_to_pseudo(YUV *in, RGB *out, const int &width, const int &height) {
+            RGB *r = r_ptr.get();
+            RGB *g = g_ptr.get();
+            RGB *b = b_ptr.get();
+            int i = 0;
+            YUV y0;
+            YUV y1;
+            for(i = 0; i < width * height * 2; i += 4)
+            {
+                y0 = in[i + 0];
+                y1 = in[i + 2];
+
+                *out ++ = r[y0];
+                *out ++ = g[y0];
+                *out ++ = b[y0];
+
+                *out ++ = r[y1];
+                *out ++ = g[y1];
+                *out ++ = b[y1];
+            }
+        }
+
+        void gray_to_rgb_pixel(const GRAY &gray, RGBPixel *rgb) {
+            rgb->r = r_ptr.get()[gray];
+            rgb->g = g_ptr.get()[gray];
+            rgb->b = b_ptr.get()[gray];
+        }
+
+        const vector<Vec3f> &pseudoColorMap(const int &index) {
+            return pseudo_color_map[index];
+        }
+
+    private:
+        PseudoColorTable current_table;
+        unique_ptr<RGB> r_ptr;
+        unique_ptr<RGB> g_ptr;
+        unique_ptr<RGB> b_ptr;
+
+        vector<Vec3f> pseudo_color_map[3];
+
+        void fillRgb(unsigned char *rgb_ptr, const vector<Vec3f> &rgb_pseudo) {
+            size_t idx = 0;
+            for(int i = 0; i < RGB_SIZE; i ++)
+            {
+                float r = i / 255.0f;
+                if( (r < 1.0)
+                        && (r >= rgb_pseudo[idx + 1].x)
+                        && ((idx + 1) < rgb_pseudo.size()) ) {
+                    idx ++;
+                }
+                double prop = (r - rgb_pseudo[idx].x) / (rgb_pseudo[idx + 1].x - rgb_pseudo[idx].x);
+                double val = rgb_pseudo[idx].z + (rgb_pseudo[idx + 1].y - rgb_pseudo[idx].z) * prop;
+                rgb_ptr[i] = (int)(255 * val);
+            }
+        }
+    };
+
+    unique_ptr<PseudoColor> pseudoColor;
 };
 
 #endif

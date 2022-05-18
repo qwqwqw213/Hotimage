@@ -56,6 +56,9 @@ typedef struct
     // app hotspot info is same as the device hotspot info, hotspot enable
     unsigned char hotspot;
 
+    // version format xx.xx.xx.xx
+    char version[11];
+
     bool isValidHeader() {
         return isValidHeader(this->marker);
     }
