@@ -382,8 +382,14 @@ Rectangle {
 
             InfoDelegate {
                 height: parent.itemHeight
-                label: qsTr("Version")
+                label: qsTr("Device version")
                 value: TcpCamera.version
+            }
+
+            InfoDelegate {
+                height: parent.itemHeight
+                label: qsTr("App version")
+                value: Config.version
             }
         }
 

@@ -541,6 +541,7 @@ public:
     }
 
     void yuv422_to_pseudo(YUV *in, RGB *out, const int &width, const int &height) {
+//        yuv422_to_rgb(in, out, width, height);
         pseudoColor->yuv422_to_pseudo(in, out, width, height);
     }
 
@@ -909,6 +910,71 @@ private:
             }
                 break;
             case __Pseudo_Rainbow: {
+                r.push_back(Vec3f(0.00, 0.01, 0.01));
+                r.push_back(Vec3f(0.05, 0.03, 0.03));
+                r.push_back(Vec3f(0.10, 0.05, 0.05));
+                r.push_back(Vec3f(0.15, 0.11, 0.11));
+                r.push_back(Vec3f(0.20, 0.13, 0.13));
+                r.push_back(Vec3f(0.25, 0.15, 0.15));
+                r.push_back(Vec3f(0.30, 0.19, 0.19));
+                r.push_back(Vec3f(0.35, 0.24, 0.24));
+                r.push_back(Vec3f(0.40, 0.38, 0.38));
+                r.push_back(Vec3f(0.45, 0.54, 0.54));
+                r.push_back(Vec3f(0.50, 0.78, 0.78));
+                r.push_back(Vec3f(0.55, 0.83, 0.83));
+                r.push_back(Vec3f(0.60, 0.85, 0.85));
+                r.push_back(Vec3f(0.65, 0.87, 0.87));
+                r.push_back(Vec3f(0.70, 0.89, 0.89));
+                r.push_back(Vec3f(0.75, 0.91, 0.91));
+                r.push_back(Vec3f(0.80, 0.93, 0.93));
+                r.push_back(Vec3f(0.85, 0.95, 0.95));
+                r.push_back(Vec3f(0.90, 0.97, 0.97));
+                r.push_back(Vec3f(0.95, 0.99, 0.99));
+                r.push_back(Vec3f(1.00, 1, 1));
+
+                g.push_back(Vec3f(0.00, 0.01, 0.01));
+                g.push_back(Vec3f(0.05, 0.05, 0.05));
+                g.push_back(Vec3f(0.10, 0.15, 0.15));
+                g.push_back(Vec3f(0.15, 0.25, 0.25));
+                g.push_back(Vec3f(0.20, 0.35, 0.35));
+                g.push_back(Vec3f(0.25, 0.45, 0.45));
+                g.push_back(Vec3f(0.30, 0.65, 0.65));
+                g.push_back(Vec3f(0.35, 0.69, 0.69));
+                g.push_back(Vec3f(0.40, 0.75, 0.75));
+                g.push_back(Vec3f(0.45, 0.83, 0.83));
+                g.push_back(Vec3f(0.50, 0.91, 0.91));
+                g.push_back(Vec3f(0.55, 0.83, 0.83));
+                g.push_back(Vec3f(0.60, 0.75, 0.75));
+                g.push_back(Vec3f(0.65, 0.52, 0.52));
+                g.push_back(Vec3f(0.70, 0.39, 0.39));
+                g.push_back(Vec3f(0.75, 0.15, 0.15));
+                g.push_back(Vec3f(0.80, 0.24, 0.24));
+                g.push_back(Vec3f(0.85, 0.48, 0.48));
+                g.push_back(Vec3f(0.90, 0.65, 0.65));
+                g.push_back(Vec3f(0.95, 0.81, 0.81));
+                g.push_back(Vec3f(1.00, 1, 1));
+
+                b.push_back(Vec3f(0.00, 0.11, 0.11));
+                b.push_back(Vec3f(0.05, 0.18, 0.18));
+                b.push_back(Vec3f(0.10, 0.36, 0.36));
+                b.push_back(Vec3f(0.15, 0.52, 0.52));
+                b.push_back(Vec3f(0.20, 0.76, 0.76));
+                b.push_back(Vec3f(0.25, 0.99, 0.99));
+                b.push_back(Vec3f(0.30, 0.76, 0.76));
+                b.push_back(Vec3f(0.35, 0.52, 0.52));
+                b.push_back(Vec3f(0.40, 0.36, 0.36));
+                b.push_back(Vec3f(0.45, 0.18, 0.18));
+                b.push_back(Vec3f(0.50, 0.11, 0.11));
+                b.push_back(Vec3f(0.55, 0.05, 0.05));
+                b.push_back(Vec3f(0.60, 0.01, 0.01));
+                b.push_back(Vec3f(0.65, 0.05, 0.05));
+                b.push_back(Vec3f(0.70, 0.19, 0.19));
+                b.push_back(Vec3f(0.75, 0.27, 0.27));
+                b.push_back(Vec3f(0.80, 0.39, 0.39));
+                b.push_back(Vec3f(0.85, 0.51, 0.51));
+                b.push_back(Vec3f(0.90, 0.69, 0.69));
+                b.push_back(Vec3f(0.95, 0.83, 0.83));
+                b.push_back(Vec3f(1.00, 1, 1));
 
             }
                 break;
@@ -1229,21 +1295,14 @@ private:
             RGB *r = r_ptr.get();
             RGB *g = g_ptr.get();
             RGB *b = b_ptr.get();
-            int i = 0;
-            YUV y0;
-            YUV y1;
-            for(i = 0; i < width * height * 2; i += 4)
-            {
-                y0 = in[i + 0];
-                y1 = in[i + 2];
+            for(int i = 0; i < width * height * 2; i += 4) {
+                *out ++ = r[in[i + 0]];
+                *out ++ = g[in[i + 0]];
+                *out ++ = b[in[i + 0]];
 
-                *out ++ = r[y0];
-                *out ++ = g[y0];
-                *out ++ = b[y0];
-
-                *out ++ = r[y1];
-                *out ++ = g[y1];
-                *out ++ = b[y1];
+                *out ++ = r[in[i + 2]];
+                *out ++ = g[in[i + 2]];
+                *out ++ = b[in[i + 2]];
             }
         }
 

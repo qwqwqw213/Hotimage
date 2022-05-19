@@ -99,6 +99,9 @@ public:
 
     void appendLog(const QString &str);
 
+    Q_PROPERTY(QString version READ version CONSTANT)
+    QString version();
+
 Q_SIGNALS:
     void rotationChanged();
     void languageChanged();

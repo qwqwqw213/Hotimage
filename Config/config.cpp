@@ -28,6 +28,8 @@
 #include "AndroidInterface/androidinterface.h"
 #endif
 
+#define PROGRAM_VERSION             "1.0.0.1"
+
 class ConfigPrivate
 {
 public:
@@ -536,6 +538,11 @@ void Config::appendLog(const QString &str)
 {
     qDebug() << str;
     emit updateLog(str);
+}
+
+QString Config::version()
+{
+    return PROGRAM_VERSION;
 }
 
 ConfigPrivate::ConfigPrivate(Config *parent)

@@ -40,6 +40,7 @@ HEADERS += \
     CameraView/cameraview.h \
     Config/config.h \
     Function/ImageProvider/imageprovider.h \
+    Function/pixeloperations.hpp \
     Function/providercamera.hpp \
     Function/queue.hpp \
     ImageListModel/imagelistmodel.h \
