@@ -70,17 +70,7 @@ Rectangle {
                 label: qsTr("Hotspot enable")
                 onOffStatus: TcpCamera.hotspotEnable
                 onClicked: {
-                    if( TcpCamera.isConnected ) {
-                        if( !TcpCamera.setHotspotParam(ssid.value, password.value) ) {
-                            ssid.value = ""
-                            password.value = ""
-                        }
-                    }
-                    else {
-                        messagebox.text = qsTr("Device not connect")
-                        ssid.value = ""
-                        password.value = ""
-                    }
+                    TcpCamera.setHotspotParam(ssid.value, password.value)
                 }
             }
 

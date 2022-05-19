@@ -28,7 +28,7 @@
 #include "AndroidInterface/androidinterface.h"
 #endif
 
-#define PROGRAM_VERSION             "1.0.0.1"
+#define PROGRAM_VERSION             "1.0.0.2"
 
 class ConfigPrivate
 {

@@ -4,6 +4,7 @@
 #include "string"
 
 namespace hs {
+
 enum RequestType {
     __req_init = 0,
     __req_frame,
@@ -19,6 +20,7 @@ enum FrameFormat {
     __even_frame = 0,
     __odd_frame,
     __full_frame,
+    __invalid_frame,
 };
 
 enum PixelFormat
@@ -27,15 +29,6 @@ enum PixelFormat
     __yuv420,
     __xtherm_n16,
     __invalid_format,
-};
-
-enum CameraPalette {
-    __white_hot,
-    __black_hot,
-    __iron,
-    __hcr,
-    __rainbow,
-    __irongray,
 };
 
 typedef struct
@@ -78,8 +71,7 @@ typedef struct {
 
     unsigned char request;
 
-    // 0: send half frame data
-    // 1: send full frame data
+    // see FrameFormat
     unsigned char frameFormat;
 
     // if camera mode is 0x8005
@@ -114,6 +106,7 @@ typedef struct {
         return false;
     }
 } t_packet;
+
 }
 
 #endif

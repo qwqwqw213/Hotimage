@@ -134,7 +134,7 @@ public:
                 const int &width, const int &height,
                 const CameraPixelFormat &format,
                 QImage *image,
-                const bool &fullBuffer);
+                const hs::FrameFormat &frameFormat);
     void nuc16_to_rgb24(const uint16_t *nuc, uint8_t *rgb, const int &width, const int &height);
 
     QScopedPointer<PixelOperations> pixelOperations;
@@ -231,18 +231,18 @@ bool TcpCamera::isOpen()
 int TcpCamera::width()
 {
 #ifdef Q_OS_ANDROID
-    return p->uvc.isNull() ? p->cfg.header.width : p->uvc->width();
+    return p->uvc.isNull() ? p->cfg.width : p->uvc->width();
 #else
-    return p->cfg.header.width;
+    return p->cfg.width;
 #endif
 }
 
 int TcpCamera::height()
 {
 #ifdef Q_OS_ANDROID
-    return p->uvc.isNull() ? p->cfg.header.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
+    return p->uvc.isNull() ? p->cfg.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
 #else
-    return p->cfg.header.height - IMAGE_Y_OFFSET;
+    return p->cfg.height - IMAGE_Y_OFFSET;
 #endif
 }
 
@@ -390,12 +390,12 @@ uint16_t TcpCamera::distance()
 
 int TcpCamera::frameMode()
 {
-    return (p->cfg.set.frameFormat == hs::__full_frame ? 1 : 0);
+    return (p->cfg.set.frameFormat == hs::__full_frame ? __image_first : __fps_first);
 }
 
 void TcpCamera::setFrameMode(const int &mode)
 {
-    p->cfg.set.frameFormat = (mode == 1 ? hs::__full_frame : hs::__even_frame);
+    p->cfg.set.frameFormat = (mode == __image_first ? hs::__full_frame : hs::__even_frame);
     emit frameModeChanged();
 }
 
@@ -459,7 +459,7 @@ QString TcpCamera::cameraSN()
 
 QString TcpCamera::version()
 {
-    return p->socket.isNull() ? "" : QByteArray(p->cfg.header.version, 11);
+    return p->socket.isNull() ? "" : p->cfg.version;
 }
 
 bool TcpCamera::hotspotEnable()
@@ -506,15 +506,20 @@ bool TcpCamera::setHotspotParam(const QString &ssid, const QString &password)
         p->cfg.hotspotSsid = ssid;
         p->cfg.hotspotPassword = password;
 
-        QByteArray _ssid = ssid.toLatin1();
-        QByteArray _password = password.toLatin1();
+        QByteArray _ssid = ssid.toUtf8();
+        QByteArray _password = password.toUtf8();
         memcpy(p->cfg.set.hotspotSSID, _ssid.data(), _ssid.length());
         p->cfg.set.hotspotSSID[_ssid.length()] = '\0';
         memcpy(p->cfg.set.hotspotPassword, _password.data(), _password.length());
         p->cfg.set.hotspotPassword[_password.length()] = '\0';
 
-        QByteArray byte(p->requestByte(hs::__req_hotspot_info));
-        emit p->write(byte);
+        if( isConnected() ) {
+            QByteArray byte(p->requestByte(hs::__req_hotspot_info));
+            emit p->write(byte);
+        }
+        else {
+            emit msg(tr("Device not connect"));
+        }
     }
     return true;
 }
@@ -725,9 +730,6 @@ QByteArray TcpCameraPrivate::requestByte(const hs::RequestType &type)
     cfg.set.marker[2] = 'C';
     cfg.set.marker[3] = 'v';
     cfg.set.request = type;
-    if( cfg.set.frameFormat != hs::__full_frame ) {
-        cfg.set.frameFormat = !cfg.set.frameFormat;
-    }
 //    qDebug() << "req type:" << cfg.set.request;
     memcpy(byte.data(), &cfg.set, sizeof (hs::t_packet));
     return byte;
@@ -737,6 +739,10 @@ void TcpCameraPrivate::requestFrame(const hs::RequestType &type)
 {
     if( exit == 1 ) {
         return;
+    }
+
+    if( cfg.set.frameFormat < hs::__full_frame ) {
+        cfg.set.frameFormat = !cfg.set.frameFormat;
     }
 //    sendTimer->start();
     emit restartSendTimer();
@@ -979,7 +985,9 @@ void TcpCameraPrivate::onUnpacket()
             emit f->paletteChanged();
         }
 
-        memcpy(&cfg.header, &header, sizeof (hs::t_header));
+        cfg.width = header.width;
+        cfg.height = header.height;
+        cfg.version = QByteArray(header.version, 11);
 
         QImage *image = f->rgb();
         CameraPixelFormat format = toCameraPixel(static_cast<hs::PixelFormat>(header.pixelFormat));
@@ -988,7 +996,7 @@ void TcpCameraPrivate::onUnpacket()
                    header.width, header.height,
                    format,
                    image,
-                   header.frameFormat == hs::__full_frame);
+                   (hs::FrameFormat)header.frameFormat);
         }
         else {
             qDebug() << "decode invalid pixel format";
@@ -1025,7 +1033,8 @@ CameraPixelFormat TcpCameraPrivate::toCameraPixel(const hs::PixelFormat &format)
 
 void TcpCameraPrivate::decode(uint8_t *buf,
                               const int &width, const int &height,
-                              const CameraPixelFormat &format, QImage *image, const bool &fullBuffer)
+                              const CameraPixelFormat &format, QImage *image,
+                              const hs::FrameFormat &frameFormat)
 {
     sendOvertimeCount = 0;
 
@@ -1059,7 +1068,7 @@ void TcpCameraPrivate::decode(uint8_t *buf,
         }
     }
 
-    if( !fullBuffer ) {
+    if( frameFormat < hs::__full_frame ) {
 //        if( frameBuffer.isNull() ) {
 //            if( format == __pix_custom ) {
 //                qDebug() << "n16 pixel format:" << width << height;
@@ -1070,13 +1079,12 @@ void TcpCameraPrivate::decode(uint8_t *buf,
 //                frameBuffer.reset(new uint8_t[ProviderCamera::byteSize(width, height, format)]);
 //            }
 //        }
-
 //        qDebug() << "frame index:" << cfg.header.frameFormat;
-        int packIndex = cfg.header.frameFormat;
+
         int row = width * 2;
         for(int i = 0; i < height / 2; i ++) {
             frameBufferMutex.lock();
-            memcpy(frameBuffer.data() + ((2 * i + packIndex) * row),
+            memcpy(frameBuffer.data() + ((2 * i + frameFormat) * row),
                    buf + (i * row),
                    row);
             frameBufferMutex.unlock();
@@ -1092,7 +1100,7 @@ void TcpCameraPrivate::decode(uint8_t *buf,
 //               width * height * 2 - cpy_size);
     }
 
-    uint16_t *data = fullBuffer ?
+    uint16_t *data = (frameFormat >= hs::__full_frame) ?
                 reinterpret_cast<uint16_t *>(buf) : reinterpret_cast<uint16_t *>(frameBuffer.data());
     uint16_t *temp = data + (width * (height - IMAGE_Y_OFFSET));
 
@@ -1193,7 +1201,7 @@ void TcpCameraPrivate::decode(uint8_t *buf,
 
     uint8_t *bit = image->bits();
     if( format == __pix_yuyv ) {
-        pixelOperations->yuv422_to_rgb(fullBuffer ? buf : frameBuffer.data(),
+        pixelOperations->yuv422_to_rgb((frameFormat >= hs::__full_frame) ? buf : frameBuffer.data(),
                                        bit,
                                        width, height - IMAGE_Y_OFFSET);
 
@@ -1206,7 +1214,7 @@ void TcpCameraPrivate::decode(uint8_t *buf,
                        bit, width, height - IMAGE_Y_OFFSET);
     }
     else if( format == __pix_yuv420p ) {
-        pixelOperations->yuv420p_to_rgb(fullBuffer ? buf : frameBuffer.data(),
+        pixelOperations->yuv420p_to_rgb((frameFormat >= hs::__full_frame) ? buf : frameBuffer.data(),
                                         bit,
                                         width, height - IMAGE_Y_OFFSET);
     }
@@ -1426,6 +1434,7 @@ void TcpCameraPrivate::capture()
             }
 
             // save frame buffer
+            /*
             fileName = QDateTime::currentDateTime().toString("yyyyMMddhhmmss") + QString(".dat");
             QFile file(g_Config->imageGalleryPath() + fileName);
             bool flag = file.open(QIODevice::WriteOnly);
@@ -1441,6 +1450,7 @@ void TcpCameraPrivate::capture()
             else {
                 emit f->msg(QString("Save frame data fail"));
             }
+            */
         });
     }
 }
@@ -1637,7 +1647,9 @@ void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, 
 
     cam->decode(reinterpret_cast<uint8_t *>(data),
                 width, height,
-                UVC_MODE == 4 ? __pix_custom : __pix_yuyv, rgb, true);
+                UVC_MODE == 4 ? __pix_custom : __pix_yuyv,
+                rgb,
+                UVC_MODE == 4 ? hs::__n16_frame : hs::__full_frame);
 
 //    switch (format) {
 //    case __pix_yuyv: {

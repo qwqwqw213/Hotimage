@@ -17,6 +17,11 @@ class TcpCamera : public ProviderCamera
     Q_OBJECT
 
 public:
+    enum FrameMode {
+        __fps_first = 0,        // 帧数据分成奇偶帧, 两次接收完整帧数据
+        __image_first,          // 一次接收所有帧数据
+    };
+
     explicit TcpCamera(QObject *parent = nullptr);
     ~TcpCamera();
 

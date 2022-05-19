@@ -29,11 +29,13 @@ typedef struct
 {
     QString ip;
     int port;
+    int width;
+    int height;
+    QByteArray version;
     bool hotspotEnable;
     QString hotspotSsid;
     QString hotspotPassword;
     hs::t_packet set;
-    hs::t_header header;
 } tcp_config;
 
 #endif // TCPDEF_H
