@@ -6,7 +6,7 @@ MouseArea {
     property alias family: label.font.family
     property alias tip: tip.text
     property bool selection: false
-    property color pressColor: "#62cfdf"
+    property alias color: label.color
 
     property bool viceState: false
     property string viceIcon: ""
@@ -18,8 +18,6 @@ MouseArea {
         font.pixelSize: parent.height
         horizontalAlignment: Qt.AlignHCenter
         verticalAlignment: Qt.AlignVCenter
-        color: parent.selection ?
-                   parent.pressColor : (parent.pressed ? parent.pressColor : "white")
         text: viceState ? viceIcon : icon
     }
 

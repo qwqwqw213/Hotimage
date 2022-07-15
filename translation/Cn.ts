@@ -90,17 +90,16 @@
         <translation>密码</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="80"/>
         <source>Device not connect</source>
-        <translation>设备未连接</translation>
+        <translation type="vanished">设备未连接</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="96"/>
+        <location filename="../Setting/Setting.qml" line="86"/>
         <source>If you want camera device connect to phone hotspot.</source>
         <translation>如果需要摄像头连接手机热点.</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="97"/>
+        <location filename="../Setting/Setting.qml" line="87"/>
         <source>
 1. connect camera device wi-fi</source>
         <translation>
@@ -112,158 +111,180 @@
         <translation>热点开关</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="98"/>
         <source>
 2. fill in hotspot ssid and password, turn on &quot;Hotspot enable&quot;</source>
-        <translation>
+        <translation type="vanished">
 2. 填写本机热点名称和密码, 打开&quot;热点开关&quot;</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="99"/>
+        <location filename="../Setting/Setting.qml" line="89"/>
         <source>
 3. open phone system setting, turn on hotspot switch</source>
         <translation>
 3. 打开手机系统设置, 打开热点功能</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="100"/>
+        <location filename="../Setting/Setting.qml" line="90"/>
         <source>
 if hotspot info changed, need reconnect device and reset ssid and password</source>
         <translation>
 如果手机热点信息改变, 需要重新连接摄像头填写新的热点名称和密码</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="105"/>
+        <location filename="../Setting/Setting.qml" line="95"/>
         <source>Wireless</source>
         <translation>无线</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="110"/>
+        <location filename="../Setting/Setting.qml" line="100"/>
         <source>Device IP</source>
         <translation>设备IP</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="111"/>
+        <location filename="../Setting/Setting.qml" line="101"/>
         <source>conn</source>
         <translation>连接</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="120"/>
+        <location filename="../Setting/Setting.qml" line="110"/>
         <source>Local IP</source>
         <translation>本地IP</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="133"/>
+        <location filename="../Setting/Setting.qml" line="123"/>
         <source>Manual connect camera device, camera device default ip 192.168.1.1</source>
         <translation>手动连接摄像头, 摄像头默认IP为192.168.1.1</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="158"/>
+        <location filename="../Setting/Setting.qml" line="148"/>
         <source>Imaging quality</source>
         <translation>成像质量</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="163"/>
+        <location filename="../Setting/Setting.qml" line="153"/>
         <source>FPS first</source>
         <translation>帧率优先</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="170"/>
+        <location filename="../Setting/Setting.qml" line="160"/>
         <source>Image first</source>
         <translation>图像优先</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="177"/>
+        <location filename="../Setting/Setting.qml" line="174"/>
+        <source>Keep the framerate smooth using &quot;FPS first&quot; when abnormal communication</source>
+        <translation>希望保持画面稳定请选择&quot;帧率优先&quot;</translation>
+    </message>
+    <message>
+        <location filename="../Setting/Setting.qml" line="179"/>
         <source>Palette</source>
         <translation>调色盘</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="183"/>
+        <location filename="../Setting/Setting.qml" line="185"/>
         <source>WhiteHot</source>
         <translation>白热</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="192"/>
+        <location filename="../Setting/Setting.qml" line="194"/>
         <source>BlackHot</source>
         <translation>黑热</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="200"/>
+        <location filename="../Setting/Setting.qml" line="202"/>
         <source>Iron</source>
         <translation>铁红</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="208"/>
+        <location filename="../Setting/Setting.qml" line="210"/>
         <source>HCR</source>
         <translation>高对比彩虹</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="216"/>
+        <location filename="../Setting/Setting.qml" line="218"/>
         <source>Rainbow</source>
         <translation>彩虹</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="224"/>
+        <location filename="../Setting/Setting.qml" line="226"/>
         <source>IronGray</source>
         <translation>铁灰</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="232"/>
+        <location filename="../Setting/Setting.qml" line="234"/>
         <source>Camera Param</source>
         <translation>模组参数</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="245"/>
+        <location filename="../Setting/Setting.qml" line="247"/>
         <source>Emiss</source>
         <translation>发射率</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="259"/>
+        <location filename="../Setting/Setting.qml" line="261"/>
         <source>Reflected</source>
         <translation>反射温度</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="272"/>
+        <location filename="../Setting/Setting.qml" line="274"/>
         <source>Ambient</source>
         <translation>环境温度</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="285"/>
+        <location filename="../Setting/Setting.qml" line="287"/>
         <source>Humidness</source>
         <translation>湿度</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="298"/>
+        <location filename="../Setting/Setting.qml" line="300"/>
         <source>Correction</source>
         <translation>校正</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="312"/>
+        <location filename="../Setting/Setting.qml" line="314"/>
         <source>Distance</source>
         <translation>距离</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="317"/>
+        <location filename="../Setting/Setting.qml" line="375"/>
+        <source>Device version</source>
+        <translation>设备版本</translation>
+    </message>
+    <message>
+        <location filename="../Setting/Setting.qml" line="381"/>
+        <source>App version</source>
+        <translation>程序版本</translation>
+    </message>
+    <message>
+        <location filename="../Setting/Setting.qml" line="20"/>
+        <location filename="../Setting/Setting.qml" line="319"/>
         <source>Save success</source>
         <translation>保存成功</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="328"/>
+        <location filename="../Setting/Setting.qml" line="88"/>
+        <source>
+2. fill in hotspot ssid and password, click &quot;Hotspot enable&quot; and wait for switch turn on</source>
+        <translation>
+2.填写手机热点名称和密码,点击&quot;热点开关&quot;并等待开关打开</translation>
+    </message>
+    <message>
+        <location filename="../Setting/Setting.qml" line="330"/>
         <source>Image flip</source>
         <translation>图像反转</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="348"/>
+        <location filename="../Setting/Setting.qml" line="350"/>
         <source>简体中文</source>
         <translation>简体中文</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="362"/>
+        <location filename="../Setting/Setting.qml" line="364"/>
         <source>Product</source>
         <translation>产品</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="367"/>
+        <location filename="../Setting/Setting.qml" line="369"/>
         <source>SN</source>
         <translation>SN</translation>
     </message>
@@ -272,7 +293,7 @@ if hotspot info changed, need reconnect device and reset ssid and password</sour
         <translation type="vanished">保存设置</translation>
     </message>
     <message>
-        <location filename="../Setting/Setting.qml" line="343"/>
+        <location filename="../Setting/Setting.qml" line="345"/>
         <source>Language</source>
         <translation>语言</translation>
     </message>
@@ -284,62 +305,79 @@ if hotspot info changed, need reconnect device and reset ssid and password</sour
         <translation type="vanished">中文测试</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="241"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="276"/>
         <source>Searching</source>
         <translation>搜索中</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="246"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="281"/>
         <source>Is connected state</source>
         <translation>已连接</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="250"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="285"/>
         <source>Invalid IP</source>
         <translation>无效IP地址</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="403"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="437"/>
         <source>Save record path:</source>
         <translation>录像保存路径:</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="445"/>
         <source>SSID length limit exceeded</source>
-        <translation>热点名称超出有效长度</translation>
+        <translation type="vanished">热点名称超出有效长度</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="449"/>
         <source>Password length limit exceeded</source>
-        <translation>密码超出有效长度</translation>
+        <translation type="vanished">密码超出有效长度</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="453"/>
         <source>Password minimum length is 8</source>
-        <translation>热点密码长度必须大于等于八位</translation>
+        <translation type="vanished">热点密码长度必须大于等于八位</translation>
     </message>
 </context>
 <context>
     <name>TcpCameraPrivate</name>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="567"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="580"/>
         <source>Abnormal communication with the camera</source>
         <translation>与摄像头通讯异常</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="645"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="667"/>
         <source>Record video fail</source>
         <translation>录像失败</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="766"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="816"/>
         <source>Manual connect success</source>
         <translation>手动连接成功</translation>
     </message>
     <message>
-        <location filename="../TcpCamera/tcpcamera.cpp" line="1322"/>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="1428"/>
         <source>Captrue fail</source>
         <translation>拍照失败</translation>
+    </message>
+    <message>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="1603"/>
+        <source>SSID length limit exceeded</source>
+        <translation>热点名称超出有效长度</translation>
+    </message>
+    <message>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="1607"/>
+        <source>Password length limit exceeded</source>
+        <translation>密码超出有效长度</translation>
+    </message>
+    <message>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="1611"/>
+        <source>Password minimum length is 8</source>
+        <translation>热点密码长度必须大于等于八位</translation>
+    </message>
+    <message>
+        <location filename="../TcpCamera/tcpcamera.cpp" line="1630"/>
+        <source>Device not connect</source>
+        <translation>设备未连接</translation>
     </message>
 </context>
 <context>

@@ -1,153 +1,156 @@
 #ifndef __HANDSHAKE_H__
 #define __HANDSHAKE_H__
 
-#define HANDSHAKE_PACK_SIZE             1490
+#define XTHERM_N16_MODE                 0x8004
+#define XTHERM_YUYV_MODE                0x8005
 
 #include "HandShakeDef.h"
-#include "iostream"
 
+#include "QString"
+#include "QByteArray"
 
-#ifndef MOBILE_APP
-#include "V4L2Control.hpp"
+class HandShakeApi {
 
-#endif
-
-class HandShake
-{
 public:
-#ifndef MOBILE_APP
-    HandShake() {
-        memset(&packet, 0, sizeof(hs::t_packet));
+    HandShakeApi() { }
+    ~HandShakeApi() { }
+
+    // 握手初始化
+    inline QByteArray handshakeInit(const float &emiss,
+                                    const float &reflected,
+                                    const float &ambient,
+                                    const float &humidness,
+                                    const float &correction,
+                                    const unsigned short &distance,
+                                    const unsigned char &infraredState,
+                                    const QString &ssid,
+                                    const QString &password) {
+        hs::t_packet p = initPacket(hs::__req_init);
+        p.emiss = emiss;
+        p.reflected = reflected;
+        p.ambient = ambient;
+        p.humidness = humidness;
+        p.correction = correction;
+        p.distance = distance;
+
+        p.infraredState = infraredState;
+
+        QByteArray _ssid = ssid.toUtf8();
+        QByteArray _password = password.toUtf8();
+        memcpy(p.hotspotSSID, _ssid.data(), _ssid.size());
+        p.hotspotSSID[_ssid.size()] = '\0';
+        memcpy(p.hotspotPassword, _password.data(), _password.size());
+        p.hotspotPassword[_password.size()] = '\0';
+        return packet(&p);
     }
 
-    int readPacket(const char *buf, const int &fd) {
-        hs::t_packet p;
-        memcpy(&p, buf, sizeof(hs::t_packet));
+    // 请求帧数据
+    inline QByteArray requestFrame() {
+        hs::t_packet p = initPacket(hs::__req_frame);
+        return packet(&p);
+    }
 
-        if( !p.isValidHeader() ) {
-            // std::cout << "invalid packet \n";
-            return hs::__req_invalid;
-        }
+    // 设置xtherm摄像头参数
+    inline QByteArray setCameraParam(const float &emiss,
+                                     const float &reflected,
+                                     const float &ambient,
+                                     const float &humidness,
+                                     const float &correction,
+                                     const unsigned short &distance) {
 
-        // std::cout << "req type: " << (int)p.request << "\n";
-        switch (p.request)
-        {
-        case hs::__req_init: {
-            // set camera param
-            v4l2_ctl.sendEmissivity(fd, p.emiss);
-            usleep(10000);
-            v4l2_ctl.sendReflection(fd, p.reflected);
-            usleep(10000);
-            v4l2_ctl.sendAmb(fd, p.ambient);
-            usleep(10000);
-            v4l2_ctl.sendHumidity(fd, p.humidness);
-            usleep(10000);
-            v4l2_ctl.sendDistance(fd, p.distance);
-            usleep(10000);
-            v4l2_ctl.sendCorrection(fd, p.correction);
+        hs::t_packet p = initPacket(hs::__req_camera_param);
+        p.emiss = emiss;
+        p.reflected = reflected;
+        p.ambient = ambient;
+        p.humidness = humidness;
+        p.correction = correction;
+        p.distance = distance;
+        return packet(&p);
+    }
 
-            // init hotspot enable
-            std::string _ssid = p.hotspotSSID;
-            std::string _password = p.hotspotPassword;
-            if( !_ssid.empty() && !_password.empty() )
+    // 刷新快门
+    inline QByteArray shutter() {
+        hs::t_packet p = initPacket(hs::__req_shutter);
+        return packet(&p);
+    }
+
+    // 设置热点参数
+    inline QByteArray setHotspot(const QString &ssid, const QString &password) {
+        hs::t_packet p = initPacket(hs::__req_hotspot_info);
+        QByteArray _ssid = ssid.toUtf8();
+        QByteArray _password = password.toUtf8();
+        memcpy(p.hotspotSSID, _ssid.data(), _ssid.size());
+        p.hotspotSSID[_ssid.size()] = '\0';
+        memcpy(p.hotspotPassword, _password.data(), _password.size());
+        p.hotspotPassword[_password.size()] = '\0';
+        return packet(&p);
+    }
+
+    // 打开红外线
+    inline QByteArray setInfraedState(const uint8_t &state) {
+        hs::t_packet p = initPacket(hs::__req_infrared);
+        p.infraredState = state;
+        return packet(&p);
+    }
+
+    inline QByteArray packet(hs::t_packet *p) {
+        QByteArray byte;
+        byte.resize(HANDSHAKE_PACK_SIZE);
+        memcpy(byte.data(), p, sizeof(hs::t_packet));
+        return byte;
+    }
+
+    // 数据解码
+    inline size_t decode(QByteArray &buf, hs::t_header *header, uint8_t *data) {
+        int headerSize = sizeof (hs::t_header);
+        memcpy(header, buf.data(), headerSize);
+
+        if( !header->isValidHeader() ) {
+            int i = 0;
+            int size = buf.size();
+            while (i < size)
             {
-                if( _ssid == packet.hotspotSSID
-                    && _password == packet.hotspotPassword ) {
-                    hotspot_enable = true;
+                char first = buf.at(i);
+                if( first == 'T' )
+                {
+                    QByteArray head = buf.mid(i, headerSize);
+                    if( header->isValidHeader(head.data()) ) {
+                        return i;
+                    }
+                    else {
+                        i ++;
+                        continue;
+                    }
                 }
                 else {
-                    hotspot_enable = false;
+                    i ++;
                 }
             }
-            else {
-                hotspot_enable = false;
-            }
-
-            std::cout << "- handshake init -" << "\n"
-                      << "     frame format: " << (int)p.frameFormat << "\n"
-                      << "            emiss: " << p.emiss << "\n"
-                      << "        reflected: " << p.reflected << "\n"
-                      << "          ambient: " << p.ambient << "\n"
-                      << "        humidness: " << p.humidness << "\n"
-                      << "         distance: " << p.distance << "\n"
-                      << "       correction: " << p.correction << "\n"
-                      << "   hotspot enable: " << hotspot_enable << "\n"
-                      << "     hotspot ssid: " << _ssid << "\n"
-                      << " hotspot password: " << _password << "\n";
-        }
-            break;
-        case hs::__req_frame: {
-            if( p.hotspotSSID == hotspot_ssid
-                && p.hotspotPassword == hotspot_password ) {
-                hotspot_enable = true;
-            }
-            else {
-                hotspot_enable = false;
-            }
-        }
-            break;
-        case hs::__req_shutter: {
-            std::cout << "refresh shutter \n";
-            v4l2_ctl.v4l2Control(fd, CAM_SHUTTER);
-        }
-            break;
-        case hs::__req_camera_param: {
-            v4l2_ctl.sendEmissivity(fd, p.emiss);
-            usleep(10000);
-            v4l2_ctl.sendReflection(fd, p.reflected);
-            usleep(10000);
-            v4l2_ctl.sendAmb(fd, p.ambient);
-            usleep(10000);
-            v4l2_ctl.sendHumidity(fd, p.humidness);
-            usleep(10000);
-            v4l2_ctl.sendDistance(fd, p.distance);
-            usleep(10000);
-            v4l2_ctl.sendCorrection(fd, p.correction);
-
-            std::cout << "- update camera param -" << "\n"
-                      << "      emiss: " << p.emiss << "\n"
-                      << "  reflected: " << p.reflected << "\n"
-                      << "    ambient: " << p.ambient << "\n"
-                      << "  humidness: " << p.humidness << "\n"
-                      << "   distance: " << p.distance << "\n"
-                      << " correction: " << p.correction << "\n";
-        }
-            break;
-        case hs::__req_hotspot_info: {
-            hotspot_ssid = p.hotspotSSID;
-            hotspot_password = p.hotspotPassword;
-            if( !hotspot_ssid.empty() && !hotspot_password.empty() ) {
-                hotspot_enable = true;
-            }
-            else {
-                hotspot_enable = false;
-            }
-
-            std::cout << "- update hotspot info -" << "\n"
-                      << "    hotspot enable: " << hotspot_enable << "\n"
-                      << "      hotspot_ssid: " << hotspot_ssid << "\n"
-                      << "  hotspot_password: " << hotspot_password << "\n";
-        }
-            break;
+            return i;
         }
 
-        memcpy(&packet, &p, sizeof(hs::t_packet));
-        return p.request;
+        if( header->bufferLength > buf.size() ) {
+            return 0;
+        }
+
+        data = reinterpret_cast<uint8_t *>(buf.data() + headerSize);
+
+        return header->bufferLength;
     }
 
-    int frameFormat() { return packet.frameFormat; }
-    bool hotspotEnable() { return hotspot_enable; }
-    std::string hotspotSSID() { return hotspot_ssid; }
-    std::string hotspotPassword() { return hotspot_password; }
-
 private:
-    XthermControl v4l2_ctl;
-    hs::t_packet packet;
-    bool hotspot_enable;
-    std::string hotspot_ssid;
-    std::string hotspot_password;
-#endif
+    hs::t_packet initPacket(const hs::RequestType &req) {
+        hs::t_packet p;
+        memset(&p, '\0', sizeof (hs::t_packet));
+        p.marker[0] = 'R';
+        p.marker[1] = 'e';
+        p.marker[2] = 'C';
+        p.marker[3] = 'v';
+        p.request = req;
+        return p;
+    }
 };
+#endif
 
 
 // int byte2int(const char *buf, const int &byteSize) {
@@ -280,7 +283,3 @@ private:
 //     }
 //     return byte;
 // }
-
-
-#endif
-

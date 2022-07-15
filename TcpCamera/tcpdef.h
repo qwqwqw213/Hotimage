@@ -31,11 +31,22 @@ typedef struct
     int port;
     int width;
     int height;
-    QByteArray version;
+    int frameMode;
+    int palette;
+    QString version;
     bool hotspotEnable;
     QString hotspotSsid;
     QString hotspotPassword;
-    hs::t_packet set;
+    int devType;
+    int infraredState;
+
+    float emiss;
+    float reflected;
+    float ambient;
+    float humidness;
+    float correction;
+    unsigned short distance;
+    int frameFormat;
 } tcp_config;
 
 #endif // TCPDEF_H

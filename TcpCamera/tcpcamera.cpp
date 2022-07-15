@@ -5,7 +5,6 @@
 #include "UVCamera/uvcamera.h"
 #endif
 
-#include "pixeloperations.hpp"
 #include "Config/config.h"
 #include "VideoProcess/videoprocess.h"
 #include "tcpsearcher.hpp"
@@ -34,18 +33,6 @@
 #include "functional"
 
 #define IMAGE_Y_OFFSET          4
-#define UVC_MODE                5
-
-QString float2byte(const float &f)
-{
-    QString data = "";
-    uint8_t *p = (uint8_t *)(&f);
-    for(int i = 0; i < 4; i ++) {
-        uint8_t u8 = *p ++;
-        data += QString::number(u8) + QString(" ");
-    }
-    return data;
-}
 
 class TcpCameraPrivate : public QObject
 {
@@ -67,7 +54,8 @@ public:
 
     int sendOvertimeCount;
     QTimer *sendTimer;
-    QByteArray requestByte(const hs::RequestType &type);
+    hs::t_packet packet(const hs::RequestType &req);
+    QByteArray requestByte(hs::t_packet *p);
     void requestFrame(const hs::RequestType &type = hs::__req_frame);
 
     QScopedPointer<QTcpSocket> socket;
@@ -106,10 +94,12 @@ public:
     void sendEmissivity(float emiss);
     void sendDistance(unsigned short distance);
 #endif
-
+    void setFrameMode(const int &mode);
     void setCameraParam(const qreal &emiss, const qreal &reflected,
                         const qreal &ambient, const qreal &humidness,
                         const qreal &correction, const int &distance);
+    bool setHotspotParam(const QString &ssid, const QString &password);
+
     bool isValidIpv4Addres(const QString &ip);
 
     QTimer *searchTimer;
@@ -120,7 +110,6 @@ public:
     void searchDevice();
 
     bool showTemp;
-    int frameMode;
 
     QString localIP;
     QString deviceIP;
@@ -135,9 +124,18 @@ public:
                 const CameraPixelFormat &format,
                 QImage *image,
                 const hs::FrameFormat &frameFormat);
+
+    void decode_tiny(uint8_t *buf,
+                     const int &width, const int &height,
+                     QImage *image,
+                     const hs::FrameFormat &frameFormat);
+
+    void y2_to_rgb24(const uint8_t *in, uint8_t *out, const int &width, const int &height);
     void nuc16_to_rgb24(const uint16_t *nuc, uint8_t *rgb, const int &width, const int &height);
 
-    QScopedPointer<PixelOperations> pixelOperations;
+    QScopedPointer<QTcpServer> server;
+    void openServer();
+    void closeServer();
 
 private:
     TcpCamera *f;
@@ -184,7 +182,6 @@ Q_SIGNALS:
 private Q_SLOTS:
     void onReadyRead();
     void searchOvertime();
-    void hostTest();
 
 };
 
@@ -198,6 +195,8 @@ TcpCamera::TcpCamera(QObject *parent)
 //             qDebug() << localhost << address.toString();
 //        }
 //    }
+
+    pixelOperations()->initializerPseudo((PseudoColorTable)p->cfg.palette);
 }
 
 TcpCamera::~TcpCamera()
@@ -240,9 +239,25 @@ int TcpCamera::width()
 int TcpCamera::height()
 {
 #ifdef Q_OS_ANDROID
-    return p->uvc.isNull() ? p->cfg.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
+//    return p->uvc.isNull() ? p->cfg.height - IMAGE_Y_OFFSET : p->uvc->height() - IMAGE_Y_OFFSET;
+    if( p->uvc.isNull() ) {
+        switch (p->cfg.devType) {
+        case hs::__t2l_a4l: { return (p->cfg.height - IMAGE_Y_OFFSET); }
+        case hs::__tiny_1b: { return (p->cfg.height / 2); }
+        }
+        return 0;
+    }
+    else {
+        return p->uvc->height() - IMAGE_Y_OFFSET;
+    }
+
 #else
-    return p->cfg.height - IMAGE_Y_OFFSET;
+//    return p->cfg.height - IMAGE_Y_OFFSET;
+    switch (p->cfg.devType) {
+    case hs::__t2l_a4l: { return (p->cfg.height - IMAGE_Y_OFFSET); }
+    case hs::__tiny_1b: { return (p->cfg.height / 2); }
+    }
+    return 0;
 #endif
 }
 
@@ -310,11 +325,12 @@ void TcpCamera::open()
 
 void TcpCamera::close()
 {
-    p->exit = 1;
     if( isOpen() ) {
+        qDebug() << "tcp start close";
         if( encoding() ) {
             closeRecord();
         }
+        p->exit = 1;
         p->thread->quit();
         p->thread->wait();
         emit connectStatusChanged();
@@ -355,48 +371,47 @@ void TcpCamera::setCameraParam(const qreal &emiss, const qreal &reflected,
 
 int TcpCamera::palette()
 {
-    return p->cfg.set.palette;
+    return p->cfg.palette;
 }
 
 qreal TcpCamera::emiss()
 {
-    return p->cfg.set.emiss;
+    return p->cfg.emiss;
 }
 
 qreal TcpCamera::reflected()
 {
-    return p->cfg.set.reflected;
+    return p->cfg.reflected;
 }
 
 qreal TcpCamera::ambient()
 {
-    return p->cfg.set.ambient;
+    return p->cfg.ambient;
 }
 
 qreal TcpCamera::humidness()
 {
-    return p->cfg.set.humidness;
+    return p->cfg.humidness;
 }
 
 qreal TcpCamera::correction()
 {
-    return p->cfg.set.correction;
+    return p->cfg.correction;
 }
 
 uint16_t TcpCamera::distance()
 {
-    return p->cfg.set.distance;
+    return p->cfg.distance;
 }
 
 int TcpCamera::frameMode()
 {
-    return (p->cfg.set.frameFormat == hs::__full_frame ? __image_first : __fps_first);
+    return p->cfg.frameMode;
 }
 
 void TcpCamera::setFrameMode(const int &mode)
 {
-    p->cfg.set.frameFormat = (mode == __image_first ? hs::__full_frame : hs::__even_frame);
-    emit frameModeChanged();
+    p->setFrameMode(mode);
 }
 
 bool TcpCamera::showTemp()
@@ -489,39 +504,19 @@ QString TcpCamera::hotspotPassword()
  */
 bool TcpCamera::setHotspotParam(const QString &ssid, const QString &password)
 {
-    if( ssid.size() >= sizeof(p->cfg.set.hotspotSSID) ) {
-        emit msg(tr("SSID length limit exceeded"));
-        return false;
-    }
-    if( password.size() >= sizeof(p->cfg.set.hotspotPassword) ) {
-        emit msg(tr("Password length limit exceeded"));
-        return false;
-    }
-    if( password.size() < 8 ) {
-        emit msg(tr("Password minimum length is 8"));
-        return false;
-    }
+    return p->setHotspotParam(ssid, password);
+}
 
-    if( !ssid.isEmpty() && !password.isEmpty() ) {
-        p->cfg.hotspotSsid = ssid;
-        p->cfg.hotspotPassword = password;
+int TcpCamera::infraredState()
+{
+    return p->cfg.infraredState;
+}
 
-        QByteArray _ssid = ssid.toUtf8();
-        QByteArray _password = password.toUtf8();
-        memcpy(p->cfg.set.hotspotSSID, _ssid.data(), _ssid.length());
-        p->cfg.set.hotspotSSID[_ssid.length()] = '\0';
-        memcpy(p->cfg.set.hotspotPassword, _password.data(), _password.length());
-        p->cfg.set.hotspotPassword[_password.length()] = '\0';
-
-        if( isConnected() ) {
-            QByteArray byte(p->requestByte(hs::__req_hotspot_info));
-            emit p->write(byte);
-        }
-        else {
-            emit msg(tr("Device not connect"));
-        }
-    }
-    return true;
+void TcpCamera::setInfraredState(const int &state)
+{
+    hs::t_packet packet = p->packet(hs::__req_infrared);
+    packet.infraredState = state;
+    emit p->write(p->requestByte(&packet));
 }
 
 void TcpCamera::saveSetting()
@@ -537,8 +532,7 @@ void TcpCamera::openUsbCamera(const int &fd)
     QObject::connect(p->uvc.data(), &UVCamera::updateCameraState, [=](){
         g_Config->appendLog(QString("camera state update: %1").arg(p->uvc->isOpen()));
         if( p->uvc->isOpen() ) {
-            p->uvc->zoomAbsolute(0x8000 | UVC_MODE);
-            p->setPalette(p->cfg.set.palette);
+            p->uvc->zoomAbsolute(XTHERM_N16_MODE);
             close();
         }
     });
@@ -611,6 +605,7 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         sendTimer->setInterval(2000);
         sendTimer->setSingleShot(true);
         QObject::connect(sendTimer, &QTimer::timeout, [=](){
+            qDebug() << "request frame time out:" << socket.data();
             if( socket.isNull() ) {
                 return ;
             }
@@ -656,9 +651,13 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
             qDebug() << "first search device";
             searchDevice();
         }
+
+        openServer();
     });
 
     QObject::connect(thread, &QThread::finished, [=](){
+        closeServer();
+
         clearSearcher();
 
         unpacket->close();
@@ -670,8 +669,8 @@ TcpCameraPrivate::TcpCameraPrivate(TcpCamera *parent)
         sendTimer = nullptr;
 
         if( !socket.isNull() ) {
-            QByteArray byte = requestByte(hs::__req_disconnect);
-            socket->write(byte);
+            hs::t_packet p = packet(hs::__req_disconnect);
+            socket->write(requestByte(&p));
             bool flag = socket->waitForBytesWritten(5 * 1000);
             g_Config->appendLog(QString("send disconnect: %1").arg(flag));
             socket->disconnect();
@@ -721,17 +720,23 @@ TcpCameraPrivate::~TcpCameraPrivate()
 //#endif
 }
 
-QByteArray TcpCameraPrivate::requestByte(const hs::RequestType &type)
+hs::t_packet TcpCameraPrivate::packet(const hs::RequestType &req)
+{
+    hs::t_packet p;
+    p.marker[0] = 'R';
+    p.marker[1] = 'e';
+    p.marker[2] = 'C';
+    p.marker[3] = 'v';
+    p.request = req;
+    p.timestamp = QDateTime::currentMSecsSinceEpoch();
+    return p;
+}
+
+QByteArray TcpCameraPrivate::requestByte(hs::t_packet *p)
 {
     QByteArray byte;
     byte.resize(HANDSHAKE_PACK_SIZE);
-    cfg.set.marker[0] = 'R';
-    cfg.set.marker[1] = 'e';
-    cfg.set.marker[2] = 'C';
-    cfg.set.marker[3] = 'v';
-    cfg.set.request = type;
-//    qDebug() << "req type:" << cfg.set.request;
-    memcpy(byte.data(), &cfg.set, sizeof (hs::t_packet));
+    memcpy(byte.data(), p, sizeof (hs::t_packet));
     return byte;
 }
 
@@ -741,12 +746,33 @@ void TcpCameraPrivate::requestFrame(const hs::RequestType &type)
         return;
     }
 
-    if( cfg.set.frameFormat < hs::__full_frame ) {
-        cfg.set.frameFormat = !cfg.set.frameFormat;
+    hs::t_packet p = packet(type);
+    if( type == hs::__req_init ) {
+        // frame mode为hs::__image_first 时, 使用0x8004模式
+        // hs::__fps_first 时, 使用0x8005模式
+        p.frameMode = cfg.frameMode;
+
+        // 摄像头参数
+        p.emiss = cfg.emiss;
+        p.reflected = cfg.reflected;
+        p.ambient = cfg.ambient;
+        p.humidness = cfg.humidness;
+        p.correction = cfg.correction;
+        p.distance = cfg.distance;
+
+        QByteArray ssid = cfg.hotspotSsid.toUtf8();
+        QByteArray password = cfg.hotspotPassword.toUtf8();
+        memcpy(p.hotspotSSID, ssid.data(), ssid.size());
+        p.hotspotSSID[ssid.size()] = '\0';
+        memcpy(p.hotspotPassword, password.data(), password.size());
+        p.hotspotPassword[password.size()] = '\0';
+
+        p.infraredState = cfg.infraredState;
     }
-//    sendTimer->start();
+    cfg.frameFormat = (cfg.frameMode == hs::__image_first ? hs::__full_frame : !cfg.frameFormat);
+    p.frameFormat = cfg.frameFormat;
     emit restartSendTimer();
-    emit write(requestByte(type));
+    emit write(requestByte(&p));
 }
 
 void TcpCameraPrivate::socketConnection()
@@ -762,6 +788,7 @@ void TcpCameraPrivate::socketConnection()
             return ;
         }
 
+        qDebug() << "socket state changed:" << state;
         if( state == QAbstractSocket::ConnectedState ) {
             // 异常断开, 重新请求
             requestFrame(hs::__req_init);
@@ -788,6 +815,8 @@ void TcpCameraPrivate::socketConnection()
 
     qDebug() << "first time request frame";
     requestFrame(hs::__req_init);
+
+    emit f->connectStatusChanged();
 }
 
 void TcpCameraPrivate::clearSearcher()
@@ -848,11 +877,6 @@ void TcpCameraPrivate::connectDevice(const QString &dev)
     }
 }
 
-void TcpCameraPrivate::hostTest()
-{
-
-}
-
 void TcpCameraPrivate::searchDevice()
 {
     if( searcher.size() > 0 ) {
@@ -893,7 +917,7 @@ void TcpCameraPrivate::searchDevice()
 
 void TcpCameraPrivate::searchOvertime()
 {
-    if( manualConnState ) {
+    if( manualConnState || !socket.isNull() ) {
         return;
     }
     clearSearcher();
@@ -904,7 +928,6 @@ void TcpCameraPrivate::searchOvertime()
     }
 }
 
-static qint64 msecsSinceEpoch = 0;
 void TcpCameraPrivate::onReadyRead()
 {
     if( sendTimer->isActive() ) {
@@ -915,7 +938,8 @@ void TcpCameraPrivate::onReadyRead()
     buf.append(socket->readAll());
     buffetMutex.unlock();
 
-    unpacket->notify();
+//    unpacket->notify();
+    onUnpacket();
 }
 
 void TcpCameraPrivate::onUnpacket()
@@ -967,6 +991,8 @@ void TcpCameraPrivate::onUnpacket()
             buf.remove(0, size);
             buffetMutex.unlock();
         }
+
+        requestFrame();
         return;
     }
 
@@ -974,29 +1000,46 @@ void TcpCameraPrivate::onUnpacket()
     if( buf.size() >= header.bufferLength )
     {
         // 热点状态更新
-        if( cfg.hotspotEnable != header.hotspot ) {
-            cfg.hotspotEnable = header.hotspot;
+        if( cfg.hotspotEnable != header.hotspotState ) {
+            cfg.hotspotEnable = header.hotspotState;
             emit f->hotspotEnableChanged();
         }
 
-        // 0x8005 模式 调色盘更新
-        if( (cfg.set.cameraMode == 5) && (cfg.set.palette != header.palette) ) {
-            cfg.set.palette = header.palette;
-            emit f->paletteChanged();
+        if( cfg.frameMode != header.frameMode ) {
+            cfg.frameMode = header.frameMode;
+            cfg.frameFormat = header.frameFormat;
+            emit f->frameModeChanged();
         }
 
+        // 红外线状态更新
+        if( cfg.infraredState != header.infraredState ) {
+            cfg.infraredState = header.infraredState;
+            emit f->infraredStateChanged();
+        }
+
+        cfg.devType = header.devType;
         cfg.width = header.width;
         cfg.height = header.height;
-        cfg.version = QByteArray(header.version, 11);
+        cfg.version = QString::fromLocal8Bit(header.version);
+
+//        qDebug() << header.devType << header.width << header.height << header.frameMode << header.frameFormat;
 
         QImage *image = f->rgb();
         CameraPixelFormat format = toCameraPixel(static_cast<hs::PixelFormat>(header.pixelFormat));
         if( format != __pix_invalid ) {
-            decode(reinterpret_cast<uint8_t *>(buf.data() + headerSize),
-                   header.width, header.height,
-                   format,
-                   image,
-                   (hs::FrameFormat)header.frameFormat);
+            if( header.devType == hs::__t2l_a4l ) {
+                decode(reinterpret_cast<uint8_t *>(buf.data() + headerSize),
+                       header.width, header.height,
+                       format,
+                       image,
+                       (hs::FrameFormat)header.frameFormat);
+            }
+            else if( header.devType == hs::__tiny_1b ) {
+                decode_tiny(reinterpret_cast<uint8_t *>(buf.data() + headerSize),
+                            header.width, header.height,
+                            image,
+                            (hs::FrameFormat)header.frameFormat);
+            }
         }
         else {
             qDebug() << "decode invalid pixel format";
@@ -1006,18 +1049,23 @@ void TcpCameraPrivate::onUnpacket()
         buf.remove(0, header.bufferLength);
         buffetMutex.unlock();
 
-        // request next frame
-        if( msecsSinceEpoch == 0 ) {
-            msecsSinceEpoch = QDateTime::currentMSecsSinceEpoch();
-        }
+//        qDebug() << QDateTime::currentMSecsSinceEpoch() - header.timestamp << "buf size:" << buf.size();
 
+        // request next frame
         // 一秒25帧
-        int waitMs = 1000 / 25;
-        while ((QDateTime::currentMSecsSinceEpoch() - msecsSinceEpoch) < waitMs) {
-        }
-//        qDebug() << (QDateTime::currentMSecsSinceEpoch() - msecsSinceEpoch);
-        msecsSinceEpoch = QDateTime::currentMSecsSinceEpoch();
-        requestFrame();
+
+//        int waitMs = 1000 / 25;
+//        while ((QDateTime::currentMSecsSinceEpoch() - header.timestamp) < waitMs) {
+//            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+//        }
+////        qDebug() << (QDateTime::currentMSecsSinceEpoch() - header.timestamp);
+//        requestFrame();
+
+        QTimer::singleShot(40, Qt::PreciseTimer, [=](){
+//            qint64 msec = QDateTime::currentMSecsSinceEpoch();
+//            qDebug() << msec - header.timestamp;
+            requestFrame();
+        });
     }
 }
 
@@ -1049,12 +1097,10 @@ void TcpCameraPrivate::decode(uint8_t *buf,
     if( lastTimeStamp == 0 ) {
         lastTimeStamp = QDateTime::currentMSecsSinceEpoch();
     }
-    else {
-        if( (QDateTime::currentMSecsSinceEpoch() - lastTimeStamp) >= 1000 ) {
-            lastTimeStamp = 0;
-            fps = fpsCount;
-            fpsCount = 0;
-        }
+    else if( (QDateTime::currentMSecsSinceEpoch() - lastTimeStamp) >= 1000 ) {
+        lastTimeStamp = 0;
+        fps = fpsCount;
+        fpsCount = 0;
     }
 
     if( frameBuffer.isNull() ) {
@@ -1069,42 +1115,23 @@ void TcpCameraPrivate::decode(uint8_t *buf,
     }
 
     if( frameFormat < hs::__full_frame ) {
-//        if( frameBuffer.isNull() ) {
-//            if( format == __pix_custom ) {
-//                qDebug() << "n16 pixel format:" << width << height;
-//                frameBuffer.reset(new uint8_t[width * height * 2]);
-//            }
-//            else {
-//                qDebug() << "frame buffer size:" << ProviderCamera::byteSize(width, height, format) << width << height;
-//                frameBuffer.reset(new uint8_t[ProviderCamera::byteSize(width, height, format)]);
-//            }
-//        }
-//        qDebug() << "frame index:" << cfg.header.frameFormat;
-
-        int row = width * 2;
-        for(int i = 0; i < height / 2; i ++) {
-            frameBufferMutex.lock();
-            memcpy(frameBuffer.data() + ((2 * i + frameFormat) * row),
-                   buf + (i * row),
-                   row);
-            frameBufferMutex.unlock();
+        int frame_width = width;
+        int frame_height = (height - IMAGE_Y_OFFSET) / 2;
+        for(int i = 0; i < frame_height; i ++) {
+           for(int j = 0; j < frame_width; j ++) {
+               frameBuffer.data()[(2 * i + frameFormat) * frame_width + j] = buf[i * frame_width + j];
+           }
         }
-    }
-    else {
-        frameBufferMutex.lock();
-        memcpy(frameBuffer.data(), buf, width * height * 2);
-        frameBufferMutex.unlock();
-//        int cpy_size = (width * (height - IMAGE_Y_OFFSET) * 2);
-//        memcpy(frameBuffer.data() + cpy_size,
-//               buf + cpy_size,
-//               width * height * 2 - cpy_size);
+
+        int frame_data_length = frame_width * frame_height;
+        int four_line_offset = frame_data_length * 4;
+        memcpy(frameBuffer.data() + four_line_offset,
+               buf + frame_data_length,
+               width * 2 * IMAGE_Y_OFFSET);
     }
 
-    uint16_t *data = (frameFormat >= hs::__full_frame) ?
-                reinterpret_cast<uint16_t *>(buf) : reinterpret_cast<uint16_t *>(frameBuffer.data());
+    uint16_t *data = reinterpret_cast<uint16_t *>((frameFormat == hs::__full_frame) ? buf : frameBuffer.data());
     uint16_t *temp = data + (width * (height - IMAGE_Y_OFFSET));
-
-
 
     float correction;
     float Refltmp;
@@ -1157,6 +1184,23 @@ void TcpCameraPrivate::decode(uint8_t *buf,
     userArea=userArea+2;
     memcpy(&distance,temp+userArea,sizeof(unsigned short));//距离
 
+    if( (emiss != cfg.emiss)
+            || (Refltmp != cfg.reflected)
+            || (Airtmp != cfg.ambient)
+            || (humi != cfg.humidness)
+            || (distance != cfg.distance)
+            || (correction != cfg.correction) ) {
+        cfg.emiss = emiss;
+        cfg.reflected = Refltmp;
+        cfg.ambient = Airtmp;
+        cfg.humidness = humi;
+        cfg.distance = distance;
+        cfg.correction = correction;
+        emit f->cameraParamChanged();
+    }
+
+//    qDebug() << correction << Refltmp << Airtmp << humi << emiss << distance;
+
 #ifdef TEMPERATURE_SDK
     if( (frameCount % 4500) == 25 ) {
         thermometryT4Line(width,
@@ -1181,18 +1225,18 @@ void TcpCameraPrivate::decode(uint8_t *buf,
     thermometrySearch(width,
                       height,
                       temperatureTable,
-//                      data,
-                      reinterpret_cast<uint16_t *>(frameBuffer.data()),
+                      data,
                       temperatureData,
                       RANGE_MODE,
                       format == __pix_custom ? N16_MODE : YUYV_MODE);
 
 #endif
+
+
+
     if( cameraSN.isEmpty() ) {
         cameraSN = QString(sn);
         emit f->productInfoChanged();
-        emit f->connectStatusChanged();
-        emit f->cameraParamChanged();
     }
     else if( lastTimeStamp == 0 ) {
         cameraSN = QString(sn);
@@ -1201,22 +1245,24 @@ void TcpCameraPrivate::decode(uint8_t *buf,
 
     uint8_t *bit = image->bits();
     if( format == __pix_yuyv ) {
-        pixelOperations->yuv422_to_rgb((frameFormat >= hs::__full_frame) ? buf : frameBuffer.data(),
-                                       bit,
-                                       width, height - IMAGE_Y_OFFSET);
-
-//        pixelOperations->yuv422_to_pseudo(buf,
-//                                          bit,
-//                                          width, height - IMAGE_Y_OFFSET);
+        if( (frameFormat < hs::__full_frame) && (cfg.frameMode == hs::__fps_first) ) {
+            y2_to_rgb24(frameBuffer.data(),
+                        bit,
+                        width, height - IMAGE_Y_OFFSET);
+        }
+        else if( (frameFormat == hs::__full_frame) && (cfg.frameMode == hs::__image_first) ) {
+            nuc16_to_rgb24(data,
+                           bit, width, height - IMAGE_Y_OFFSET);
+        }
+        else {
+            f->pixelOperations()->yuv422_to_rgb(buf,
+                                                bit,
+                                                width, height - IMAGE_Y_OFFSET);
+        }
     }
     else if( format == __pix_custom ) {
         nuc16_to_rgb24(data,
                        bit, width, height - IMAGE_Y_OFFSET);
-    }
-    else if( format == __pix_yuv420p ) {
-        pixelOperations->yuv420p_to_rgb((frameFormat >= hs::__full_frame) ? buf : frameBuffer.data(),
-                                        bit,
-                                        width, height - IMAGE_Y_OFFSET);
     }
 
     int rotation = f->rotationIndex();
@@ -1314,6 +1360,31 @@ void TcpCameraPrivate::decode(uint8_t *buf,
     f->setUrlImage(i);
 }
 
+void TcpCameraPrivate::decode_tiny(uint8_t *buf,
+                                   const int &width, const int &height,
+                                   QImage *image,
+                                   const hs::FrameFormat &frameFormat)
+{
+    if( frameBuffer.isNull() ) {
+        frameBuffer.reset(new uint8_t[width * height / 2]);
+    }
+
+    if( frameFormat < hs::__full_frame ) {
+        for(int i = 0; i < height / 4; i ++) {
+            memcpy(frameBuffer.data() + ((i * 2 + frameFormat) * width),
+                   buf + (i * width),
+                   width);
+        }
+
+        f->pixelOperations()->gray_to_pseudo(frameBuffer.data(),
+                                             image->bits(),
+                                             width, height / 2);
+        int rotation = f->rotationIndex();
+        QImage i = image->mirrored(rotation & 0x01, (rotation >> 1) & 0x01);
+        f->setUrlImage(i);
+    }
+}
+
 void TcpCameraPrivate::nuc16_to_rgb24(const uint16_t *nuc, uint8_t *rgb, const int &width, const int &height)
 {
     uint index = width * height;
@@ -1345,10 +1416,31 @@ void TcpCameraPrivate::nuc16_to_rgb24(const uint16_t *nuc, uint8_t *rgb, const i
             }
 
             RGBPixel pixel;
-            pixelOperations->gray_to_rgb_pixel(gray, &pixel);
+            f->pixelOperations()->gray_to_rgb_pixel(gray, &pixel);
             *rgb ++ = pixel.r;
             *rgb ++ = pixel.g;
             *rgb ++ = pixel.b;
+        }
+    }
+}
+
+void TcpCameraPrivate::y2_to_rgb24(const uint8_t *in, uint8_t *out, const int &width, const int &height)
+{
+    for(int i = 0; i < height; i ++) {
+        for(int j = 0; j < width; j ++) {
+            RGBPixel pixel;
+
+//            uint8_t gray = in[i * width + j];
+//            if( gray < 127 ) {
+//                gray = gray >> 1;
+//            }
+//            pixelOperations->gray_to_rgb_pixel(gray, &pixel);
+
+            f->pixelOperations()->gray_to_rgb_pixel(in[i * width + j], &pixel);
+
+            *out ++ = pixel.r;
+            *out ++ = pixel.g;
+            *out ++ = pixel.b;
         }
     }
 }
@@ -1358,37 +1450,19 @@ void TcpCameraPrivate::readSetting()
 //    deviceIP = g_Config->readSetting("Tcp/DevceIP", "192.168.1.1").toString();
     cfg.ip = SERVER_IP;
     cfg.port = SERVER_PORT;
-    cfg.set.cameraMode = g_Config->readSetting("Tcp/cameraMode", UVC_MODE).toUInt();
-    cfg.set.palette = g_Config->readSetting("Tcp/palette", 0).toUInt();
-    cfg.set.emiss = g_Config->readSetting("Tcp/emiss", 1.0).toDouble();
-    cfg.set.reflected = g_Config->readSetting("Tcp/reflected", 1.0).toDouble();
-    cfg.set.ambient = g_Config->readSetting("Tcp/ambient", 1.0).toDouble();
-    cfg.set.humidness = g_Config->readSetting("Tcp/humidness", 1.0).toDouble();
-    cfg.set.correction = g_Config->readSetting("Tcp/correction", 1.0).toDouble();
-    cfg.set.distance = g_Config->readSetting("Tcp/distance", 0).toUInt();
-    cfg.set.frameFormat = g_Config->readSetting("Tcp/frameFormat", 0).toUInt();
-    if( cfg.set.frameFormat != hs::__full_frame ) {
-        cfg.set.frameFormat = hs::__even_frame;
-    }
+    cfg.palette = g_Config->readSetting("Tcp/palette", 0).toUInt();
+    cfg.emiss = g_Config->readSetting("Tcp/emiss", 1.0).toDouble();
+    cfg.reflected = g_Config->readSetting("Tcp/reflected", 1.0).toDouble();
+    cfg.ambient = g_Config->readSetting("Tcp/ambient", 1.0).toDouble();
+    cfg.humidness = g_Config->readSetting("Tcp/humidness", 1.0).toDouble();
+    cfg.correction = g_Config->readSetting("Tcp/correction", 1.0).toDouble();
+    cfg.distance = g_Config->readSetting("Tcp/distance", 0).toUInt();
+    cfg.frameMode = g_Config->readSetting("Tcp/frameMode", hs::__image_first).toUInt();
     showTemp = g_Config->readSetting("Tcp/showtemp", false).toBool();
     cfg.hotspotSsid = g_Config->readSetting("Tcp/hotspotSsid", "").toString();
     cfg.hotspotPassword = g_Config->readSetting("Tcp/hotspotPassword", "").toString();
     cfg.hotspotEnable = false;
-
-    QByteArray _ssid = cfg.hotspotSsid.toLatin1();
-    QByteArray _password = cfg.hotspotPassword.toLatin1();
-    memcpy(cfg.set.hotspotSSID, _ssid.data(), _ssid.length());
-    cfg.set.hotspotSSID[_ssid.length()] = '\0';
-    memcpy(cfg.set.hotspotPassword, _password.data(), _password.length());
-    cfg.set.hotspotPassword[_password.length()] = '\0';
-
-    if( cfg.set.palette < __Pseudo_WhiteHot
-            || cfg.set.palette > __InvalidPseudoTable ) {
-        qDebug() << "invalid palette index:" << cfg.set.palette;
-        cfg.set.palette = __Pseudo_WhiteHot;
-    }
-    pixelOperations.reset(new PixelOperations);
-    pixelOperations->initializerPseudo((PseudoColorTable)cfg.set.palette);
+    cfg.infraredState = hs::__infrared_off;
 }
 
 void TcpCameraPrivate::saveSetting()
@@ -1396,15 +1470,14 @@ void TcpCameraPrivate::saveSetting()
     QVector<SettingParam> param;
 //    param.append({"Tcp/DeviceIP", deviceIP});
 
-    param.append({"Tcp/cameraMode", cfg.set.cameraMode});
-    param.append({"Tcp/palette", cfg.set.palette});
-    param.append({"Tcp/emiss", cfg.set.emiss});
-    param.append({"Tcp/reflected", cfg.set.reflected});
-    param.append({"Tcp/ambient", cfg.set.ambient});
-    param.append({"Tcp/humidness", cfg.set.humidness});
-    param.append({"Tcp/correction", cfg.set.correction});
-    param.append({"Tcp/distance", cfg.set.distance});
-    param.append({"Tcp/frameFormat", cfg.set.frameFormat});
+    param.append({"Tcp/palette", cfg.palette});
+    param.append({"Tcp/emiss", cfg.emiss});
+    param.append({"Tcp/reflected", cfg.reflected});
+    param.append({"Tcp/ambient", cfg.ambient});
+    param.append({"Tcp/humidness", cfg.humidness});
+    param.append({"Tcp/correction", cfg.correction});
+    param.append({"Tcp/distance", cfg.distance});
+    param.append({"Tcp/frameMode", cfg.frameMode});
     param.append({"Tcp/showtemp", showTemp});
     param.append({"Tcp/hotspotSsid", cfg.hotspotSsid});
     param.append({"Tcp/hotspotPassword", cfg.hotspotPassword});
@@ -1463,32 +1536,16 @@ void TcpCameraPrivate::shutter()
         return;
     }
 #endif
-    QByteArray byte = requestByte(hs::__req_shutter);
-    emit write(byte);
+    hs::t_packet p = packet(hs::__req_shutter);
+    emit write(requestByte(&p));
 }
 
 void TcpCameraPrivate::setPalette(const int &index)
 {
     qDebug() << "set palette:" << index;
-    cfg.set.palette = index;
-#ifdef Q_OS_ANDROID
-    if( !uvc.isNull() ) {
-        if( UVC_MODE == 4 ) {
-            pixelOperations->updatePseudoColor((PseudoColorTable)index);
-        }
-        else {
-            uvc->zoomAbsolute(0x8800 | (index & 0xfff));
-        }
-        emit f->paletteChanged();
-        return;
-    }
-#endif
-    if( cfg.set.cameraMode == 4 ) {
-        pixelOperations->updatePseudoColor((PseudoColorTable)index);
-    }
-    else {
-        emit write(requestByte(hs::__req_palette));
-    }
+    cfg.palette = index;
+    f->pixelOperations()->updatePseudoColor((PseudoColorTable)index);
+    emit f->paletteChanged();
 }
 
 #ifdef Q_OS_ANDROID
@@ -1569,17 +1626,28 @@ void TcpCameraPrivate::sendDistance(unsigned short distance)
 }
 #endif
 
+void TcpCameraPrivate::setFrameMode(const int &mode)
+{
+    if( f->isConnected() ) {
+        hs::t_packet p = packet(hs::__req_frame_mode);
+        p.frameMode = mode;
+        emit write(requestByte(&p));
+    }
+    else {
+        cfg.frameMode = mode;
+    }
+}
+
 void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected,
                                       const qreal &ambient, const qreal &humidness,
                                       const qreal &correction, const int &distance)
 {
-    cfg.set.emiss = emiss;
-    cfg.set.reflected = reflected;
-    cfg.set.ambient = ambient;
-    cfg.set.humidness = humidness;
-    cfg.set.correction = correction;
-    cfg.set.distance = distance;
-    emit f->cameraParamChanged();
+    cfg.emiss = emiss;
+    cfg.reflected = reflected;
+    cfg.ambient = ambient;
+    cfg.humidness = humidness;
+    cfg.correction = correction;
+    cfg.distance = distance;
 #ifdef Q_OS_ANDROID
     if( !uvc.isNull() ) {
         sendEmissivity(emiss);
@@ -1596,8 +1664,51 @@ void TcpCameraPrivate::setCameraParam(const qreal &emiss, const qreal &reflected
         return;
     }
 #endif
-    QByteArray byte = requestByte(hs::__req_camera_param);
-    emit write(byte);
+//    QByteArray byte = requestByte(hs::__req_camera_param);
+    hs::t_packet p = packet(hs::__req_camera_param);
+    p.emiss = emiss;
+    p.reflected = reflected;
+    p.ambient = ambient;
+    p.humidness = humidness;
+    p.correction = correction;
+    p.distance = distance;
+    emit write(requestByte(&p));
+}
+
+bool TcpCameraPrivate::setHotspotParam(const QString &ssid, const QString &password)
+{
+    if( ssid.toUtf8().size() >= HOTSPOT_SSID_LENGTH ) {
+        emit f->msg(tr("SSID length limit exceeded"));
+        return false;
+    }
+    if( password.size() >= HOTSPOT_PASSWORD_LENGTH ) {
+        emit f->msg(tr("Password length limit exceeded"));
+        return false;
+    }
+    if( password.size() < 8 ) {
+        emit f->msg(tr("Password minimum length is 8"));
+        return false;
+    }
+
+    if( !ssid.isEmpty() && !password.isEmpty() ) {
+        cfg.hotspotSsid = ssid;
+        cfg.hotspotPassword = password;
+
+        if( f->isConnected() ) {
+            hs::t_packet p = packet(hs::__req_hotspot_info);
+            QByteArray _ssid = ssid.toUtf8();
+            QByteArray _password = password.toUtf8();
+            memcpy(p.hotspotSSID, _ssid.data(), _ssid.size());
+            p.hotspotSSID[_ssid.size()] = '\0';
+            memcpy(p.hotspotPassword, _password.data(), _password.size());
+            p.hotspotPassword[_password.size()] = '\0';
+            emit write(requestByte(&p));
+        }
+        else {
+            emit f->msg(tr("Device not connect"));
+        }
+    }
+    return true;
 }
 
 bool TcpCameraPrivate::isValidIpv4Addres(const QString &ip)
@@ -1637,6 +1748,38 @@ bool TcpCameraPrivate::isValidIpv4Addres(const QString &ip)
     return true;
 }
 
+void TcpCameraPrivate::openServer()
+{
+
+    server.reset(new QTcpServer);
+    QObject::connect(server.data(), &QTcpServer::newConnection, [=](){
+        QTcpSocket *s = server->nextPendingConnection();
+        if( s != nullptr ) {
+            clearSearcher();
+
+            socket.reset(s);
+
+            QString ipv6 = socket->peerAddress().toString();
+            int index = ipv6.lastIndexOf(':');
+            QString ipv4 = ipv6.mid(index + 1, ipv6.length() - index);
+            qDebug() << QString("client connected, ip: %1").arg(ipv4);
+
+            socketConnection();
+        }
+    });
+    bool state = server->listen(QHostAddress::Any, 8080);
+    qDebug() << "server listen state:" << state;
+
+}
+
+void TcpCameraPrivate::closeServer()
+{
+    if( !server.isNull() ) {
+        server->close();
+        server.reset();
+    }
+}
+
 #ifdef Q_OS_ANDROID
 void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, const int &height, const int &bufferLength)
 {
@@ -1647,9 +1790,9 @@ void TcpCameraPrivate::UvcCallback(void *content, void *data, const int &width, 
 
     cam->decode(reinterpret_cast<uint8_t *>(data),
                 width, height,
-                UVC_MODE == 4 ? __pix_custom : __pix_yuyv,
+                __pix_custom,
                 rgb,
-                UVC_MODE == 4 ? hs::__n16_frame : hs::__full_frame);
+                hs::__full_frame);
 
 //    switch (format) {
 //    case __pix_yuyv: {

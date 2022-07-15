@@ -28,7 +28,7 @@
 #include "AndroidInterface/androidinterface.h"
 #endif
 
-#define PROGRAM_VERSION             "1.0.0.2"
+#define PROGRAM_VERSION             "1.0.2.5"
 
 class ConfigPrivate
 {
@@ -646,7 +646,9 @@ ConfigPrivate::~ConfigPrivate()
 
 void ConfigPrivate::readSetting()
 {
-#ifndef Q_OS_WIN32
+#ifdef Q_OS_ANDROID
+    documentsPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation) + QString("/");
+#elif defined (Q_OS_IOS)
     documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString("/");
 #else
     documentsPath = QGuiApplication::applicationDirPath() + QString("/");

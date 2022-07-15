@@ -17,7 +17,7 @@ Rectangle {
         buttonText: qsTr("Save")
         onButtonClicked: {
             Config.saveSetting()
-            stackView.pop()
+            messagebox.text = qsTr("Save success")
         }
     }
 
@@ -85,7 +85,7 @@ Rectangle {
                 lineHeight: 1.5
                 text: qsTr("If you want camera device connect to phone hotspot.")
                       + qsTr("\n1. connect camera device wi-fi")
-                      + qsTr("\n2. fill in hotspot ssid and password, turn on \"Hotspot enable\"")
+                      + qsTr("\n2. fill in hotspot ssid and password, click \"Hotspot enable\" and wait for switch turn on")
                       + qsTr("\n3. open phone system setting, turn on hotspot switch")
                       + qsTr("\nif hotspot info changed, need reconnect device and reset ssid and password")
             }

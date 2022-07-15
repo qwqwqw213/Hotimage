@@ -7,6 +7,7 @@
 #include "QStandardPaths"
 #include "QDebug"
 
+#include "pixeloperations.hpp"
 #include "ImageProvider/imageprovider.h"
 
 typedef void (*frame_callback)(void *content, void *data, const int &width, const int &height, const int &bufferLength);
@@ -43,7 +44,7 @@ public:
 #endif
         settings = new QSettings(path, QSettings::IniFormat);
 
-        currentRotation = settings->value("Normal/Rotation", 0).toInt();
+        currentRotation = settings->value("Normal/Rotation", __no_flip).toInt();
     }
     ~ProviderCamera() {
 //        qDebug() << "~ProviderCamera:" << settings->fileName();
@@ -122,6 +123,17 @@ public:
     void setUrlImage(QImage &image) { provider->append(image); }
     void clearImage() { provider->clear(); }
 
+    PixelOperations * pixelOperations() {
+        if( pixel.isNull() ) {
+            pixel.reset(new PixelOperations);
+        }
+        return pixel.data();
+    }
+
+    Q_PROPERTY(int contrast READ contrast WRITE setContrast NOTIFY updateContrast)
+    int contrast() { return pixel->contrastLevel(); }
+    void setContrast(const int &index) { pixel->setContrastLevel((ContrastLevel)index); emit updateContrast(); }
+
 protected:
     // 原始坐标转换为画面旋转后的坐标
     // @param 原始坐标
@@ -173,8 +185,10 @@ Q_SIGNALS:
     void updateCameraState();
     void updateImageFrameUrl();
     void updateRotationIndex();
+    void updateContrast();
 
 private:
+    QScopedPointer<PixelOperations> pixel;
     ImageProvider *provider;
     QImage rgbImage;
 

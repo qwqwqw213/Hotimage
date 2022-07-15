@@ -77,6 +77,80 @@ ApplicationWindow {
             property real safeHeight: (height - Config.topMargin) * 0.8
             property real buttonSize: mainView.landscape ? safeWidth * 0.75 : safeHeight * 0.75
 
+            Row {
+                width: parent.width
+                height: parent.height - Config.topMargin
+                x: 0
+                y: Config.topMargin
+
+                property int buttonCount: Config.canReadTemperature ? 5 : 4
+
+                leftPadding: 20
+                rightPadding: leftPadding
+                spacing: (width - leftPadding - rightPadding - (topTool.buttonSize * buttonCount)) / (buttonCount - 1)
+
+                // 快门
+                FontButton {
+                    width: topTool.buttonSize
+                    height: width
+                    family: Config.fontSolid
+                    icon: "\uf2f9"
+                    color: pressed ? "#a0a0a0" : "white"
+                    onClicked: TcpCamera.shutter()
+                }
+
+                // 对比度
+                FontButton {
+                    width: topTool.buttonSize
+                    height: width
+                    family: Config.fontRegular
+                    icon: "\uf042"
+                    color: TcpCamera.contrast > 1 ? "#dc143c" : "white"
+                    onClicked: {
+                        if( TcpCamera.contrast > 1 ) {
+                            TcpCamera.contrast = 0
+                        }
+                        else {
+                            TcpCamera.contrast = 2;
+                        }
+                    }
+                }
+
+                // 红外线
+                FontButton {
+                    width: topTool.buttonSize
+                    height: width
+                    family: Config.fontSolid
+                    icon: "\uf0eb"
+                    color: TcpCamera.infraredState > 0 ? "#dc143c" : "white"
+                    onClicked: {
+                        TcpCamera.infraredState = !TcpCamera.infraredState;
+                    }
+                }
+
+                // 温度显示
+                FontButton {
+                    visible: Config.canReadTemperature
+                    width: topTool.buttonSize
+                    height: width
+                    family: Config.fontLight
+                    icon: "\uf2cb"
+                    color: TcpCamera.showTemp ? "#dc143c" : "#696969"
+                    onClicked: TcpCamera.showTemp = !TcpCamera.showTemp
+                }
+
+                // 设置跳转
+                FontButton {
+                    width: topTool.buttonSize
+                    height: width
+                    family: Config.fontLight
+                    icon: "\uf013"
+                    color: pressed ? "#a0a0a0" : "white"
+                    onClicked: stackView.push("qrc:/Setting/Setting.qml")
+                }
+            }
+
+            /*
             // 温度开关
             Item {
                 id: btnTempSetting
@@ -159,6 +233,7 @@ ApplicationWindow {
                     }
                 }
             }
+            */
         }
 
         // 摄像头图像
@@ -176,7 +251,7 @@ ApplicationWindow {
                 width: parent.height * scaleBar.value
                 height: parent.width * scaleBar.value
                 source: mainView.videoPlay ? (TcpCamera.canReadUrl ? TcpCamera.frameUrl : "") : TcpCamera.freeze
-                rotation: 90
+                rotation: 270
 
                 // 录像标志
                 Text {
@@ -384,7 +459,8 @@ ApplicationWindow {
                 anchors.leftMargin: width / 2
                 family: Config.fontSolid
                 icon: "\uf03d"
-                pressColor: "#a0a0a0"
+//                pressColor: "#a0a0a0"
+                color: pressed ? "#a0a0a0" : "white"
                 onClicked: {
                     if( TcpCamera.encoding ) {
                         TcpCamera.closeRecord()

@@ -49,13 +49,22 @@ enum PseudoColorTable
     __Pseudo_WhiteHot = 0,
     __Pseudo_BlackHot,
     __Pseudo_Iron,
-    __Pseudo_IronGray,
-    __Pseudo_Rainbow,
     __Pseudo_HCR,
+    __Pseudo_Rainbow,
+    __Pseudo_IronGray,
     __Pseudo_Ocean,
     __Pseudo_Summer,
     __Pseudo_Hot,
     __InvalidPseudoTable,
+};
+
+enum ContrastLevel {
+    __no_contrast = 0,
+    __contrast_1,
+    __contrast_2,
+    __contrast_3,
+    __contrast_4,
+    __contrast_5,
 };
 
 struct Vec3f
@@ -328,7 +337,7 @@ public:
         }
     }
 
-    static int yuv420p_to_rgb(const YUV *raw, RGB *rgb, const int &width, const int &height)
+    static int yuv420p_to_rgb(const YUV *in, RGB *out, const int &width, const int &height)
     {
         //
         // yuv420p数据排序
@@ -358,12 +367,12 @@ public:
         //  width / 2
         //
 
-        if( (raw == nullptr) || (rgb == nullptr) ) {
+        if( (in == nullptr) || (out == nullptr) ) {
             return 0;
         }
 
-        const unsigned char *y = raw;
-        const unsigned char *u = raw + (width * height);
+        const unsigned char *y = in;
+        const unsigned char *u = in + (width * height);
         const unsigned char *v = u + (width * height / 4);
 
         int offset = 0;
@@ -377,9 +386,9 @@ public:
 
                 if( yuv_to_rgb_pixel(y[y_index], u[uv_index], v[uv_index], &pixel) == 1 )
                 {
-                    rgb[offset ++] = static_cast<unsigned char>(pixel.r);
-                    rgb[offset ++] = static_cast<unsigned char>(pixel.g);
-                    rgb[offset ++] = static_cast<unsigned char>(pixel.b);
+                    out[offset ++] = static_cast<unsigned char>(pixel.r);
+                    out[offset ++] = static_cast<unsigned char>(pixel.g);
+                    out[offset ++] = static_cast<unsigned char>(pixel.b);
                 }
             }
         }
@@ -387,7 +396,7 @@ public:
         return 1;
     }
 
-    static int yuv422_to_rgb(const YUV *raw, RGB *rgb, const int &width, const int &height)
+    static int yuv422_to_rgb(const YUV *in, RGB *out, const int &width, const int &height)
     {
         /*
          *  YUV422数据排序
@@ -396,29 +405,27 @@ public:
          *  Y0 U0 Y1 V0 .... Y(n) U(n) Y(n + 1) V(n)
          *  4个byte 为 2个RGB24像素, Y0 和 Y1 公用同一个U V数据
          */
-        if( (raw == nullptr) || (rgb == nullptr) ) {
+        if( (in == nullptr) || (out == nullptr) ) {
             return 0;
         }
 
-        int in, out = 0;
         unsigned char y0, u, y1, v;
         RGBPixel pixel;
-        for(in = 0; in < width * height * 2; in += 4)
-        {
-            y0 = raw[in + 0];
-            u  = raw[in + 1];
-            y1 = raw[in + 2];
-            v  = raw[in + 3];
+        for(int i = 0; i < width * height * 2; i += 4) {
+            y0 = in[i + 0];
+            u  = in[i + 1];
+            y1 = in[i + 2];
+            v  = in[i + 3];
 
             yuv_to_rgb_pixel(y0, u, v, &pixel);
-            rgb[out++] = pixel.r;
-            rgb[out++] = pixel.g;
-            rgb[out++] = pixel.b;
+            *out ++ = pixel.r;
+            *out ++ = pixel.g;
+            *out ++ = pixel.b;
 
             yuv_to_rgb_pixel(y1, u, v, &pixel);
-            rgb[out++] = pixel.r;
-            rgb[out++] = pixel.g;
-            rgb[out++] = pixel.b;
+            *out ++ = pixel.r;
+            *out ++ = pixel.g;
+            *out ++ = pixel.b;
         }
         return 1;
     }
@@ -541,12 +548,16 @@ public:
     }
 
     void yuv422_to_pseudo(YUV *in, RGB *out, const int &width, const int &height) {
-//        yuv422_to_rgb(in, out, width, height);
         pseudoColor->yuv422_to_pseudo(in, out, width, height);
     }
 
     void gray_to_rgb_pixel(const GRAY &gray, RGBPixel *rgb) {
         pseudoColor->gray_to_rgb_pixel(gray, rgb);
+    }
+
+    ContrastLevel contrastLevel() { return pseudoColor->contrastLevel(); }
+    void setContrastLevel(const ContrastLevel &contrast) {
+        pseudoColor->setContrastLevel(contrast);
     }
 
     const vector<Vec3f> &pseudoColorMap(const int &index) {
@@ -620,6 +631,7 @@ private:
             g_ptr.reset(new RGB[RGB_SIZE]);
             b_ptr.reset(new RGB[RGB_SIZE]);
             current_table = __InvalidPseudoTable;
+            contrast = __no_contrast;
         }
         ~PseudoColor() { }
 
@@ -778,23 +790,23 @@ private:
                 r.push_back(Vec3f(0.05, 0.11, 0.11));
                 r.push_back(Vec3f(0.10, 0.21, 0.21));
                 r.push_back(Vec3f(0.15, 0.31, 0.31));
-                r.push_back(Vec3f(0.20, 0.45, 0.45));
-                r.push_back(Vec3f(0.25, 0.65, 0.65));
-                r.push_back(Vec3f(0.30, 0.73, 0.73));
-                r.push_back(Vec3f(0.35, 0.74, 0.74));
-                r.push_back(Vec3f(0.40, 0.79, 0.79));
-                r.push_back(Vec3f(0.45, 0.85, 0.85));
-                r.push_back(Vec3f(0.50, 0.89, 0.89));
-                r.push_back(Vec3f(0.55, 0.92, 0.92));
-                r.push_back(Vec3f(0.60, 0.95, 0.95));
-                r.push_back(Vec3f(0.65, 0.96, 0.96));
+                r.push_back(Vec3f(0.20, 0.41, 0.41));
+                r.push_back(Vec3f(0.25, 0.51, 0.51));
+                r.push_back(Vec3f(0.30, 0.61, 0.61));
+                r.push_back(Vec3f(0.35, 0.71, 0.71));
+                r.push_back(Vec3f(0.40, 0.75, 0.75));
+                r.push_back(Vec3f(0.45, 0.81, 0.81));
+                r.push_back(Vec3f(0.50, 0.85, 0.85));
+                r.push_back(Vec3f(0.55, 0.87, 0.87));
+                r.push_back(Vec3f(0.60, 0.89, 0.89));
+                r.push_back(Vec3f(0.65, 0.91, 0.91));
                 r.push_back(Vec3f(0.70, 0.98, 0.98));
                 r.push_back(Vec3f(0.75, 0.99, 0.99));
                 r.push_back(Vec3f(0.80, 0.99, 0.99));
                 r.push_back(Vec3f(0.85, 0.99, 0.99));
                 r.push_back(Vec3f(0.90, 0.99, 0.99));
                 r.push_back(Vec3f(0.95, 0.99, 0.99));
-                r.push_back(Vec3f(1.00, 1.00, 1.00));
+                r.push_back(Vec3f(1.00, 1, 1));
 
                 g.push_back(Vec3f(0.00, 0.01, 0.01));
                 g.push_back(Vec3f(0.05, 0.01, 0.01));
@@ -806,26 +818,26 @@ private:
                 g.push_back(Vec3f(0.35, 0.11, 0.11));
                 g.push_back(Vec3f(0.40, 0.15, 0.15));
                 g.push_back(Vec3f(0.45, 0.25, 0.25));
-                g.push_back(Vec3f(0.50, 0.37, 0.37));
-                g.push_back(Vec3f(0.55, 0.43, 0.43));
-                g.push_back(Vec3f(0.60, 0.46, 0.46));
-                g.push_back(Vec3f(0.65, 0.51, 0.51));
-                g.push_back(Vec3f(0.70, 0.55, 0.55));
-                g.push_back(Vec3f(0.75, 0.61, 0.61));
-                g.push_back(Vec3f(0.80, 0.65, 0.65));
-                g.push_back(Vec3f(0.85, 0.76, 0.76));
+                g.push_back(Vec3f(0.50, 0.35, 0.35));
+                g.push_back(Vec3f(0.55, 0.41, 0.41));
+                g.push_back(Vec3f(0.60, 0.45, 0.45));
+                g.push_back(Vec3f(0.65, 0.55, 0.55));
+                g.push_back(Vec3f(0.70, 0.61, 0.61));
+                g.push_back(Vec3f(0.75, 0.65, 0.65));
+                g.push_back(Vec3f(0.80, 0.71, 0.71));
+                g.push_back(Vec3f(0.85, 0.75, 0.75));
                 g.push_back(Vec3f(0.90, 0.81, 0.81));
-                g.push_back(Vec3f(0.95, 0.88, 0.88));
-                g.push_back(Vec3f(1.00, 1.00, 1.00));
+                g.push_back(Vec3f(0.95, 0.85, 0.85));
+                g.push_back(Vec3f(1.00, 1, 1));
 
-                b.push_back(Vec3f(0.00, 0.11, 0.11));
-                b.push_back(Vec3f(0.05, 0.25, 0.25));
-                b.push_back(Vec3f(0.10, 0.36, 0.36));
-                b.push_back(Vec3f(0.15, 0.47, 0.47));
-                b.push_back(Vec3f(0.20, 0.59, 0.59));
+                b.push_back(Vec3f(0.00, 0.15, 0.15));
+                b.push_back(Vec3f(0.05, 0.31, 0.31));
+                b.push_back(Vec3f(0.10, 0.41, 0.41));
+                b.push_back(Vec3f(0.15, 0.51, 0.51));
+                b.push_back(Vec3f(0.20, 0.61, 0.61));
                 b.push_back(Vec3f(0.25, 0.71, 0.71));
-                b.push_back(Vec3f(0.30, 0.66, 0.66));
-                b.push_back(Vec3f(0.35, 0.46, 0.46));
+                b.push_back(Vec3f(0.30, 0.81, 0.81));
+                b.push_back(Vec3f(0.35, 0.55, 0.55));
                 b.push_back(Vec3f(0.40, 0.35, 0.35));
                 b.push_back(Vec3f(0.45, 0.21, 0.21));
                 b.push_back(Vec3f(0.50, 0.11, 0.11));
@@ -836,9 +848,9 @@ private:
                 b.push_back(Vec3f(0.75, 0.05, 0.05));
                 b.push_back(Vec3f(0.80, 0.11, 0.11));
                 b.push_back(Vec3f(0.85, 0.15, 0.15));
-                b.push_back(Vec3f(0.90, 0.25, 0.25));
+                b.push_back(Vec3f(0.90, 0.35, 0.35));
                 b.push_back(Vec3f(0.95, 0.55, 0.55));
-                b.push_back(Vec3f(1.00, 1.00, 1.00));
+                b.push_back(Vec3f(1.00, 1, 1));
             }
                 break;
             case __Pseudo_IronGray: {
@@ -1266,11 +1278,23 @@ private:
             RGB *r = r_ptr.get();
             RGB *g = g_ptr.get();
             RGB *b = b_ptr.get();
-            for(int i = 0; i < height; i ++) {
-                for(int j = 0; j < width; j ++) {
-                    *out ++ = r[in[width * i + j]];
-                    *out ++ = g[in[width * i + j]];
-                    *out ++ = b[in[width * i + j]];
+
+            if( contrast == __no_contrast ) {
+                for(int i = 0; i < height; i ++) {
+                    for(int j = 0; j < width; j ++) {
+                        *out ++ = r[in[width * i + j]];
+                        *out ++ = g[in[width * i + j]];
+                        *out ++ = b[in[width * i + j]];
+                    }
+                }
+            }
+            else {
+                for(int i = 0; i < height; i ++) {
+                    for(int j = 0; j < width; j ++) {
+                        *out ++ = truncate(factor * (r[in[width * i + j]] - 128) + 128);
+                        *out ++ = truncate(factor * (g[in[width * i + j]] - 128) + 128);
+                        *out ++ = truncate(factor * (b[in[width * i + j]] - 128) + 128);
+                    }
                 }
             }
         }
@@ -1307,13 +1331,26 @@ private:
         }
 
         void gray_to_rgb_pixel(const GRAY &gray, RGBPixel *rgb) {
-            rgb->r = r_ptr.get()[gray];
-            rgb->g = g_ptr.get()[gray];
-            rgb->b = b_ptr.get()[gray];
+            if( contrast > __no_contrast ) {
+                rgb->r = truncate(factor * (r_ptr.get()[gray] - 128) + 128);
+                rgb->g = truncate(factor * (g_ptr.get()[gray] - 128) + 128);
+                rgb->b = truncate(factor * (b_ptr.get()[gray] - 128) + 128);
+            }
+            else {
+                rgb->r = r_ptr.get()[gray];
+                rgb->g = g_ptr.get()[gray];
+                rgb->b = b_ptr.get()[gray];
+            }
         }
 
         const vector<Vec3f> &pseudoColorMap(const int &index) {
             return pseudo_color_map[index];
+        }
+
+        ContrastLevel contrastLevel() { return contrast; }
+        void setContrastLevel(const ContrastLevel &c) {
+            contrast = c;
+            factor = (259.0 * ((contrast * 51)  + 255.0)) / (255.0 * (259.0 - (contrast * 51)));
         }
 
     private:
@@ -1321,6 +1358,8 @@ private:
         unique_ptr<RGB> r_ptr;
         unique_ptr<RGB> g_ptr;
         unique_ptr<RGB> b_ptr;
+        ContrastLevel contrast;
+        float factor;
 
         vector<Vec3f> pseudo_color_map[3];
 
@@ -1338,6 +1377,10 @@ private:
                 double val = rgb_pseudo[idx].z + (rgb_pseudo[idx + 1].y - rgb_pseudo[idx].z) * prop;
                 rgb_ptr[i] = (int)(255 * val);
             }
+        }
+
+        int truncate(const int &value) {
+            return (value > 255 ? 255 : (value < 0 ? 0 : value));
         }
     };
 

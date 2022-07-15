@@ -8,6 +8,7 @@
 #include "QImage"
 #include "QHostInfo"
 #include "QHostAddress"
+#include "QTcpServer"
 #include "QTcpSocket"
 #include "QQuickImageProvider"
 
@@ -17,11 +18,6 @@ class TcpCamera : public ProviderCamera
     Q_OBJECT
 
 public:
-    enum FrameMode {
-        __fps_first = 0,        // 帧数据分成奇偶帧, 两次接收完整帧数据
-        __image_first,          // 一次接收所有帧数据
-    };
-
     explicit TcpCamera(QObject *parent = nullptr);
     ~TcpCamera();
 
@@ -102,6 +98,10 @@ public:
     QString hotspotPassword();
     Q_INVOKABLE bool setHotspotParam(const QString &ssid, const QString &password);
 
+    Q_PROPERTY(bool infraredState READ infraredState WRITE setInfraredState NOTIFY infraredStateChanged)
+    int infraredState();
+    void setInfraredState(const int &state);
+
     void saveSetting();
 
     void openUsbCamera(const int &fd);
@@ -125,6 +125,7 @@ Q_SIGNALS:
     void cameraParamChanged();
     void manualConnectStateChanged();
     void hotspotEnableChanged();
+    void infraredStateChanged();
     void frameModeChanged();
 };
 
